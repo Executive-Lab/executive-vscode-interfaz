@@ -109,6 +109,15 @@ jobs:
             instalador/mac/informe-*.txt
             instalador/mac/executive-lab-instalacion.log
           if-no-files-found: warn
+      # Y el .dmg mismo, para probarlo a mano en un Mac (sin firmar: Gatekeeper pide
+      # «Abrir igualmente» en Ajustes › Privacidad y seguridad).
+      - name: Subir el .dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-dmg
+          path: instalador/mac/Executive Lab *.dmg
+          retention-days: 14
+          if-no-files-found: error
 
   # El .exe: se compila, se instala en silencio y se comprueba con probar.ps1,
   # como en un Windows limpio. Lo que esto no responde está en COMO-PROBARLO.md:
@@ -173,3 +182,12 @@ jobs:
             instalador/windows/informe-*.txt
             instalador/windows/instalacion.log
           if-no-files-found: warn
+      # Y el .exe mismo, para probarlo a mano en un Windows de verdad (sin firmar:
+      # SmartScreen pide «Más información» › «Ejecutar de todas formas»).
+      - name: Subir el .exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-exe
+          path: instalador/windows/Output/ExecutiveLab-Setup.exe
+          retention-days: 14
+          if-no-files-found: error
