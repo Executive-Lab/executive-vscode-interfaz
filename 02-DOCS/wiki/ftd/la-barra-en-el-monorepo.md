@@ -4,7 +4,7 @@ title: La barra en un monorepo
 date: 2026-10-19
 author: Jose Sanchis
 branch: la-barra-en-el-monorepo
-status: en curso
+status: hecho
 ---
 
 # La barra en un monorepo
@@ -41,7 +41,7 @@ La barra daba por hecho una carpeta, un git y una documentación. En esa forma, 
 Y una quinta, al revés: abrir `03-PROYECTOS/<proyecto>/` sola ofrecía «Preparar esta carpeta», o sea montar
 un segundo arnés dentro de un proyecto que no debe llevarlo.
 
-## Decisión (194)
+## Decisión (195)
 
 **Qué es un proyecto de dentro, leído del disco (P5).** Una carpeta del primer o del segundo nivel que
 tiene su propio `.git` (carpeta o fichero: un clon, un worktree o un submódulo). Sin mirar las carpetas
@@ -82,7 +82,7 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 
 - Dentro: `subproyectos.js` (nuevo), `sueltas.js`, `extension.js` (estado y acciones), `panel.js`
   (Proyectos y la línea de las copias), `piezas.json`, `proyectos.js`, `por-donde-ibas.js`, `terreno.js`
-  y `arrancar.js` (el proyecto abierto solo), diccionario, decisión 194 y pruebas.
+  y `arrancar.js` (el proyecto abierto solo), diccionario, decisión 195 y pruebas.
 - Fuera: guardar o subir los proyectos desde la barra sin el asistente; la brújula con zonas por
   proyecto o por área; vigilar `03-PROYECTOS/**` para repintar (con sus `node_modules`, sería caro: se
   mira al repintar); el escaneo de RSC, que ve el código de los proyectos como evidencia del plan (eso es
@@ -90,19 +90,34 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 
 ## Checklist
 
-- [ ] `subproyectos.js`: reconoce los proyectos de dentro, cómo está cada uno y sus tres encargos.
-- [ ] `sueltas.js`: un proyecto de dentro no es desorden.
-- [ ] Copias: «✓ Todo guardado» solo con todo guardado; un botón por proyecto con cambios.
-- [ ] Apartado Proyectos en la pantalla principal, con su pieza en `piezas.json`.
-- [ ] «En qué estamos» y «Seguir donde lo dejé» leen la documentación de cada proyecto.
-- [ ] Un proyecto abierto solo ofrece abrir su monorepo.
-- [ ] Diccionario, decisión 194 y `humo.js` con un monorepo de mentira.
-- [ ] Batería entera y mutaciones de lo importante.
+- [x] `subproyectos.js`: reconoce los proyectos de dentro, cómo está cada uno y sus tres encargos.
+- [x] `sueltas.js`: un proyecto de dentro no es desorden.
+- [x] Copias: «✓ Todo guardado» solo con todo guardado; un botón por proyecto con cambios.
+- [x] Apartado Proyectos en la pantalla principal, con su pieza en `piezas.json`.
+- [x] «En qué estamos» y «Seguir donde lo dejé» leen la documentación de cada proyecto.
+- [x] Un proyecto abierto solo ofrece abrir su monorepo.
+- [x] Diccionario, decisión 195 y `humo.js` con un monorepo de mentira.
+- [x] Batería entera y mutaciones de lo importante.
+- [x] Revisiones adversarias (seguridad y corrección) y sus arreglos.
 
 ## Evidence
 
-(Se rellena con las pruebas al terminar.)
+- **El fallo, reproducido antes de arreglarlo**: con un monorepo de mentira y el código de `main`, `ficherosDeAcceso()`
+  daba `03-PROYECTOS/panel-fundae/cuenta-de-servicio.json` y `buscar()` daba `web-suelta/.env`. Con la rama, los dos vacíos,
+  y los dos siguen en `paraProteger`.
+- **`humo.js`**: 9 comprobaciones nuevas (decisión 195), con git de verdad: un monorepo con un proyecto del segundo nivel sin
+  manifiesto y otro del primero, un GitHub de mentira (`--bare`), ramas nuevas y borradas, enlaces, sin confianza, el vigía y
+  la barra entera con `refrescar`. Se ajustaron tres que fijaban la forma de antes: `dentroDeOtro`, la tabla de piezas y
+  `lasCopias`.
+- **Batería**: ver la PR (humo, `--con-arnes`, mapeos-codex, contrato, empresas-distintas, diccionario).
+- **Mutaciones**: 24, todas cazadas. Entre otras: sueltas sin mirar el git propio, un `.git` enlazado que cuenta, entrar en
+  `node_modules`, sin tope, lo no mirado como «guardado», lo visto que no caduca, subir sin esperar el sí, el encargo sin sus
+  reglas, las copias que callan los proyectos, abrir lo de un proyecto enlazado, el `next:` sin proyectos, parte de cualquier
+  git de arriba, abrir sin ser el botón principal, el git de los proyectos sin confianza, el vigía que no olvida o no mira,
+  subir sin adónde, la rama borrada como subida, nombres con «», y un `.md` enlazado.
 
 ## Next
 
-Empezar por `subproyectos.js` y `sueltas.js`: es lo que puede romper un proyecto.
+Revisar la PR y las cuatro filas nuevas del diccionario. Después, probarla abierta sobre `mono-repo-executive-lab` de verdad:
+qué proyectos salen, si «Trabajar en «…»» se entiende, y si los encargos de guardar y subir respetan las reglas de
+`executive-certificados` (subir a `main` despliega).

@@ -1,4 +1,4 @@
-// Los proyectos de dentro: la carpeta como monorepo (decisión 194).
+// Los proyectos de dentro: la carpeta como monorepo (decisión 195).
 //
 // ── La forma ─────────────────────────────────────────────────────────────
 //
@@ -38,10 +38,15 @@ const NO_SE_MIRA = new Set(['node_modules', '01-TOOLS', '02-DOCS']);
 const TOPE = 30;
 const DOCUMENTACION = ['02-DOCS', 'wiki', 'proyectos'];
 
-// Un nombre que se puede enseñar y meter en un encargo: sin saltos de línea ni
-// caracteres de control, y no muy largo. Uno que no cumple no es un proyecto
-// para la barra: mejor no enseñarlo que enseñarlo roto.
-const NOMBRE_QUE_VALE = /^[^\0-\x1f\x7f]{1,100}$/;
+// Un nombre que se puede enseñar y meter en un encargo: sin caracteres de control
+// (tampoco los de la segunda tabla ni los separadores de línea de Unicode), sin
+// «» —que cerrarían las comillas del encargo y colarían texto como si fuera
+// nuestro—, sin punto delante y no muy largo. Espacios, tildes y paréntesis, sí:
+// «mi proyecto» es un nombre normal. Uno que no cumple no es un proyecto para la
+// barra: mejor no enseñarlo que enseñarlo roto. La misma regla en todos los sitios
+// que leen una carpeta de proyecto (`proyectos.js`, `por-donde-ibas.js`).
+const NOMBRE_QUE_VALE = /^(?!\.)[^\0-\x1f\x7f-\x9f\u2028\u2029«»/\\]{1,100}$/;
+const nombreQueVale = (nombre) => typeof nombre === 'string' && NOMBRE_QUE_VALE.test(nombre);
 
 // ¿Tiene su propio git? Un `.git` de verdad: una carpeta o un fichero, no un enlace.
 function tieneSuGit(carpeta) {
@@ -56,7 +61,7 @@ function tieneSuGit(carpeta) {
 function carpetasDe(carpeta) {
   try {
     return lecturas.entradas(carpeta)
-      .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !NO_SE_MIRA.has(e.name) && NOMBRE_QUE_VALE.test(e.name))
+      .filter((e) => e.isDirectory() && !NO_SE_MIRA.has(e.name) && nombreQueVale(e.name))
       .map((e) => e.name)
       .sort();
   } catch {
@@ -133,19 +138,26 @@ function leerElEstado(salida) {
   let sinGuardar = 0;
   let sinSubir = 0;
   let rama = null;
-  let conRemoto = false;
+  let conUpstream = false;
+  let conCuentas = false;
+  let sinCopias = false;
   for (const linea of String(salida).split('\n')) {
-    if (linea.startsWith('# branch.head ')) rama = linea.slice('# branch.head '.length).trim();
-    else if (linea.startsWith('# branch.upstream ')) conRemoto = true;
+    if (linea.startsWith('# branch.oid ')) sinCopias = linea.trim().endsWith('(initial)');
+    else if (linea.startsWith('# branch.head ')) rama = linea.slice('# branch.head '.length).trim();
+    else if (linea.startsWith('# branch.upstream ')) conUpstream = true;
     else if (linea.startsWith('# branch.ab ')) {
+      conCuentas = true;
       const m = linea.match(/\+(\d+) -\d+/);
       if (m) sinSubir = Number(m[1]);
     } else if (linea.trim() && !linea.startsWith('#')) sinGuardar += 1;
   }
   if (rama === '(detached)') rama = null;
-  // Una rama que no está en GitHub todavía: todo lo suyo está sin subir.
-  const ramaSinSubir = Boolean(rama) && !conRemoto;
-  return { sinGuardar, sinSubir, rama, ramaSinSubir };
+  // Una rama que no está en GitHub: nunca se subió, o se subió y allí se borró
+  // (fusionada y borrada: git sigue nombrándola, pero ya no sabe contar contra
+  // ella). Sin ninguna copia todavía, no hay nada que subir. Si nunca se subió,
+  // `comoEsta` mira además que haya adónde subirla.
+  const ramaSinSubir = Boolean(rama) && !sinCopias && (!conUpstream || !conCuentas);
+  return { sinGuardar, sinSubir, rama, ramaSinSubir, conUpstream };
 }
 
 async function comoEsta(p, { ahora = Date.now() } = {}) {
@@ -156,13 +168,33 @@ async function comoEsta(p, { ahora = Date.now() } = {}) {
     [...procesos.ARGS_DE_GIT, '-C', p.ruta, 'status', '--porcelain=v2', '--branch'],
     { tiempoMaximo: TOPE_DE_GIT },
   );
-  const estado = r.codigo === 0 ? leerElEstado(r.salida) : SIN_MIRAR;
+  let estado = SIN_MIRAR;
+  if (r.codigo === 0) {
+    const { conUpstream, ...leido } = leerElEstado(r.salida);
+    estado = leido;
+    // Una rama que nunca se subió solo se ofrece subir si hay adónde: un
+    // repositorio sin GitHub tendría el botón para siempre (revisión de la 195).
+    if (leido.ramaSinSubir && !conUpstream) {
+      const remotos = await procesos.ejecutar(entorno.git(), [...procesos.ARGS_DE_GIT, '-C', p.ruta, 'remote'], { tiempoMaximo: TOPE_DE_GIT });
+      if (remotos.codigo !== 0 || !remotos.salida.trim()) estado = { ...leido, ramaSinSubir: false };
+    }
+  }
   vistos.set(p.ruta, { cuando: ahora, estado });
   return estado;
 }
 
-// Tras pedirle algo al asistente, lo visto ya no vale.
+// Lo visto deja de valer cuando el git de un proyecto se mueve: una copia nueva,
+// otra rama, una subida. Lo dice el vigía de la extensión, que mira sus registros
+// (`.git/logs/`, ver `LOS_REGISTROS`). Sin eso, tras «Guardar» la barra seguía
+// diciendo «Cambios sin guardar» hasta 15 segundos (revisión de la 195).
 const olvidar = () => vistos.clear();
+
+// Lo que el vigía mira de cada proyecto: los registros de su git, que cambian con
+// cada copia, cada cambio de rama y cada subida, y nunca con un `status`. El índice
+// no: lo toca cualquier `git status`, también el del propio editor, y la barra se
+// pondría a repintar sin parar (decisión 188).
+const LOS_REGISTROS = ['*/.git/logs/**', '*/*/.git/logs/**'];
+const esDeUnRegistro = (ruta) => /[\\/]\.git[\\/]logs[\\/]/.test(String(ruta || ''));
 
 // Solo en una carpeta de confianza: un `git status` dentro de un repositorio corre
 // su configuración, y un filtro `clean` suyo es una orden de quien hizo esa carpeta
@@ -273,5 +305,5 @@ function enPantalla(p) {
 
 module.exports = {
   cuales, hayAlguno, deCualEs, tieneSuGit, comoEsta, comoEstan, olvidar, leerElEstado, enPantalla, boton,
-  trabajarEn, guardar, subir, TOPE, DOCUMENTACION,
+  trabajarEn, guardar, subir, TOPE, DOCUMENTACION, nombreQueVale, LOS_REGISTROS, esDeUnRegistro,
 };

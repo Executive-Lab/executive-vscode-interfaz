@@ -9378,7 +9378,7 @@ dependen de la causa.
 arranca. `humo.js` crea el acceso sobre una carpeta de mentira (se salta fuera de macOS). Lo que sigue sin comprobarse: que en
 un Mac con macOS 26 de un alumno el botón abra de verdad; hasta que alguien lo pruebe, la causa y la cura son una hipótesis.
 
-## 194. La barra en un monorepo
+## 195. La barra en un monorepo
 
 **Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código · **Vía rápida** `la-barra-en-el-monorepo`
 
@@ -9423,6 +9423,24 @@ seguir enlaces y con tope de 30. No hace falta que la de arriba se llame `03-PRO
 5. Dentro de una carpeta que ya tiene el arnés (`queHayEncima` dice ahora `conArnes`), la brújula no ofrece preparar: «Esta
    carpeta es parte de «{nombre}»», y el botón principal es Abrir «{nombre}». La ruta la vuelve a mirar la extensión; del
    panel solo llega que se pulsó. Prepararla igual sigue detrás, con el aviso de siempre.
+
+**El git de un proyecto, solo con confianza.** Un `git status` dentro de un repositorio corre su configuración: un filtro
+`clean` suyo es una orden de quien hizo esa carpeta (lo reprodujo la revisión de seguridad de la 147; `core.fsmonitor` ya va
+apagado). Así que cómo está cada proyecto solo se mira si el editor confía en la carpeta, como hace su propio git; sin
+confianza, cada uno sale «No he podido mirar si hay cambios sin guardar» y no se lanza ningún git.
+
+**Lo que trajeron las revisiones adversarias** (ninguna encontró nada que parase la fusión):
+- *Corrección, media*: lo visto de un proyecto se guardaba 15 segundos y nada lo olvidaba; y nada repintaba al moverse su git.
+  Tras «Guardar», la barra seguía diciendo «Cambios sin guardar». Ahora el vigía mira los registros del git de cada proyecto
+  (`*/.git/logs/**` y `*/*/.git/logs/**`), que cambian con una copia, otra rama o una subida y nunca con un `status`, y al
+  verlos moverse olvida lo visto y repinta. El índice no se vigila: lo toca cualquier `status`, también el del editor (188).
+- *Corrección*: dos reglas distintas para el nombre de un proyecto; «mi proyecto» salía en Proyectos y no en En qué
+  estamos. Ahora es una (`subproyectos.nombreQueVale`): espacios, tildes y paréntesis sí; punto delante, «», caracteres de
+  control y separadores de línea, no. Lo de «» también lo pidió la de seguridad: el nombre va dentro del encargo, entre «».
+- *Corrección*: una rama borrada en GitHub con copias nuevas salía «✓ Todo guardado»; ahora «Su rama no está en GitHub». Y
+  un repositorio sin GitHub o sin ninguna copia ofrecía «Subir» para siempre: ahora solo si hay adónde.
+- *Seguridad, baja*: un `.md` que es un enlace dentro de `sdd/` se listaba y se abría (también en la raíz, desde antes).
+  Ahora solo ficheros de verdad.
 
 **Lo que no cambia**: el guardado solo sigue sin correr en un historial que no creó la barra (P4), y un monorepo clonado lo es.
 

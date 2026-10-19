@@ -855,7 +855,7 @@ ${cabecera}
     this.ponerleElNombre();
     this.enviar({ tipo: 'cargando' });
     const suya = marca.leer();
-    // Una vez por repintado: lo usan Proyectos y la línea de las copias (decisión 194).
+    // Una vez por repintado: lo usan Proyectos y la línea de las copias (decisión 195).
     const deDentro = await this.losProyectosDeDentro();
     this.enviar({
       tipo: 'estado',
@@ -916,7 +916,7 @@ ${cabecera}
       // Para la sencilla: lo que hay en Acciones, la línea de las copias y la versión.
       habilidades: this.habilidadesSuyas(),
       copias: await this.lasCopias(deDentro),
-      // En un monorepo, sus proyectos: cómo está cada uno y sus botones (decisión 194).
+      // En un monorepo, sus proyectos: cómo está cada uno y sus botones (decisión 195).
       proyectosDeDentro: deDentro,
       versionDeLaBarra: this.versionDeLaBarra(),
       // Lo nuevo de la versión que acaba de poner. Antes de mirar si hay otra:
@@ -963,7 +963,7 @@ ${cabecera}
   // La línea de las copias: solo si la carpeta las tiene.
   //
   // En un monorepo, «✓ Todo guardado» tiene que valer también para sus proyectos,
-  // que tienen su propio git y el de la raíz deja fuera (decisión 194). Los que
+  // que tienen su propio git y el de la raíz deja fuera (decisión 195). Los que
   // tienen cambios van con su botón; uno que no se pudo mirar no deja decir
   // «Todo guardado».
   async lasCopias(deDentro = []) {
@@ -990,7 +990,7 @@ ${cabecera}
     }
   }
 
-  // Los proyectos de dentro, si esto es un monorepo (decisión 194). Vacío si no.
+  // Los proyectos de dentro, si esto es un monorepo (decisión 195). Vacío si no.
   async losProyectosDeDentro() {
     try {
       return (await subproyectos.comoEstan(subproyectos.cuales(), { conConfianza: vscode.workspace.isTrusted !== false })).map(subproyectos.enPantalla);
@@ -4396,7 +4396,7 @@ ${cabecera}
   // de sitio sin tener que saber dónde está el menú de VS Code.
 
   // La carpeta de arriba, ya preparada: un proyecto de un monorepo se trabaja
-  // desde su raíz (decisión 194). La ruta se vuelve a mirar aquí: del panel solo
+  // desde su raíz (decisión 195). La ruta se vuelve a mirar aquí: del panel solo
   // llega que se pulsó. En esta misma ventana, como al elegir carpeta.
   async abrirLaDeArriba() {
     const arriba = terreno.queHayEncima(proyecto.raiz());
@@ -4558,7 +4558,9 @@ function loQueMira() {
 
   const reglasDelAsistente = donde.paraQuien() === 'codex'
     ? ['AGENTS.md', 'AGENTS.override.md'] : ['CLAUDE.md'];
-  return `{${[...LO_FIJO, ...reglasDelAsistente, ...new Set(suyas)].join(',')}}`;
+  // Y los registros del git de cada proyecto de un monorepo (decisión 195): una copia
+  // nueva o una subida cambian cómo está, y si no, la barra no se enteraba.
+  return `{${[...LO_FIJO, ...reglasDelAsistente, ...new Set(suyas), ...subproyectos.LOS_REGISTROS].join(',')}}`;
 }
 
 // Volver a vigilar lo del asistente de ahora. Cambiar de asistente ya no toca
@@ -4588,6 +4590,8 @@ function vigilarElArnes(contexto, panel) {
     const esMarca = marca.esDeLaMarca(uri.fsPath);
     // El índice del buscador se hizo con lo que había antes de este cambio.
     buscador.olvidar();
+    // Y cómo estaba un proyecto, si se ha movido su git (decisión 195).
+    if (subproyectos.esDeUnRegistro(uri.fsPath)) subproyectos.olvidar();
     // Cambiar de asistente cambia dónde vive todo lo suyo, y eso se escribe en
     // `.rsc.json`. Sin rearmar, se seguirían vigilando las carpetas del
     // anterior: la barra dejaría de enterarse de lo que pasa en las de ahora.

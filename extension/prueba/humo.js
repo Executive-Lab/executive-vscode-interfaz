@@ -14976,7 +14976,7 @@ exec git "$@"
     try {
       const parte = cargar('terreno').mirarYClasificar();
       assert.equal(parte.dentroDeOtro.nombre, path.basename(padre), 'no se ve el proyecto de encima');
-      // Sin arnés arriba no es parte de una carpeta preparada (decisión 194).
+      // Sin arnés arriba no es parte de una carpeta preparada (decisión 195).
       assert.equal(parte.dentroDeOtro.conArnes, false);
 
       vscode.registrado.mensajes.length = 0;
@@ -18237,7 +18237,7 @@ exec git "$@"
         assert.equal(await proveedor.lasCopias(), null, 'sin copias, sale la línea de las copias');
         guardar.copias = async () => [{ cuando: new Date(Date.now() - 5 * 60000).toISOString() }];
         guardar.puedeSubir = async () => false; github.remoto = async () => null; guardar.cambiosSinGuardar = async () => false;
-        // `raizSinGuardar` y `proyectosSinGuardar`: lo de un monorepo (decisión 194); aquí no hay proyectos.
+        // `raizSinGuardar` y `proyectosSinGuardar`: lo de un monorepo (decisión 195); aquí no hay proyectos.
         assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: false, raizSinGuardar: false, proyectosSinGuardar: [], subir: false });
         github.remoto = async () => 'https://github.com/alguien/algo'; guardar.cambiosSinGuardar = async () => true;
         assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: true, raizSinGuardar: true, proyectosSinGuardar: [], subir: true }, 'con sitio en GitHub o cambios, no lo dice');
@@ -27896,7 +27896,7 @@ exec git "$@"
     return 'uno a la vez; terminado, el siguiente sí';
   });
 
-  // ── La barra en un monorepo (decisión 194) ───────────────────────────────
+  // ── La barra en un monorepo (decisión 195) ───────────────────────────────
   //
   // La raíz con el arnés y su git; cada proyecto, un clon con su propio git que el
   // de la raíz deja fuera. Uno del segundo nivel sin manifiesto (`apps/`), con una
@@ -27929,7 +27929,7 @@ exec git "$@"
     return raiz;
   };
 
-  await comprobar('en un monorepo, lo de dentro de un proyecto no es desorden, y sus claves se siguen tapando (decisión 194)', () => {
+  await comprobar('en un monorepo, lo de dentro de un proyecto no es desorden, y sus claves se siguen tapando (decisión 195)', () => {
     const raiz = montarMonorepo();
     const antes = vscode.guion.raiz;
     try {
@@ -27949,7 +27949,7 @@ exec git "$@"
     }
   });
 
-  await comprobar('los proyectos de dentro se leen del disco: su propio git, primer o segundo nivel, su documentación (decisión 194)', () => {
+  await comprobar('los proyectos de dentro se leen del disco: su propio git, primer o segundo nivel, su documentación (decisión 195)', () => {
     const raiz = montarMonorepo();
     const sp = cargar('subproyectos');
     const lista = sp.cuales(raiz);
@@ -27978,15 +27978,21 @@ exec git "$@"
     assert.equal(sp.cuales(raiz).length, sp.TOPE, 'sin tope');
     // Una carpeta sin proyectos dentro no es un monorepo.
     assert.deepEqual(sp.cuales(empresa), [], 'la empresa de mentira no tiene proyectos');
+    // Los nombres: con espacios y tildes, sí; con «» o un separador de línea, no (revisión de la 195).
+    const otro = montarMonorepo();
+    for (const n of ['mi proyecto', 'ñandú (nuevo)', 'x«y»', 'a\u2028b']) fs.mkdirSync(path.join(otro, '03-PROYECTOS', n, '.git'), { recursive: true });
+    assert.deepEqual(sp.cuales(otro).map((p) => p.nombre), ['mi proyecto', 'panel-fundae', 'ñandú (nuevo)', 'web-suelta']);
+    assert.equal(sp.nombreQueVale('.oculto'), false);
     return `${lista.length} proyectos, con tope de ${sp.TOPE}`;
   });
 
-  await comprobar('cómo está cada proyecto sale de su propio git, y lo que no se puede mirar no es «guardado» (decisión 194)', async () => {
+  await comprobar('cómo está cada proyecto sale de su propio git, y lo que no se puede mirar no es «guardado» (decisión 195)', async () => {
     const raiz = montarMonorepo();
     const sp = cargar('subproyectos');
     sp.olvidar();
     const [panel] = sp.cuales(raiz);
-    assert.deepEqual(await sp.comoEsta(panel), { sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: true });
+    // Sin GitHub no hay adónde subir: no se ofrece (revisión de la 195).
+    assert.deepEqual(await sp.comoEsta(panel), { sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
     // Con su GitHub de mentira: subido, nada sin subir.
     const remoto = fs.mkdtempSync(path.join(os.tmpdir(), 'remoto-'));
     MONO_G(remoto, 'init', '-q', '--bare');
@@ -28001,6 +28007,20 @@ exec git "$@"
     MONO_G(panel.ruta, 'commit', '-q', '-m', 'Nuevo');
     sp.olvidar();
     assert.deepEqual(await sp.comoEsta(panel), { sinGuardar: 1, sinSubir: 1, rama: 'main', ramaSinSubir: false });
+    // Una rama que nunca se subió, con adónde subirla; y una que se subió y en GitHub se borró.
+    MONO_G(panel.ruta, 'checkout', '-q', '-b', 'nueva');
+    sp.olvidar();
+    assert.equal((await sp.comoEsta(panel)).ramaSinSubir, true, 'una rama nueva no se ofrece subir');
+    MONO_G(panel.ruta, 'push', '-q', '-u', 'origin', 'nueva');
+    sp.olvidar();
+    assert.equal((await sp.comoEsta(panel)).ramaSinSubir, false);
+    MONO_G(panel.ruta, 'push', '-q', 'origin', '--delete', 'nueva');
+    sp.olvidar();
+    assert.equal((await sp.comoEsta(panel)).ramaSinSubir, true, 'una rama borrada en GitHub sale como guardada y subida');
+    MONO_G(panel.ruta, 'checkout', '-q', 'main');
+    // Sin ninguna copia todavía, nada que subir; y una rama suelta no se nombra.
+    assert.equal(sp.leerElEstado('# branch.oid (initial)\n# branch.head main\n').ramaSinSubir, false);
+    assert.deepEqual(sp.leerElEstado('# branch.oid abc\n# branch.head (detached)\n1 .M N... 100644 100644 100644 a b x\n'), { sinGuardar: 1, sinSubir: 0, rama: null, ramaSinSubir: false, conUpstream: false });
     // Lo visto vale un rato: el repintado no lanza un git cada vez.
     fs.writeFileSync(path.join(panel.ruta, 'otro.md'), 'otro\n');
     assert.equal((await sp.comoEsta(panel)).sinGuardar, 1, 'lo visto no se guarda');
@@ -28012,7 +28032,7 @@ exec git "$@"
     return 'sin guardar, sin subir, rama, y null si no se puede';
   });
 
-  await comprobar('cada proyecto lleva sus botones hechos, y los encargos dicen dónde, sus reglas, y que subir pide el sí (decisión 194)', () => {
+  await comprobar('cada proyecto lleva sus botones hechos, y los encargos dicen dónde, sus reglas, y que subir pide el sí (decisión 195)', () => {
     const raiz = montarMonorepo();
     const sp = cargar('subproyectos');
     const [panel] = sp.cuales(raiz);
@@ -28044,7 +28064,7 @@ exec git "$@"
     return 'tres botones, cuatro partes cada uno';
   });
 
-  await comprobar('la pantalla: Proyectos solo en un monorepo, y «✓ Todo guardado» solo si los proyectos también (decisión 194)', () => {
+  await comprobar('la pantalla: Proyectos solo en un monorepo, y «✓ Todo guardado» solo si los proyectos también (decisión 195)', () => {
     const pintar = (estado) => require('./panel-falso').montarPanel().mandar({ tipo: 'estado', estado: { listo: true, barraCompleta: false, piezas: { copias: true, proyectos: true }, ...estado } });
     const proyectosDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:proyectos-de-dentro"[\s\S]*?<\/details>/) || [''])[0];
     const copiasDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:copias"[\s\S]*?<\/details>/) || [''])[0];
@@ -28076,7 +28096,7 @@ exec git "$@"
     return 'apartado, línea y nota';
   });
 
-  await comprobar('la barra entera en un monorepo: el estado lleva los proyectos y la línea de las copias no los calla (decisión 194)', async () => {
+  await comprobar('la barra entera en un monorepo: el estado lleva los proyectos y la línea de las copias no los calla (decisión 195)', async () => {
     const proveedor = vscode.registrado.proveedor;
     const brujulaM = cargar('brujula');
     const rscM = cargar('rsc');
@@ -28102,7 +28122,7 @@ exec git "$@"
       assert.notEqual(estado.copias && estado.copias.sinGuardar, false, 'sin mirar los proyectos dice «Todo guardado»');
       vscode.guion.confianza = true;
       estado = await otraVez();
-      assert.equal(dentro.length, 2, 'con confianza, un git por proyecto');
+      assert.equal(dentro.filter((a) => a.includes('status')).length, 2, 'con confianza, un git status por proyecto');
       assert.deepEqual(estado.proyectosDeDentro.map((p) => p.nombre), ['panel-fundae', 'web-suelta']);
       assert.equal(estado.copias.sinGuardar, false, `con todo guardado: ${JSON.stringify(estado.copias)}`);
       fs.writeFileSync(path.join(raiz, '03-PROYECTOS', 'panel-fundae', 'nuevo.md'), 'hola\n');
@@ -28113,6 +28133,15 @@ exec git "$@"
       assert.equal(estado.copias.proyectosSinGuardar[0].boton.etiqueta, 'Guardar «panel-fundae» en git');
       const html = require('./panel-falso').montarPanel().mandar({ ...estado, barraCompleta: false });
       assert.match(html, /Hay cambios sin guardar en «panel-fundae»/);
+      // Guardado por el asistente: lo visto deja de valer en cuanto el vigía ve moverse
+      // su git, sin esperar los 15 segundos (revisión de la 195).
+      assert.ok(cargar('subproyectos').LOS_REGISTROS.every((g) => vscode.registrado.vigia.patron.includes(g)), 'el vigía no mira el git de los proyectos');
+      const sinOlvidar = async () => { rscM.olvidarLaContinuacion(); brujulaM.olvidar(); enviados.length = 0; await proveedor.refrescar(true); return [...enviados].reverse().find((m) => m.tipo === 'estado'); };
+      MONO_G(path.join(raiz, '03-PROYECTOS', 'panel-fundae'), 'add', 'nuevo.md');
+      MONO_G(path.join(raiz, '03-PROYECTOS', 'panel-fundae'), 'commit', '-q', '-m', 'Lo nuevo');
+      assert.equal((await sinOlvidar()).copias.sinGuardar, true, 'lo visto no se guarda un rato');
+      vscode.registrado.vigia.disparar(path.join(raiz, '03-PROYECTOS', 'panel-fundae', '.git', 'logs', 'HEAD'));
+      assert.equal((await sinOlvidar()).copias.sinGuardar, false, 'tras una copia nueva sigue diciendo «Cambios sin guardar»');
       assert.match(html, /data-abrir="grupo:proyectos-de-dentro"[\s\S]*Trabajar en «panel-fundae»/);
       // En la carpeta de siempre no cambia nada.
       vscode.guion.raiz = empresa;
@@ -28128,7 +28157,7 @@ exec git "$@"
     }
   });
 
-  await comprobar('«Seguir donde lo dejé» y «En qué estamos» leen la documentación de cada proyecto (decisión 194)', () => {
+  await comprobar('«Seguir donde lo dejé» y «En qué estamos» leen la documentación de cada proyecto (decisión 195)', () => {
     const raiz = montarMonorepo();
     const ibasM = cargar('por-donde-ibas');
     const escribir = (rel, c, cuando) => {
@@ -28181,6 +28210,18 @@ exec git "$@"
       for (const malo of ['proyectos/enlazado/sdd/specs/ajena.md', 'proyectos/../sdd/specs/la-raiz.md', 'proyectos/panel-fundae/sdd/specs/../../../../../etc/x.md', 'proyectos/panel-fundae/otra/specs/a.md', '../proyectos/panel-fundae/sdd/specs/los-registros.md']) {
         assert.equal(proyectosM.dondeVive(malo), null, `se abre ${malo}`);
       }
+      // Un .md que es un enlace no sale ni se abre, tampoco en la raíz (revisión de seguridad de la 195).
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'specs', 'enlace.md'));
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), path.join(raiz, '02-DOCS', 'wiki', 'sdd', 'specs', 'enlace.md'));
+      const conEnlaces = proyectosM.queHay().find((m) => m.id === 'specs').cosas.map((c) => c.fichero);
+      assert.ok(!conEnlaces.some((f) => f.endsWith('enlace.md')), `sale un enlace: ${conEnlaces}`);
+      assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/specs/enlace.md'), null);
+      assert.equal(proyectosM.dondeVive('specs/enlace.md'), null);
+      // Un proyecto con espacios en el nombre, como en Proyectos.
+      escribir('02-DOCS/wiki/proyectos/mi proyecto/sdd/specs/con-espacio.md', '---\ntitle: Con espacio\n---\n');
+      escribir('02-DOCS/wiki/proyectos/mi proyecto/ftd/a-medias.md', doc('A medias', 'Terminar lo del espacio'));
+      assert.ok(proyectosM.queHay().find((m) => m.id === 'specs').cosas.some((c) => c.proyecto === 'mi proyecto'), 'un proyecto con espacio no sale en En qué estamos');
+      assert.equal(ibasM.porDondeIbas(raiz, '').ruta, '02-DOCS/wiki/proyectos/mi proyecto/ftd/a-medias.md', 'ni en Seguir donde lo dejé');
       const html = require('./panel-falso').montarPanel().mandar({ tipo: 'proyectos', montones: proyectosM.queHay() });
       assert.match(html, /Los cinco registros<\/p>\s*<p class="pista">«panel-fundae» · /);
       return 'el del proyecto se ofrece y se abre; el enlazado, no';
@@ -28189,7 +28230,7 @@ exec git "$@"
     }
   });
 
-  await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 194)', async () => {
+  await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 195)', async () => {
     const raiz = montarMonorepo();
     const brujulaM = cargar('brujula');
     const proveedor = vscode.registrado.proveedor;
