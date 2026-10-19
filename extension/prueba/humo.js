@@ -28252,9 +28252,11 @@ exec git "$@"
       // Abrir: la ruta la mira la extensión, no llega del panel.
       vscode.guion.raiz = path.join(raiz, '03-PROYECTOS', 'panel-fundae');
       await proveedor.abrirLaDeArriba();
-      const abierta = vscode.registrado.ejecutados.slice(antes.ejecutados).find((e) => (e.id || e[0] || e.comando) === 'vscode.openFolder' || JSON.stringify(e).includes('vscode.openFolder'));
+      const abierta = vscode.registrado.ejecutados.slice(antes.ejecutados).find((e) => e.id === 'vscode.openFolder');
       assert.ok(abierta, 'no se abre ninguna carpeta');
-      assert.ok(JSON.stringify(abierta).includes(fs.realpathSync(raiz)), `se abre otra: ${JSON.stringify(abierta)}`);
+      // Comparadas como rutas, no como texto: en Windows el JSON dobla las «\\» y la unidad cambia de mayúscula.
+      const real = (r) => (fs.realpathSync.native || fs.realpathSync)(r);
+      assert.ok(cargar('rutas').mismoSitio(real(abierta.args[0].fsPath), real(raiz)), `se abre otra: ${abierta.args[0].fsPath}`);
       // Dentro de un git sin arnés, como siempre: se ofrece preparar.
       const sinArnes = fs.mkdtempSync(path.join(os.tmpdir(), 'git-sin-arnes-'));
       MONO_G(sinArnes, 'init', '-q');
