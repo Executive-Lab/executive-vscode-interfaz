@@ -49,17 +49,19 @@ ChangesEnvironment=yes
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Files]
-Source: "carga\runtime\*";   DestDir: "{app}\runtime";  Flags: recursesubdirs ignoreversion
+; overwritereadonly: al reinstalar encima, un fichero de solo lectura de la vez
+; anterior no debe parar la instalación ni preguntar.
+Source: "carga\runtime\*";   DestDir: "{app}\runtime";  Flags: recursesubdirs ignoreversion overwritereadonly
 ; preparar.js y los módulos que necesita para funcionar. El arnés y los raíles
 ; ya no viajan aquí: van dentro del .vsix, que es quien los usa.
-Source: "carga\preparar.js"; DestDir: "{app}";          Flags: ignoreversion
-Source: "carga\git.js";      DestDir: "{app}";          Flags: ignoreversion
-Source: "carga\ajustes.js";  DestDir: "{app}";          Flags: ignoreversion
-Source: "carga\ajustes-del-editor.js"; DestDir: "{app}"; Flags: ignoreversion
-Source: "carga\control-remoto.js"; DestDir: "{app}";   Flags: ignoreversion
-Source: "carga\executive-lab.vsix"; DestDir: "{app}";   Flags: ignoreversion
-Source: "carga\executivelab.ico";   DestDir: "{app}";   Flags: ignoreversion
-Source: "carga\disfraz.json";       DestDir: "{app}";   Flags: ignoreversion
+Source: "carga\preparar.js"; DestDir: "{app}";          Flags: ignoreversion overwritereadonly
+Source: "carga\git.js";      DestDir: "{app}";          Flags: ignoreversion overwritereadonly
+Source: "carga\ajustes.js";  DestDir: "{app}";          Flags: ignoreversion overwritereadonly
+Source: "carga\ajustes-del-editor.js"; DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "carga\control-remoto.js"; DestDir: "{app}";   Flags: ignoreversion overwritereadonly
+Source: "carga\executive-lab.vsix"; DestDir: "{app}";   Flags: ignoreversion overwritereadonly
+Source: "carga\executivelab.ico";   DestDir: "{app}";   Flags: ignoreversion overwritereadonly
+Source: "carga\disfraz.json";       DestDir: "{app}";   Flags: ignoreversion overwritereadonly
 ; El instalador de VS Code YA NO VIAJA AQUÍ: son 225 MB de los 256 que pesaba
 ; esto. Se descarga durante la instalación, como ya hacía el de macOS, y no se
 ; descarga nada si esa persona ya lo tiene. Hace falta red, que de todos modos
@@ -69,20 +71,9 @@ Source: "carga\disfraz.json";       DestDir: "{app}";   Flags: ignoreversion
 ; Para que la extensión encuentre la app aunque cambie la carpeta por defecto.
 Root: HKCU; Subkey: "Environment"; ValueType: string; ValueName: "EXECUTIVE_LAB_HOME"; ValueData: "{app}"; Flags: uninsdeletevalue
 
-[Run]
-; VS Code en silencio, y solo si hubo que descargarlo. !runcode evita que se
-; abra solo al acabar.
-Filename: "{tmp}\VSCodeUserSetup-x64.exe"; \
-  Parameters: "/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /MERGETASKS=!runcode"; \
-  StatusMsg: "Instalando el editor..."; Flags: waituntilterminated; \
-  Check: HayQueInstalarElEditor
-
-; git (si no está) y las dos extensiones. git se descarga, así que este paso
-; necesita red y puede tardar un par de minutos.
-Filename: "{app}\runtime\node.exe"; \
-  Parameters: """{app}\preparar.js"" --asistente ""{code:AsistenteElegido}"""; \
-  StatusMsg: "Poniendo las piezas que faltan. Esto tarda un par de minutos..."; \
-  Flags: waituntilterminated runhidden
+; Aquí no hay [Run]: el editor y el último paso (git y las dos extensiones) se
+; lanzan desde [Code], en `PonerLasPiezas`. Inno no mira cómo termina un [Run], y
+; si el último paso fallaba la persona veía «instalado» sin estarlo.
 
 [UninstallRun]
 ; El control remoto de Claude, si lo puso la instalación y sigue puesto
@@ -100,7 +91,7 @@ Filename: "{app}\runtime\node.exe"; \
 ; Abre el editor, sin carpeta: la elige esa persona la primera vez, y el panel
 ; la prepara. El disfraz lo pone la extensión cuando se enciende.
 Name: "{autodesktop}\{#Nombre}"; \
-  Filename: "{localappdata}\Programs\Microsoft VS Code\Code.exe"; \
+  Filename: "{code:RutaDelEditor}"; \
   IconFilename: "{app}\executivelab.ico"; \
   Comment: "Abre Executive Lab"
 
@@ -125,9 +116,14 @@ begin
          or FileExists(ExpandConstant('{commonpf32}\Microsoft VS Code\Code.exe'));
 end;
 
-function HayQueInstalarElEditor(): Boolean;
+function RutaDelEditor(Param: String): String;
 begin
-  Result := Descargado;
+  Result := ExpandConstant('{localappdata}\Programs\Microsoft VS Code\Code.exe');
+  if FileExists(Result) then Exit;
+  if FileExists(ExpandConstant('{commonpf}\Microsoft VS Code\Code.exe')) then
+    Result := ExpandConstant('{commonpf}\Microsoft VS Code\Code.exe')
+  else if FileExists(ExpandConstant('{commonpf32}\Microsoft VS Code\Code.exe')) then
+    Result := ExpandConstant('{commonpf32}\Microsoft VS Code\Code.exe');
 end;
 
 function AlDescargar(const NombreDelFichero, URL: String; const Progreso, Total: Int64): Boolean;
@@ -141,7 +137,7 @@ begin
 
   PaginaAsistente := CreateInputOptionPage(wpWelcome,
     'Tu asistente', '¿Con cuál vas a trabajar?',
-    'Los dos hacen lo mismo aquí. Si en clase te han dicho uno, elige ese. Si no lo sabes, deja Claude.',
+    'Claude y Codex hacen lo mismo aquí. Si en clase te han dicho uno, elige ese. Si no lo sabes, deja Claude. «Los dos» pone los dos.',
     True, False);
   PaginaAsistente.Add('Claude');
   PaginaAsistente.Add('Codex');
@@ -216,8 +212,77 @@ begin
   RegWriteExpandStringValue(HKEY_CURRENT_USER, 'Environment', 'Path', Actual);
 end;
 
+// Lo que ve la persona cuando el último paso falla: el motivo en una frase, y un
+// informe en el escritorio para su tutor. `preparar.js` ya deja el informe y el
+// motivo (`motivo.txt`, en el código de página de Windows); si ni eso pudo
+// —no arrancó, o se cayó antes—, el informe lo deja el instalador.
+procedure ContarQueHaFallado(Codigo: Integer);
+var
+  App, Informe, Porque: String;
+  Crudo: AnsiString;
+  Lineas: TArrayOfString;
+begin
+  App := ExpandConstant('{app}');
+  Informe := ExpandConstant('{userdesktop}') + '\Informe para tu tutor.txt';
+  Porque := '';
+  if LoadStringFromFile(App + '\motivo.txt', Crudo) then
+    Porque := Trim(String(Crudo));
+  if Porque = '' then
+    Porque := 'el último paso de la instalación se ha parado (código ' + IntToStr(Codigo) + ') y no ha dicho por qué';
+
+  if not FileExists(Informe) then
+  begin
+    SetArrayLength(Lineas, 4);
+    Lineas[0] := 'Executive Lab: la instalación no ha terminado.';
+    Lineas[1] := 'Motivo: ' + Porque;
+    Lineas[2] := '';
+    Lineas[3] := 'El registro, si llegó a escribirse, está en ' + App + '\instalacion.log';
+    SaveStringsToUTF8File(Informe, Lineas, False);
+  end;
+
+  Log('El ultimo paso ha fallado: ' + Porque);
+  SuppressibleMsgBox('No he podido terminar: ' + Porque + '.' + #13#10 + #13#10 +
+    'Te he dejado en el escritorio un informe para tu tutor: «Informe para tu tutor.txt».',
+    mbError, MB_OK, IDOK);
+end;
+
+// El editor (si hubo que descargarlo) y después `preparar.js`, que pone git y las
+// extensiones. Va aquí y no en [Run] para poder mirar cómo terminó.
+procedure PonerLasPiezas();
+var
+  App, Escritorio: String;
+  Codigo: Integer;
+begin
+  App := ExpandConstant('{app}');
+  Escritorio := ExpandConstant('{userdesktop}');
+
+  if Descargado then
+  begin
+    WizardForm.StatusLabel.Caption := 'Instalando el editor...';
+    if not Exec(ExpandConstant('{tmp}\VSCodeUserSetup-x64.exe'),
+        '/VERYSILENT /NORESTART /SUPPRESSMSGBOXES /MERGETASKS=!runcode',
+        '', SW_HIDE, ewWaitUntilTerminated, Codigo) then
+      Codigo := -1;
+    // Si falla, preparar.js lo dirá con sus palabras al no encontrar el editor.
+    Log('Instalador del editor: código ' + IntToStr(Codigo));
+  end;
+
+  DeleteFile(App + '\motivo.txt');
+  WizardForm.StatusLabel.Caption := 'Poniendo el editor y el asistente. Esto tarda un par de minutos...';
+  if not Exec(App + '\runtime\node.exe',
+      '"' + App + '\preparar.js" --asistente "' + AsistenteElegido('') + '" --escritorio "' + Escritorio + '"',
+      App, SW_HIDE, ewWaitUntilTerminated, Codigo) then
+    Codigo := -1;
+  Log('preparar.js: codigo ' + IntToStr(Codigo));
+  if Codigo <> 0 then
+    ContarQueHaFallado(Codigo);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
+  begin
     AnadirAlPath(ExpandConstant('{app}') + '\runtime');
+    PonerLasPiezas();
+  end;
 end;

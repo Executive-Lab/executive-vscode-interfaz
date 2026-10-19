@@ -2951,6 +2951,53 @@ exec git "$@"
     }
   });
 
+  // Decisión 193: el acceso directo del Mac es un applet de `osacompile`, no un guion a mano.
+  await comprobar('el acceso directo del Mac se crea como un applet firmado, con su nombre', () => {
+    if (process.platform !== 'darwin') return 'SALTADA: osacompile solo existe en macOS';
+    const cp = require('node:child_process');
+    const casa = fs.mkdtempSync(path.join(os.tmpdir(), 'acceso-'));
+    try {
+      const instalar = path.join(RAIZ, '..', 'instalador', 'mac', 'instalar.js');
+      const r = cp.spawnSync(process.execPath, ['-e', 'process.stdout.write(require(process.argv[1]).elAccesoDirecto(process.argv[2]))', instalar, '/Applications/Visual Studio Code.app'], { env: { ...process.env, HOME: casa }, encoding: 'utf8' });
+      assert.equal(r.status, 0, r.stderr);
+      const app = r.stdout.trim();
+      assert.equal(app, path.join(casa, 'Applications', 'Mi Empresa.app'));
+      const plist = path.join(app, 'Contents', 'Info.plist');
+      const leer = (k) => cp.spawnSync('/usr/bin/plutil', ['-extract', k, 'raw', plist], { encoding: 'utf8' }).stdout.trim();
+      assert.equal(leer('CFBundleName'), 'Mi Empresa');
+      const exe = path.join(app, 'Contents', 'MacOS', leer('CFBundleExecutable'));
+      assert.match(cp.spawnSync('/usr/bin/file', [exe], { encoding: 'utf8' }).stdout, /Mach-O/, 'el ejecutable no es un Mach-O');
+      assert.equal(cp.spawnSync('/usr/bin/codesign', ['--verify', '--deep', app]).status, 0, 'la firma no se verifica');
+      const guion = cp.spawnSync('/usr/bin/osadecompile', [path.join(app, 'Contents', 'Resources', 'Scripts', 'main.scpt')], { encoding: 'utf8' }).stdout;
+      assert.match(guion, /open -a/);
+      assert.match(guion, /Visual Studio Code\.app/);
+    } finally {
+      fs.rmSync(casa, { recursive: true, force: true });
+    }
+  });
+
+  await comprobar('si el último paso del instalador de Windows falla, deja el informe con el motivo', () => {
+    // Inno no mira cómo termina un paso: antes la persona veía «instalado» sin estarlo.
+    // preparar.js deja motivo.txt (que lee el instalador) y el informe en el escritorio.
+    const { spawnSync } = require('node:child_process');
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'preparar-falla-'));
+    try {
+      const app = path.join(d, 'app');
+      const escritorio = path.join(d, 'Escritorio');
+      fs.mkdirSync(app);
+      for (const f of ['preparar.js', 'git.js', 'ajustes.js', 'ajustes-del-editor.js', 'control-remoto.js']) {
+        fs.copyFileSync(path.join(RAIZ, '..', 'instalador', 'comun', f), path.join(app, f));
+      }
+      const correr = (extra) => spawnSync(process.execPath, [path.join(app, 'preparar.js'), '--asistente', 'claude', '--escritorio', escritorio], { encoding: 'utf8', env: { ...process.env, ...extra } });
+      const r = correr({ EXECUTIVE_LAB_PROBAR_FALLO: '1', GITHUB_ACTIONS: 'true' });
+      assert.equal(r.status, 1, `debía salir con 1: ${r.stderr}`);
+      assert.match(fs.readFileSync(path.join(app, 'motivo.txt'), 'latin1'), /fallo forzado/);
+      const informe = fs.readFileSync(path.join(escritorio, 'Informe para tu tutor.txt'), 'utf8');
+      for (const trozo of ['Motivo: fallo forzado', '--- Progreso', '--- Registro', 'instalación no ha terminado']) assert.ok(informe.includes(trozo), `el informe no lleva «${trozo}»`);
+      return 'motivo.txt + informe con motivo, progreso y registro';
+    } finally { fs.rmSync(d, { recursive: true, force: true }); }
+  });
+
   await comprobar('reinstalar en macOS encima de una instalación vieja no choca con sus enlaces', () => {
     // Al reinstalar, `cpSync` con `force` encima del Node de antes saltaba con
     // «EEXIST, File exists '…/runtime/bin'»: el `bin/npm` viejo era un enlace a otro

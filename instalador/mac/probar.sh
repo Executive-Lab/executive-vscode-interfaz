@@ -178,15 +178,21 @@ comprobar 'nada se ha colado en /usr/local' bash -c '
   [ -e /usr/local/executive-lab ] && { echo "hay restos de la versión vieja en /usr/local"; exit 1; }
   echo "limpio"'
 
-# Sin carpeta: la elige esa persona y la prepara el panel. Si el acceso directo
-# vuelve a llevar una, es que alguien ha devuelto el montaje al instalador.
-comprobar 'el acceso directo abre el editor, sin carpeta' bash -c '
-  [ -d "'"$ACCESO"'" ] || { echo "SALTADA"; exit 0; }
-  abre="'"$ACCESO"'/Contents/MacOS/abrir"
-  [ -x "$abre" ] || { echo "no tiene permiso de ejecución"; exit 1; }
-  grep -q "open -a" "$abre" || { echo "no abre nada"; exit 1; }
-  grep -q "Mi trabajo" "$abre" && { echo "sigue apuntando a una carpeta creada a ciegas"; exit 1; }
-  echo "abre el editor y ya"'
+# El acceso directo es un applet hecho con osacompile (decisión 193), no una app
+# escrita a mano: -10669 de LaunchServices en macOS 26.
+comprobar 'el acceso directo es un applet de verdad, con nombre e icono' bash -c '
+  app="'"$ACCESO"'"
+  [ -d "$app" ] || { echo "SALTADA"; exit 0; }
+  plist="$app/Contents/Info.plist"
+  [ "$(/usr/bin/plutil -extract CFBundleName raw "$plist")" = "Mi Empresa" ] || { echo "no se llama Mi Empresa"; exit 1; }
+  ico="$(/usr/bin/plutil -extract CFBundleIconFile raw "$plist" 2>/dev/null)"
+  [ -n "$ico" ] || { echo "el Info.plist no tiene icono"; exit 1; }
+  [ -f "$app/Contents/Resources/${ico%.icns}.icns" ] || { echo "falta el .icns de $ico"; exit 1; }
+  /usr/bin/plutil -extract CFBundleIconName raw "$plist" >/dev/null 2>&1 && { echo "CFBundleIconName tapa nuestro icono"; exit 1; }
+  exe="$(/usr/bin/plutil -extract CFBundleExecutable raw "$plist")"
+  /usr/bin/file "$app/Contents/MacOS/$exe" | grep -q "Mach-O" || { echo "el ejecutable no es un Mach-O: $exe"; exit 1; }
+  /usr/bin/codesign --verify --deep "$app" 2>&1 || { echo "la firma no se verifica"; exit 1; }
+  echo "$exe (Mach-O), firmado, con icono"'
 
 comprobar 'el arranque del shell lleva nuestro Node' bash -c '
   [ -d "'"$APP"'" ] || { echo "SALTADA"; exit 0; }
