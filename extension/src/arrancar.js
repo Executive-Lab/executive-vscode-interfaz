@@ -1450,7 +1450,8 @@ async function confirmarDentroDeOtro(parte) {
   const igual = 'Prepararla igual';
   const otra = 'Elegir otra carpeta';
   const elegido = await vscode.window.showWarningMessage(
-    `Esta carpeta está dentro de otro proyecto, «${parte.dentroDeOtro.nombre}». Si la preparo, sus copias irán aparte.`,
+    // Sin «proyecto»: desde la 195 nombra a los de dentro de un monorepo, no a lo de arriba.
+    `Esta carpeta está dentro de «${parte.dentroDeOtro.nombre}». Si la preparo, sus copias irán aparte.`,
     { modal: true },
     igual,
     otra,

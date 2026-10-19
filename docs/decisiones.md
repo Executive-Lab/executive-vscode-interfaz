@@ -9593,6 +9593,124 @@ porque solo se probaba la primera instalación y el camino bueno. En Windows se 
 cuadro de verdad (solo se ve sin `/SILENT`); y que el instalador sigue saliendo con 0 aunque falle el último paso (el informe
 y el cuadro son lo que avisa).
 
+## 195. La barra en un monorepo
+
+**Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código; sale con la 0.58.0 · **Vía rápida** `la-barra-en-el-monorepo`
+
+Jose: *«hay que adaptar la interfaz del arnés a un proyecto monorepo estilo mono-repo-executive-lab»*. Esa forma: la raíz
+lleva el arnés y su propio git; cada proyecto es un clon de su repositorio en `03-PROYECTOS/<proyecto>/`, con su propio git,
+que el de la raíz deja fuera en su `.gitignore`; su documentación vive en la raíz, en `02-DOCS/wiki/proyectos/<proyecto>/`;
+y se trabaja siempre desde la raíz. La barra daba por hecho una carpeta, un git y una documentación.
+
+**Lo que salía mal, medido con un monorepo de mentira y el código de `main`**:
+1. Lo de dentro de un proyecto se tomaba por desorden. `sueltas.js` solo reconocía una aplicación por su manifiesto arriba,
+   y `conectores-pymes` o `panel-inspeccion-fundae` no lo tienen (`apps/`, `services/`, `datos/`). Una cuenta de servicio en
+   `03-PROYECTOS/<proyecto>/` salía como fichero de acceso fuera de sitio, y el `.env` de un proyecto del primer nivel, como
+   claves fuera de sitio. Las dos, con un botón que se las llevaba a `01-TOOLS/` y rompía el proyecto.
+2. «✓ Todo guardado» callaba los proyectos: el git de la raíz no los ve.
+3. No había proyectos: ni se veían ni se podía decir «vamos a trabajar en este».
+4. «En qué estamos» y «Seguir donde lo dejé» no leían la documentación de cada proyecto.
+5. Abrir un proyecto solo ofrecía «Preparar esta carpeta»: montar un segundo arnés donde no debe haberlo.
+
+**Qué es un proyecto de dentro (P5)**: una carpeta del primer o del segundo nivel con su propio `.git`, carpeta o fichero (un
+clon, un worktree o un submódulo), sin entrar en las carpetas con punto, `node_modules`, `01-TOOLS/` ni `02-DOCS/`, sin
+seguir enlaces y con tope de 30. No hace falta que la de arriba se llame `03-PROYECTOS`. Lo lee `subproyectos.js`, nuevo.
+
+**Lo que se ha cambiado**:
+1. `sueltas.js`: una carpeta con su propio git es un proyecto aparte, como una aplicación. Lo de dentro no es desorden ni se
+   mueve; sus claves siguen en `paraProteger` y se tapan donde se enseñan.
+2. La línea de las copias solo dice «✓ Todo guardado» si la carpeta **y** cada proyecto lo están; uno que no se pudo mirar
+   no deja decirlo (189). Con la carpeta guardada y un proyecto sin guardar: «Hay cambios sin guardar en «{proyecto}»», con su
+   botón dentro. «Guardar en git» sigue guardando la carpeta, y se dice: «Cada proyecto tiene sus propias copias.».
+3. El apartado **Proyectos** (pieza `proyectos` de `piezas.json`, también en la completa), solo si hay alguno: cómo está cada
+   uno —cambios sin guardar, copias sin subir, la rama si no es la principal— y tres botones: Trabajar en «{proyecto}»,
+   Guardar «{proyecto}» en git (si tiene cambios) y Subir «{proyecto}» a GitHub (si tiene copias sin subir o su rama no está).
+   **Los tres son encargos al asistente**, con las cuatro partes de `encargos.js`: dónde está, qué leer antes (sus reglas y su
+   índice en la documentación, y su `AGENTS.md`, `CLAUDE.md` o `README.md`, solo los que existen) y dónde se documenta. Cada
+   proyecto tiene sus reglas —cómo se escriben las copias, en qué rama, si subir a `main` publica una web o despliega— y
+   saberlas pide leer (P5). La barra **nunca escribe en el git de un proyecto**. Guardar dice «No subas nada a GitHub»; subir
+   pide mirar en sus reglas si eso publica o despliega y, si es así, decirlo y esperar el sí (P9: salir del ordenador en su
+   nombre, solo con su clic). Cómo está cada uno sale de un `git status --porcelain=v2 --branch` por proyecto, todos a la vez,
+   con 5 segundos de tope y lo visto guardado 15 segundos, para que el repintado no se atasque (188).
+4. «En qué estamos» lee también `02-DOCS/wiki/proyectos/<proyecto>/sdd/`, cada cosa con su proyecto, y abrirla exige esa forma
+   exacta y una carpeta que no sea un enlace. «Seguir donde lo dejé» mira también `02-DOCS/wiki/proyectos/<proyecto>/ftd/`, y la
+   línea `next:` de RSC puede nombrarlos.
+5. Dentro de una carpeta que ya tiene el arnés (`queHayEncima` dice ahora `conArnes`), la brújula no ofrece preparar: «Esta
+   carpeta es parte de «{nombre}»», y el botón principal es Abrir «{nombre}». La ruta la vuelve a mirar la extensión; del
+   panel solo llega que se pulsó. Prepararla igual sigue detrás, con el aviso de siempre.
+
+**El git de un proyecto, solo con confianza.** Un `git status` dentro de un repositorio corre su configuración: un filtro
+`clean` suyo es una orden de quien hizo esa carpeta (lo reprodujo la revisión de seguridad de la 147; `core.fsmonitor` ya va
+apagado). Así que cómo está cada proyecto solo se mira si el editor confía en la carpeta, como hace su propio git; sin
+confianza, cada uno sale «No he podido mirar si hay cambios sin guardar» y no se lanza ningún git.
+
+**Lo que trajeron las revisiones adversarias** (ninguna encontró nada que parase la fusión):
+- *Corrección, media*: lo visto de un proyecto se guardaba 15 segundos y nada lo olvidaba; y nada repintaba al moverse su git.
+  Tras «Guardar», la barra seguía diciendo «Cambios sin guardar». Ahora el vigía mira los registros del git de cada proyecto
+  (`*/.git/logs/**` y `*/*/.git/logs/**`), que cambian con una copia, otra rama o una subida y nunca con un `status`, y al
+  verlos moverse olvida lo visto y repinta. El índice no se vigila: lo toca cualquier `status`, también el del editor (188).
+- *Corrección*: dos reglas distintas para el nombre de un proyecto; «mi proyecto» salía en Proyectos y no en En qué
+  estamos. Ahora es una (`subproyectos.nombreQueVale`): espacios, tildes y paréntesis sí; punto delante, «», caracteres de
+  control y separadores de línea, no. Lo de «» también lo pidió la de seguridad: el nombre va dentro del encargo, entre «».
+- *Corrección*: una rama borrada en GitHub con copias nuevas salía «✓ Todo guardado»; ahora «Su rama no está en GitHub». Y
+  un repositorio sin GitHub o sin ninguna copia ofrecía «Subir» para siempre: ahora solo si hay adónde.
+- *Seguridad, baja*: un `.md` que es un enlace dentro de `sdd/` se listaba y se abría (también en la raíz, desde antes).
+  Ahora solo ficheros de verdad.
+
+**La auditoría contra el monorepo de verdad** (Jose: *«revisa, audita y hazlo bien»*). Se cargaron los módulos de la barra
+apuntando a `mono-repo-executive-lab`, solo leyendo, y se vio lo que vería la persona. Salieron ocho proyectos, mirarlos tarda
+0,6 s y no salía nada fuera de sitio, pero había cuatro cosas mal:
+- **«Que los ordene» habría desmontado la documentación de los proyectos.** Conocimiento contaba 402 documentos «sin
+  ordenar», 380 de ellos de `proyectos/<proyecto>/`, y su botón le pide al asistente meterlos en temas. Además decía «Hay 8»
+  (el número de los que enseña, no de los que hay). Ahora la documentación de un proyecto (con su índice, o de un proyecto
+  de dentro) no está sin ordenar, el número es el de verdad, el encargo dice que la deje donde está, y se abre desde Proyectos
+  con «Conocimiento de «x»», el nombre que el diccionario da a la wiki por dentro.
+- **En qué estamos mezclaba 87 documentos** con los tres de la raíz. Ahora va lo de la raíz y, debajo, un desplegable por
+  proyecto.
+- **Los estados salían en crudo y en inglés**: treinta valores (`shipped`, `pass`, `ready_for_ship`, `retracted`…). Pasa
+  desde antes con lo de la raíz. Ahora `proyectos.comoEsta` los dice con once palabras del diccionario, leyendo palabras
+  enteras: lo que va detrás de «after», «with» o «for» cuenta la historia y no se mira, una negación («not-approved», «sin
+  empezar») no se afirma, y lo que no se entiende no sale.
+- **El encargo de subir no leía la tabla que dice qué subida despliega**, en `03-PROYECTOS/README.md`. Ahora los encargos leen
+  primero lo común (`02-DOCS/wiki/proyectos/README.md` y el README de la carpeta que guarda los proyectos).
+
+Y «Seguir donde lo dejé» dice de qué proyecto es el documento («…de «El informe», en «panel-fundae»»).
+
+**Lo que trajeron las dos revisiones del proyecto**:
+- *El vigía del diccionario*:
+  - un proyecto que no se pudo mirar se quedaba sin salida (183). Ahora lleva «Que lo mire el asistente». Sin confianza, el
+    apartado lo dice una vez con «Confiar en esta carpeta», que abre la pantalla del editor, y al darla se repinta.
+  - «Lo que sabe de «x»» era la perífrasis que prohíbe la 98, y la prueba de las perífrasis lo cazó. Ahora es «Conocimiento
+    de «x»».
+  - «comprobado» (ya en el diccionario) en vez de «salió bien».
+  - el encargo de subir decía «despliega», y ya no lo dice.
+  - «Esta carpeta está dentro de «x»», sin llamar proyecto a lo de arriba.
+  - Proyectos entra en la lista de apartados.
+- *El guardián de las pruebas*:
+  - lo que la extensión manda a En qué estamos y a Conocimiento no lo comprobaba nadie. Ahora sí, de punta a punta.
+  - `dondeVive` abría un fichero de fuera si el montón (`specs/`) era un enlace a otra carpeta, también en la raíz y desde
+    antes. Ahora el montón tiene que ser una carpeta de verdad y el sitio real tiene que caer dentro, como en
+    `cerebro.dentroDeLaWiki`.
+  - faltaban pruebas de las negaciones, de cada palabra de los estados, de la documentación con índice y sin clon, y del
+    orden de la línea de las copias.
+  - con un `.git` fichero (worktree o submódulo) los registros viven fuera del proyecto y el vigía no los ve. Ahí lo visto
+    caduca a los 15 segundos. Está dicho en el código, no arreglado.
+- *La última revisión adversaria*, solo sobre lo de la auditoría:
+  - `realpath` en `dondeVive` lo probó con la raíz enlazada y con `/private/var`, y está bien.
+  - «without» le daba la vuelta al estado. Ahora niega, como «not» o «sin».
+  - Una negación se llevaba todo el estado: «pass-no-failures» o «aprobado-sin-cambios» no decían nada. Ahora solo se
+    lleva la palabra que niega.
+  - Lo que va detrás de «then» es lo de ahora: «failed-then-passed» está comprobado.
+  - «hold» suelto ya no es aplazado: «done (hold removed)» está terminado.
+  - Lo de una carpeta de `proyectos/` sin índice ni clon salía «sin ordenar», mientras el encargo decía que no se tocara, y
+    la lista no se vaciaba nunca. Ahora todo lo que cuelga de `proyectos/<proyecto>/` es de su proyecto, sin excepciones.
+
+**Lo que no cambia**: el guardado solo sigue sin correr en un historial que no creó la barra (P4), y un monorepo clonado lo es.
+
+**Fuera**: guardar o subir un proyecto desde la barra sin el asistente; zonas de la brújula por proyecto o por área; vigilar
+`03-PROYECTOS/**` para repintar (con sus `node_modules` sería caro: se mira al repintar); el escaneo de RSC, que cuenta el
+código de los proyectos como evidencia del plan (es de RSC, y en un monorepo es verdad).
+
 ## 196. Otra prueba que fallaba en falso en Windows
 
 **Qué fallaba.** En la máquina de Windows, una vez, la prueba «al pasar a la 3 o al montar, justo antes de escribir» esperaba `[]` en «se decide otra vez en una que ya va en la 3» y salieron las cuatro marcas `.no-*`: la barra creyó que la carpeta seguía en la 2.

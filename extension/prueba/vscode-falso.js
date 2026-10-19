@@ -15,6 +15,8 @@ const registrado = {
   // abierta (decisión 158).
   alCambiarAjustes: [],
   alCambiarCarpetas: [],
+  // Quién escucha cuando el editor pasa a confiar en la carpeta (decisión 195).
+  alConfiar: [],
 };
 
 // Lo que las pruebas pueden cambiar antes de llamar.
@@ -121,6 +123,7 @@ module.exports = {
       return [guion.raiz, ...guion.otrasRaices].map((p, index) => ({ uri: uri(p), name: nombre(p), index }));
     },
     onDidChangeWorkspaceFolders: (oyente) => { registrado.alCambiarCarpetas.push(oyente); return { dispose() {} }; },
+    onDidGrantWorkspaceTrust: (oyente) => { registrado.alConfiar.push(oyente); return { dispose() {} }; },
     onDidChangeConfiguration: (oyente) => { registrado.alCambiarAjustes.push(oyente); return { dispose() {} }; },
     createFileSystemWatcher: (patron) => {
       const oyentes = { crear: null, cambiar: null, borrar: null };

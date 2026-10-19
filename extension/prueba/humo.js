@@ -5506,7 +5506,8 @@ exec git "$@"
 
     const spec = hay[0].cosas[0];
     assert.equal(spec.titulo, 'Vender recambios por internet', 'el título, no el nombre del fichero');
-    assert.equal(spec.estado, 'accepted');
+    // Dicho con el diccionario desde la decisión 195: lo traduce `proyectos.js`, no la pantalla.
+    assert.equal(spec.estado, 'acordado');
 
     // Las tareas se cuentan de la tabla; no se dice cuántas van hechas, porque
     // el fichero no lo dice y no se inventa.
@@ -15005,14 +15006,16 @@ exec git "$@"
     vscode.guion.raiz = hija;
     try {
       const parte = cargar('terreno').mirarYClasificar();
-      assert.deepEqual(parte.dentroDeOtro, { nombre: path.basename(padre) }, 'no se ve el proyecto de encima');
+      assert.equal(parte.dentroDeOtro.nombre, path.basename(padre), 'no se ve el proyecto de encima');
+      // Sin arnés arriba no es parte de una carpeta preparada (decisión 195).
+      assert.equal(parte.dentroDeOtro.conArnes, false);
 
       vscode.registrado.mensajes.length = 0;
       vscode.guion.eleccion = undefined;
       const sinMemoria = { extensionPath: RAIZ, workspaceState: { get: () => undefined, update: async () => {} } };
       const callado = await cargar('arrancar').arrancar(sinMemoria, { appendLine() {} });
       assert.equal(callado.cancelado, true);
-      assert.ok(vscode.registrado.mensajes.some((m) => m.includes(`Esta carpeta está dentro de otro proyecto, «${path.basename(padre)}». Si la preparo, sus copias irán aparte.`)), 'no se dice');
+      assert.ok(vscode.registrado.mensajes.some((m) => m.includes(`Esta carpeta está dentro de «${path.basename(padre)}». Si la preparo, sus copias irán aparte.`)), 'no se dice');
       assert.deepEqual(fs.readdirSync(hija), [], 'se ha escrito algo antes de decirlo');
 
       vscode.guion.eleccion = 'Prepararla igual';
@@ -18136,6 +18139,8 @@ exec git "$@"
       assert.deepEqual(encendidas, {
         tarjetaUnica: true, documentos: true, documentosPlegable: false, acciones: true, ayuda: true, copias: true, pie: true,
         accionesRapidas: false, pulso: false, conocimiento: false, enQueEstamos: false, ajustes: false, comandos: false,
+        // Decisión 194: solo sale en un monorepo.
+        proyectos: true,
       }, 'la tabla de piezas ha cambiado');
       const ajuste = require(path.join(RAIZ, 'package.json')).contributes.configuration.properties['executiveLab.barraCompleta'];
       assert.equal(ajuste.default, false, 'de fábrica tiene que salir la sencilla');
@@ -18263,9 +18268,10 @@ exec git "$@"
         assert.equal(await proveedor.lasCopias(), null, 'sin copias, sale la línea de las copias');
         guardar.copias = async () => [{ cuando: new Date(Date.now() - 5 * 60000).toISOString() }];
         guardar.puedeSubir = async () => false; github.remoto = async () => null; guardar.cambiosSinGuardar = async () => false;
-        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: false, subir: false });
+        // `raizSinGuardar` y `proyectosSinGuardar`: lo de un monorepo (decisión 195); aquí no hay proyectos.
+        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: false, raizSinGuardar: false, proyectosSinGuardar: [], subir: false });
         github.remoto = async () => 'https://github.com/alguien/algo'; guardar.cambiosSinGuardar = async () => true;
-        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: true, subir: true }, 'con sitio en GitHub o cambios, no lo dice');
+        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: true, raizSinGuardar: true, proyectosSinGuardar: [], subir: true }, 'con sitio en GitHub o cambios, no lo dice');
         github.remoto = async () => null; guardar.puedeSubir = async () => true;
         assert.equal((await proveedor.lasCopias()).subir, true, 'con cuenta de GitHub, no ofrece subir');
         guardar.copias = async () => { throw new Error('git roto'); };
@@ -28539,6 +28545,549 @@ exec git "$@"
   });
 
   vscode.guion.rechazaAjuste = rechazaAntes192;
+
+  // ── La barra en un monorepo (decisión 195) ───────────────────────────────
+  //
+  // La raíz con el arnés y su git; cada proyecto, un clon con su propio git que el
+  // de la raíz deja fuera. Uno del segundo nivel sin manifiesto (`apps/`), con una
+  // cuenta de servicio; otro del primer nivel, con su `.env`.
+  const MONO_G = (cwd, ...a) => require('node:child_process').execFileSync('git', ['-c', 'user.name=Ana', '-c', 'user.email=ana@example.com', ...a], { cwd, encoding: 'utf8' });
+  const montarMonorepo = () => {
+    const raiz = montar(fs.mkdtempSync(path.join(os.tmpdir(), 'monorepo-')));
+    const escribir = (rel, c) => { const f = path.join(raiz, ...rel.split('/')); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, c); };
+    escribir('.gitignore', '/03-PROYECTOS/*\n!/03-PROYECTOS/README.md\n/web-suelta/\n');
+    escribir('03-PROYECTOS/README.md', '# Proyectos\n');
+    escribir('03-PROYECTOS/panel-fundae/apps/web/index.js', 'console.log(1);\n');
+    escribir('03-PROYECTOS/panel-fundae/cuenta-de-servicio.json', JSON.stringify({ type: 'service_account', private_key: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n', client_email: 'a@b.iam.gserviceaccount.com' }));
+    escribir('03-PROYECTOS/panel-fundae/README.md', '# Panel\n');
+    escribir('02-DOCS/wiki/proyectos/panel-fundae/reglas-del-asistente.md', '# Reglas\n');
+    escribir('02-DOCS/wiki/proyectos/panel-fundae/index.md', '# Panel\n');
+    escribir('web-suelta/.env', 'RESEND_API_KEY=re_123\n');
+    escribir('web-suelta/src/a.js', '');
+    // Lo que no es un proyecto: sin git, con punto, de dependencias o del arnés.
+    escribir('04-OPERACIONES/README.md', '# Operaciones\n');
+    for (const d of ['.oculto/x', 'node_modules/y', '02-DOCS/z', '01-TOOLS/w']) fs.mkdirSync(path.join(raiz, ...d.split('/'), '.git'), { recursive: true });
+    for (const d of ['03-PROYECTOS/panel-fundae', 'web-suelta']) {
+      MONO_G(path.join(raiz, ...d.split('/')), 'init', '-q', '-b', 'main');
+      MONO_G(path.join(raiz, ...d.split('/')), 'add', '-A');
+      MONO_G(path.join(raiz, ...d.split('/')), 'commit', '-q', '-m', 'Primera');
+    }
+    // La raíz, con todo guardado: su git deja fuera los proyectos.
+    MONO_G(raiz, 'init', '-q', '-b', 'main');
+    MONO_G(raiz, 'add', '-A');
+    MONO_G(raiz, 'commit', '-q', '-m', 'Punto de partida');
+    return raiz;
+  };
+
+  await comprobar('en un monorepo, lo de dentro de un proyecto no es desorden, y sus claves se siguen tapando (decisión 195)', () => {
+    const raiz = montarMonorepo();
+    const antes = vscode.guion.raiz;
+    try {
+      vscode.guion.raiz = raiz;
+      const s = cargar('sueltas');
+      assert.deepEqual(s.ficherosDeAcceso().map((f) => f.donde), [], 'la cuenta de servicio de un proyecto sale como fuera de sitio');
+      assert.deepEqual(s.buscar().map((f) => f.donde), [], 'el .env de un proyecto del primer nivel sale como fuera de sitio');
+      const protegidas = [...s.paraProteger().claves, ...s.paraProteger().ficheros].map((f) => f.donde);
+      assert.ok(protegidas.includes('web-suelta/.env'), 'sus claves tienen que seguir tapándose');
+      assert.ok(protegidas.includes('03-PROYECTOS/panel-fundae/cuenta-de-servicio.json'), 'y su cuenta de servicio también');
+      // Una carpeta normal de la raíz sigue mirándose: lo de ahí sí es de la raíz.
+      fs.writeFileSync(path.join(raiz, '04-OPERACIONES', '.env'), 'HOLDED_API_KEY=abc\n');
+      assert.deepEqual(s.buscar().map((f) => f.donde), ['04-OPERACIONES/.env'], 'una carpeta sin git propio deja de mirarse');
+      return 'nada fuera de sitio; dos tapadas; un área sí se mira';
+    } finally {
+      vscode.guion.raiz = antes;
+    }
+  });
+
+  await comprobar('los proyectos de dentro se leen del disco: su propio git, primer o segundo nivel, su documentación (decisión 195)', () => {
+    const raiz = montarMonorepo();
+    const sp = cargar('subproyectos');
+    const lista = sp.cuales(raiz);
+    assert.deepEqual(lista.map((p) => p.rel), ['03-PROYECTOS/panel-fundae', 'web-suelta'], 'ni con punto, ni node_modules, ni las del arnés, ni sin git');
+    const [panel, web] = lista;
+    assert.equal(panel.nombre, 'panel-fundae');
+    assert.equal(panel.docs, '02-DOCS/wiki/proyectos/panel-fundae');
+    // Lo común primero: el README de la carpeta que guarda los proyectos, donde el monorepo
+    // de verdad dice qué subida despliega; y su índice (aquí no hay `02-DOCS/wiki/proyectos/README.md`).
+    assert.deepEqual(panel.paraLeer, ['03-PROYECTOS/README.md', '02-DOCS/wiki/proyectos/panel-fundae/reglas-del-asistente.md', '02-DOCS/wiki/proyectos/panel-fundae/index.md', '03-PROYECTOS/panel-fundae/README.md']);
+    assert.equal(panel.indice, 'proyectos/panel-fundae/index.md');
+    assert.equal(web.docs, null, 'sin documentación, no se inventa');
+    assert.deepEqual(web.paraLeer, [], 'uno del primer nivel no tiene carpeta de arriba que leer');
+    assert.equal(web.indice, null);
+    fs.writeFileSync(path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'README.md'), '# Proyectos\n');
+    assert.equal(sp.cuales(raiz)[0].paraLeer[0], '02-DOCS/wiki/proyectos/README.md', 'el índice de la documentación de los proyectos no se lee');
+    // Un `.git` que es un enlace no hace proyecto, ni una documentación que es un enlace.
+    fs.mkdirSync(path.join(raiz, 'enlazado'));
+    fs.symlinkSync(path.join(raiz, 'web-suelta', '.git'), path.join(raiz, 'enlazado', '.git'));
+    fs.rmSync(path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae'), { recursive: true });
+    fs.symlinkSync(os.tmpdir(), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae'));
+    const otraVez = sp.cuales(raiz);
+    assert.ok(!otraVez.some((p) => p.rel === 'enlazado'), 'un .git enlazado cuenta como proyecto');
+    assert.equal(otraVez[0].docs, null, 'una documentación enlazada se lee');
+    // Un worktree o un submódulo llevan un fichero `.git`, y sí son proyectos.
+    fs.mkdirSync(path.join(raiz, '03-PROYECTOS', 'otro'));
+    fs.writeFileSync(path.join(raiz, '03-PROYECTOS', 'otro', '.git'), 'gitdir: ../../.git/worktrees/otro\n');
+    assert.ok(sp.cuales(raiz).some((p) => p.rel === '03-PROYECTOS/otro'), 'un .git fichero no cuenta');
+    // Con tope.
+    for (let i = 0; i < sp.TOPE + 5; i += 1) fs.mkdirSync(path.join(raiz, 'muchos', `p${String(i).padStart(2, '0')}`, '.git'), { recursive: true });
+    assert.equal(sp.cuales(raiz).length, sp.TOPE, 'sin tope');
+    // Una carpeta sin proyectos dentro no es un monorepo.
+    assert.deepEqual(sp.cuales(empresa), [], 'la empresa de mentira no tiene proyectos');
+    // Los nombres: con espacios y tildes, sí; con «» o un separador de línea, no (revisión de la 195).
+    const otro = montarMonorepo();
+    for (const n of ['mi proyecto', 'ñandú (nuevo)', 'x«y»', 'a\u2028b']) fs.mkdirSync(path.join(otro, '03-PROYECTOS', n, '.git'), { recursive: true });
+    assert.deepEqual(sp.cuales(otro).map((p) => p.nombre), ['mi proyecto', 'panel-fundae', 'ñandú (nuevo)', 'web-suelta']);
+    assert.equal(sp.nombreQueVale('.oculto'), false);
+    return `${lista.length} proyectos, con tope de ${sp.TOPE}`;
+  });
+
+  await comprobar('cómo está cada proyecto sale de su propio git, y lo que no se puede mirar no es «guardado» (decisión 195)', async () => {
+    const raiz = montarMonorepo();
+    const sp = cargar('subproyectos');
+    sp.olvidar();
+    const [panel] = sp.cuales(raiz);
+    // Sin GitHub no hay adónde subir: no se ofrece (revisión de la 195).
+    assert.deepEqual(await sp.comoEsta(panel), { sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
+    // Con su GitHub de mentira: subido, nada sin subir.
+    const remoto = fs.mkdtempSync(path.join(os.tmpdir(), 'remoto-'));
+    MONO_G(remoto, 'init', '-q', '--bare');
+    MONO_G(panel.ruta, 'remote', 'add', 'origin', remoto);
+    MONO_G(panel.ruta, 'push', '-q', '-u', 'origin', 'main');
+    sp.olvidar();
+    assert.deepEqual(await sp.comoEsta(panel), { sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
+    // Un cambio y una copia sin subir.
+    fs.writeFileSync(path.join(panel.ruta, 'apps', 'web', 'index.js'), 'console.log(2);\n');
+    fs.writeFileSync(path.join(panel.ruta, 'nuevo.md'), 'hola\n');
+    MONO_G(panel.ruta, 'add', 'nuevo.md');
+    MONO_G(panel.ruta, 'commit', '-q', '-m', 'Nuevo');
+    sp.olvidar();
+    assert.deepEqual(await sp.comoEsta(panel), { sinGuardar: 1, sinSubir: 1, rama: 'main', ramaSinSubir: false });
+    // Una rama que nunca se subió, con adónde subirla; y una que se subió y en GitHub se borró.
+    MONO_G(panel.ruta, 'checkout', '-q', '-b', 'nueva');
+    sp.olvidar();
+    assert.equal((await sp.comoEsta(panel)).ramaSinSubir, true, 'una rama nueva no se ofrece subir');
+    MONO_G(panel.ruta, 'push', '-q', '-u', 'origin', 'nueva');
+    sp.olvidar();
+    assert.equal((await sp.comoEsta(panel)).ramaSinSubir, false);
+    MONO_G(panel.ruta, 'push', '-q', 'origin', '--delete', 'nueva');
+    sp.olvidar();
+    assert.equal((await sp.comoEsta(panel)).ramaSinSubir, true, 'una rama borrada en GitHub sale como guardada y subida');
+    MONO_G(panel.ruta, 'checkout', '-q', 'main');
+    // Sin ninguna copia todavía, nada que subir; y una rama suelta no se nombra.
+    assert.equal(sp.leerElEstado('# branch.oid (initial)\n# branch.head main\n').ramaSinSubir, false);
+    assert.deepEqual(sp.leerElEstado('# branch.oid abc\n# branch.head (detached)\n1 .M N... 100644 100644 100644 a b x\n'), { sinGuardar: 1, sinSubir: 0, rama: null, ramaSinSubir: false, conUpstream: false });
+    // Lo visto vale un rato: el repintado no lanza un git cada vez.
+    fs.writeFileSync(path.join(panel.ruta, 'otro.md'), 'otro\n');
+    assert.equal((await sp.comoEsta(panel)).sinGuardar, 1, 'lo visto no se guarda');
+    assert.equal((await sp.comoEsta(panel, { ahora: Date.now() + 60000 })).sinGuardar, 2, 'lo visto no caduca');
+    // Lo que git no deja mirar: `null`, nunca «todo guardado».
+    sp.olvidar();
+    const roto = { ...panel, ruta: path.join(raiz, 'no-existe') };
+    assert.equal((await sp.comoEsta(roto)).sinGuardar, null);
+    return 'sin guardar, sin subir, rama, y null si no se puede';
+  });
+
+  await comprobar('cada proyecto lleva sus botones hechos, y los encargos dicen dónde, sus reglas, y que subir pide el sí (decisión 195)', () => {
+    const raiz = montarMonorepo();
+    const sp = cargar('subproyectos');
+    const [panel] = sp.cuales(raiz);
+    const limpio = sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false, indice: null });
+    assert.deepEqual(limpio.botones.map((b) => b.etiqueta), ['Trabajar en «panel-fundae»']);
+    assert.equal(limpio.estado, '✓ Todo guardado');
+    assert.equal(limpio.guardar, null);
+    const sucio = sp.enPantalla({ ...panel, sinGuardar: 3, sinSubir: 2, rama: 'arreglo', ramaSinSubir: false, indice: null });
+    assert.deepEqual(sucio.botones.map((b) => b.etiqueta), ['Trabajar en «panel-fundae»', 'Guardar «panel-fundae» en git', 'Subir «panel-fundae» a GitHub']);
+    // Con índice, su documentación a un clic, que en Conocimiento no está entre los temas.
+    const conIndice = sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
+    assert.deepEqual(conIndice.botones[1], { etiqueta: 'Conocimiento de «panel-fundae»', icono: '📚', accion: { tipo: 'leerArticulo', ruta: 'proyectos/panel-fundae/index.md' } });
+    assert.equal(sucio.estado, 'Cambios sin guardar · 2 copias sin subir · En la rama «arreglo»');
+    assert.equal(sucio.guardar, sucio.botones[1]);
+    assert.deepEqual(sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'nueva', ramaSinSubir: true }).botones.map((b) => b.etiqueta).filter((e) => e.startsWith('Subir')), ['Subir «panel-fundae» a GitHub'], 'una rama que no está en GitHub se puede subir');
+    const sinMirar = sp.enPantalla({ ...panel, sinGuardar: null, sinSubir: 0, rama: null, ramaSinSubir: false, indice: null });
+    assert.equal(sinMirar.estado, 'No he podido mirar si hay cambios sin guardar');
+    assert.equal(sinMirar.sinGuardar, null);
+    // Ningún aviso sin salida (183): lo mira el asistente, sin cambiar nada.
+    assert.equal(sinMirar.botones[1].etiqueta, 'Que lo mire el asistente');
+    assert.match(sinMirar.botones[1].accion.prompt, /03-PROYECTOS\/panel-fundae\/ tiene cambios sin guardar: su git no contesta[\s\S]*No cambies nada sin preguntarme/);
+    // Sin confianza no es «no contesta»: no se le pregunta. Sin estado; lo dice el apartado.
+    const sinConfianza = sp.enPantalla({ ...panel, sinGuardar: null, sinSubir: 0, rama: null, ramaSinSubir: false, sinConfianza: true, indice: null });
+    assert.equal(sinConfianza.estado, '');
+    assert.equal(sinConfianza.sinConfianza, true);
+    assert.deepEqual(sinConfianza.botones.map((b) => b.etiqueta), ['Trabajar en «panel-fundae»'], 'sin confianza se ofrece mirar o guardar');
+    // P6: ninguno sin texto, todos para el asistente.
+    for (const b of sucio.botones) {
+      assert.equal(b.accion.tipo, 'pedir');
+      assert.ok(b.accion.prompt && !/undefined|null/.test(b.accion.prompt), `${b.etiqueta} sin texto`);
+      assert.match(b.accion.prompt, /03-PROYECTOS\/panel-fundae\//, `${b.etiqueta} no dice dónde`);
+      assert.match(b.accion.prompt, /reglas-del-asistente\.md/, `${b.etiqueta} no manda a sus reglas`);
+      assert.match(b.accion.prompt, /02-DOCS\/wiki\/proyectos\/panel-fundae\//, `${b.etiqueta} no dice dónde se documenta`);
+    }
+    const [trabajar, guardar, subir] = sucio.botones.map((b) => b.accion.prompt);
+    assert.match(trabajar, /no montes un arnés dentro/);
+    assert.match(guardar, /No subas nada a GitHub/);
+    assert.match(subir, /pone algo a la vista de otros[\s\S]*sin palabras técnicas, y espera a que te diga que sí/);
+    assert.ok(!/despliega/.test(subir), 'el encargo de subir dice «despliega»');
+    assert.match(subir, /no fuerces la subida/);
+    return 'tres botones, cuatro partes cada uno';
+  });
+
+  await comprobar('la pantalla: Proyectos solo en un monorepo, y «✓ Todo guardado» solo si los proyectos también (decisión 195)', () => {
+    const pintar = (estado) => require('./panel-falso').montarPanel().mandar({ tipo: 'estado', estado: { listo: true, barraCompleta: false, piezas: { copias: true, proyectos: true }, ...estado } });
+    const proyectosDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:proyectos-de-dentro"[\s\S]*?<\/details>/) || [''])[0];
+    const copiasDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:copias"[\s\S]*?<\/details>/) || [''])[0];
+    const pedir = (p) => ({ tipo: 'pedir', prompt: `Encargo de ${p}` });
+    const guardarlo = { etiqueta: 'Guardar «panel» en git', icono: '💾', accion: pedir('guardar') };
+    const deDentro = [
+      { nombre: 'panel', estado: 'Cambios sin guardar', sinGuardar: true, guardar: guardarlo, botones: [{ etiqueta: 'Trabajar en «panel»', icono: '💬', accion: pedir('trabajar') }, guardarlo] },
+      { nombre: 'web', estado: '✓ Todo guardado', sinGuardar: false, guardar: null, botones: [{ etiqueta: 'Trabajar en «web»', icono: '💬', accion: pedir('trabajar') }] },
+    ];
+    assert.equal(proyectosDe(pintar({ proyectosDeDentro: [] })), '', 'sin proyectos sale el apartado');
+    const conProyectos = pintar({ proyectosDeDentro: deDentro });
+    const apartado = proyectosDe(conProyectos);
+    assert.match(apartado, /Proyectos<span class="cuantos">1 sin guardar<\/span>/);
+    assert.match(apartado, /panel[\s\S]*Cambios sin guardar[\s\S]*Trabajar en «panel»[\s\S]*Guardar «panel» en git[\s\S]*web[\s\S]*✓ Todo guardado[\s\S]*Trabajar en «web»/);
+    assert.ok(apartado.includes('Encargo de trabajar'), 'el botón no lleva su encargo tal cual');
+    // La línea de las copias.
+    const copias = (c) => copiasDe(pintar({ copias: { hace: 'hace un momento', subir: false, ...c } }));
+    assert.match(copias({ sinGuardar: false, raizSinGuardar: false, proyectosSinGuardar: [] }), /✓ Todo guardado, hace un momento/);
+    const soloDentro = copias({ sinGuardar: true, raizSinGuardar: false, proyectosSinGuardar: [{ nombre: 'panel', boton: guardarlo }] });
+    assert.match(soloDentro, /Hay cambios sin guardar en «panel»/);
+    assert.ok(!/Todo guardado/.test(soloDentro), 'dice «Todo guardado» con un proyecto sin guardar');
+    assert.match(soloDentro, /Guardar en git[\s\S]*Guardar «panel» en git[\s\S]*Cada proyecto se guarda aparte, con su botón\. «Guardar en git» guarda el resto de la carpeta\./);
+    assert.match(copias({ sinGuardar: true, raizSinGuardar: false, proyectosSinGuardar: [{ nombre: 'a', boton: guardarlo }, { nombre: 'b', boton: guardarlo }] }), /Hay cambios sin guardar en 2 proyectos/);
+    assert.match(copias({ sinGuardar: true, raizSinGuardar: true, proyectosSinGuardar: [{ nombre: 'panel', boton: guardarlo }] }), /<summary>Hay cambios sin guardar</);
+    assert.match(copias({ sinGuardar: null, raizSinGuardar: false, proyectosSinGuardar: [] }), /No he podido mirar si hay cambios sin guardar/);
+    // Una carpeta normal, como siempre.
+    assert.match(copias({ sinGuardar: false }), /✓ Todo guardado/);
+    assert.ok(!/se guarda aparte/.test(copias({ sinGuardar: false })), 'sin proyectos, sobra la nota');
+    // Sin confianza, el apartado lo dice una vez, con su salida.
+    const sinConfianza = proyectosDe(pintar({ proyectosDeDentro: deDentro.map((p) => ({ ...p, estado: '', sinConfianza: true, botones: p.botones.slice(0, 1) })) }));
+    assert.equal((sinConfianza.match(/no miro cómo está cada proyecto/g) || []).length, 1);
+    assert.match(sinConfianza, /data-accion="[^"]*confiarEnLaCarpeta[^"]*"[^>]*>[\s\S]*?Confiar en esta carpeta/);
+    assert.ok(!/<p class="pista"><\/p>/.test(sinConfianza), 'sin estado sale una línea vacía');
+    assert.ok(!/confiarEnLaCarpeta/.test(proyectosDe(conProyectos)), 'con confianza se ofrece darla');
+    return 'apartado, línea y nota';
+  });
+
+  await comprobar('la barra entera en un monorepo: el estado lleva los proyectos y la línea de las copias no los calla (decisión 195)', async () => {
+    const proveedor = vscode.registrado.proveedor;
+    const brujulaM = cargar('brujula');
+    const rscM = cargar('rsc');
+    const sp = cargar('subproyectos');
+    const raiz = montarMonorepo();
+    const procesosM = cargar('procesos');
+    const antes = { raiz: vscode.guion.raiz, enviar: proveedor.enviar, confianza: vscode.guion.confianza, ejecutar: procesosM.ejecutar };
+    const enviados = [];
+    proveedor.enviar = (m) => enviados.push(m);
+    const otraVez = async () => { rscM.olvidarLaContinuacion(); brujulaM.olvidar(); sp.olvidar(); enviados.length = 0; await proveedor.refrescar(true); return [...enviados].reverse().find((m) => m.tipo === 'estado'); };
+    try {
+      vscode.guion.raiz = raiz;
+      // Sin confianza no se lanza ningún git dentro de un proyecto, y nada es «guardado».
+      const dentro = [];
+      procesosM.ejecutar = (programa, args, opciones) => {
+        if (args.includes('-C') && /03-PROYECTOS|web-suelta/.test(args[args.indexOf('-C') + 1])) dentro.push(args);
+        return antes.ejecutar(programa, args, opciones);
+      };
+      vscode.guion.confianza = false;
+      let estado = await otraVez();
+      assert.deepEqual(dentro, [], 'sin confianza se mira dentro de un proyecto');
+      assert.deepEqual(estado.proyectosDeDentro.map((p) => [p.estado, p.sinConfianza]), [['', true], ['', true]]);
+      assert.match(require('./panel-falso').montarPanel().mandar({ ...estado, barraCompleta: false }), /no miro cómo está cada proyecto[\s\S]*Confiar en esta carpeta/);
+      // «Confiar en esta carpeta» abre la pantalla del editor, y al darla se mira sin recargar.
+      const ejecutadosAntes = vscode.registrado.ejecutados.length;
+      await proveedor.manejar({ tipo: 'confiarEnLaCarpeta' });
+      assert.ok(vscode.registrado.ejecutados.slice(ejecutadosAntes).some((e) => e.id === 'workbench.trust.manage'), 'no abre la pantalla de la confianza');
+      assert.ok(vscode.registrado.alConfiar.length > 0, 'la barra no se entera de que se le da la confianza');
+      vscode.guion.confianza = true;
+      const repintadas = [];
+      const repintar = proveedor.repintarLoQueHaya;
+      proveedor.repintarLoQueHaya = async () => { repintadas.push(1); };
+      try {
+        await Promise.all(vscode.registrado.alConfiar.map((f) => f()));
+      } finally {
+        proveedor.repintarLoQueHaya = repintar;
+      }
+      assert.equal(repintadas.length > 0, true, 'al darle la confianza no se repinta');
+      assert.notEqual(estado.copias && estado.copias.sinGuardar, false, 'sin mirar los proyectos dice «Todo guardado»');
+      vscode.guion.confianza = true;
+      estado = await otraVez();
+      assert.equal(dentro.filter((a) => a.includes('status')).length, 2, 'con confianza, un git status por proyecto');
+      assert.deepEqual(estado.proyectosDeDentro.map((p) => p.nombre), ['panel-fundae', 'web-suelta']);
+      assert.equal(estado.copias.sinGuardar, false, `con todo guardado: ${JSON.stringify(estado.copias)}`);
+      fs.writeFileSync(path.join(raiz, '03-PROYECTOS', 'panel-fundae', 'nuevo.md'), 'hola\n');
+      estado = await otraVez();
+      assert.equal(estado.copias.raizSinGuardar, false, 'el git de la raíz ve el proyecto');
+      assert.equal(estado.copias.sinGuardar, true, 'la línea de las copias calla el proyecto');
+      assert.deepEqual(estado.copias.proyectosSinGuardar.map((p) => p.nombre), ['panel-fundae']);
+      assert.equal(estado.copias.proyectosSinGuardar[0].boton.etiqueta, 'Guardar «panel-fundae» en git');
+      const html = require('./panel-falso').montarPanel().mandar({ ...estado, barraCompleta: false });
+      assert.match(html, /Hay cambios sin guardar en «panel-fundae»/);
+      // Guardado por el asistente: lo visto deja de valer en cuanto el vigía ve moverse
+      // su git, sin esperar los 15 segundos (revisión de la 195).
+      assert.ok(cargar('subproyectos').LOS_REGISTROS.every((g) => vscode.registrado.vigia.patron.includes(g)), 'el vigía no mira el git de los proyectos');
+      const sinOlvidar = async () => { rscM.olvidarLaContinuacion(); brujulaM.olvidar(); enviados.length = 0; await proveedor.refrescar(true); return [...enviados].reverse().find((m) => m.tipo === 'estado'); };
+      MONO_G(path.join(raiz, '03-PROYECTOS', 'panel-fundae'), 'add', 'nuevo.md');
+      MONO_G(path.join(raiz, '03-PROYECTOS', 'panel-fundae'), 'commit', '-q', '-m', 'Lo nuevo');
+      assert.equal((await sinOlvidar()).copias.sinGuardar, true, 'lo visto no se guarda un rato');
+      vscode.registrado.vigia.disparar(path.join(raiz, '03-PROYECTOS', 'panel-fundae', '.git', 'logs', 'HEAD'));
+      assert.equal((await sinOlvidar()).copias.sinGuardar, false, 'tras una copia nueva sigue diciendo «Cambios sin guardar»');
+      assert.match(html, /data-abrir="grupo:proyectos-de-dentro"[\s\S]*Trabajar en «panel-fundae»/);
+      // En la carpeta de siempre no cambia nada.
+      vscode.guion.raiz = empresa;
+      estado = await otraVez();
+      assert.deepEqual(estado.proyectosDeDentro, []);
+      return 'dos proyectos; uno sin guardar, dicho';
+    } finally {
+      vscode.guion.raiz = antes.raiz;
+      vscode.guion.confianza = antes.confianza;
+      procesosM.ejecutar = antes.ejecutar;
+      proveedor.enviar = antes.enviar;
+      sp.olvidar();
+    }
+  });
+
+  await comprobar('«Seguir donde lo dejé» y «En qué estamos» leen la documentación de cada proyecto (decisión 195)', () => {
+    const raiz = montarMonorepo();
+    const ibasM = cargar('por-donde-ibas');
+    const escribir = (rel, c, cuando) => {
+      const f = path.join(raiz, ...rel.split('/'));
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      fs.writeFileSync(f, c);
+      if (cuando) fs.utimesSync(f, cuando, cuando);
+    };
+    const doc = (titulo, paso) => `---\ntype: ftd\ntitle: ${titulo}\nstatus: en curso\n---\n\n# ${titulo}\n\n## Checklist\n\n- [ ] ${paso}\n- [ ] Otra cosa\n\n## Next\n\n${paso}\n`;
+    const ayer = new Date(Date.now() - 86400000);
+    escribir('02-DOCS/wiki/ftd/lo-de-la-raiz.md', doc('Lo de la raíz', 'Ordenar las facturas'), ayer);
+    escribir('02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', doc('El informe', 'Sacar los cinco registros'));
+    let ibas = ibasM.porDondeIbas(raiz, '');
+    assert.equal(ibas.ruta, '02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', 'el más reciente es el del proyecto');
+    assert.match(ibas.texto, /Sacar los cinco registros, y te quedan 2 pasos de «El informe», en «panel-fundae»\./, 'no dice de qué proyecto es');
+    assert.match(ibas.accion.prompt, /02-DOCS\/wiki\/proyectos\/panel-fundae\/ftd\/el-informe\.md/);
+    // La línea `next:` de RSC también puede nombrar uno de un proyecto.
+    ibas = ibasM.porDondeIbas(raiz, 'next: 02-DOCS/wiki/ftd/lo-de-la-raiz.md: Ordenar las facturas (2 open)');
+    assert.equal(ibas.ruta, '02-DOCS/wiki/ftd/lo-de-la-raiz.md');
+    fs.utimesSync(path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'ftd', 'el-informe.md'), ayer, ayer);
+    fs.utimesSync(path.join(raiz, '02-DOCS', 'wiki', 'ftd', 'lo-de-la-raiz.md'), new Date(), new Date());
+    ibas = ibasM.porDondeIbas(raiz, 'next: 02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md: Sacar los cinco registros (2 open)');
+    assert.equal(ibas.ruta, '02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', 'el next de un proyecto no se lee');
+    assert.deepEqual(ibasM.porDondeIbas(raiz, 'next: 02-DOCS/wiki/proyectos/../ftd/x.md: a (1 open)').ruta, '02-DOCS/wiki/ftd/lo-de-la-raiz.md', 'un next que sale de su sitio se lee');
+    // Una carpeta de proyecto que es un enlace no se lee.
+    const fuera = fs.mkdtempSync(path.join(os.tmpdir(), 'ftd-fuera-'));
+    fs.mkdirSync(path.join(fuera, 'ftd'));
+    fs.writeFileSync(path.join(fuera, 'ftd', 'ajeno.md'), doc('Ajeno', 'No debería salir'));
+    fs.symlinkSync(fuera, path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'enlazado'));
+    fs.utimesSync(path.join(raiz, '02-DOCS', 'wiki', 'ftd', 'lo-de-la-raiz.md'), ayer, ayer);
+    assert.ok(!/No debería salir/.test(JSON.stringify(ibasM.porDondeIbas(raiz, ''))), 'una carpeta enlazada se lee');
+
+    // «En qué estamos».
+    const antes = vscode.guion.raiz;
+    try {
+      vscode.guion.raiz = raiz;
+      const proyectosM = cargar('proyectos');
+      escribir('02-DOCS/wiki/sdd/specs/la-raiz.md', '---\ntitle: Lo de la raíz\nstatus: approved\n---\n');
+      escribir('02-DOCS/wiki/proyectos/panel-fundae/sdd/specs/los-registros.md', '---\ntitle: Los cinco registros\nstatus: approved\n---\n| T001 | a |\n');
+      escribir('02-DOCS/wiki/proyectos/enlazado-no/sdd', '');
+      fs.mkdirSync(path.join(fuera, 'sdd', 'specs'), { recursive: true });
+      fs.writeFileSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), '# Ajena\n');
+      // Lo de la raíz, solo; lo de cada proyecto, aparte.
+      const specs = proyectosM.queHay().find((m) => m.id === 'specs').cosas;
+      assert.ok(specs.some((c) => c.fichero === 'specs/la-raiz.md' && c.estado === 'acordado'));
+      assert.ok(!specs.some((c) => c.proyecto), 'lo de un proyecto sale mezclado con lo de la raíz');
+      const aparte = proyectosM.deLosProyectos();
+      assert.deepEqual(aparte.map((p) => p.nombre), ['panel-fundae'], 'lo de un proyecto no sale, o sale lo de uno enlazado');
+      assert.deepEqual(aparte[0].montones.map((m) => [m.id, m.cosas.map((c) => [c.fichero, c.titulo, c.estado, c.tareas])]),
+        [['specs', [['proyectos/panel-fundae/sdd/specs/los-registros.md', 'Los cinco registros', 'acordado', 1]]]]);
+      assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/specs/los-registros.md'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'specs', 'los-registros.md'));
+      assert.ok(proyectosM.dondeVive('specs/la-raiz.md'), 'lo de la raíz deja de abrirse');
+      for (const malo of ['proyectos/enlazado/sdd/specs/ajena.md', 'proyectos/../sdd/specs/la-raiz.md', 'proyectos/panel-fundae/sdd/specs/../../../../../etc/x.md', 'proyectos/panel-fundae/otra/specs/a.md', '../proyectos/panel-fundae/sdd/specs/los-registros.md']) {
+        assert.equal(proyectosM.dondeVive(malo), null, `se abre ${malo}`);
+      }
+      // Un .md que es un enlace no sale ni se abre, tampoco en la raíz (revisión de seguridad de la 195).
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'specs', 'enlace.md'));
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), path.join(raiz, '02-DOCS', 'wiki', 'sdd', 'specs', 'enlace.md'));
+      const conEnlaces = [...proyectosM.queHay(), ...proyectosM.deLosProyectos().flatMap((p) => p.montones)].find((m) => m.id === 'specs').cosas.map((c) => c.fichero)
+        .concat(...proyectosM.deLosProyectos().flatMap((p) => p.montones.map((m) => m.cosas.map((c) => c.fichero))));
+      assert.ok(!conEnlaces.some((f) => f.endsWith('enlace.md')), `sale un enlace: ${conEnlaces}`);
+      assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/specs/enlace.md'), null);
+      assert.equal(proyectosM.dondeVive('specs/enlace.md'), null);
+      // Un montón entero enlazado a otra carpeta: ni se lista ni se abre (revisión del guardián).
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'plans'));
+      fs.rmSync(path.join(raiz, '02-DOCS', 'wiki', 'sdd', 'plans'), { recursive: true, force: true });
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs'), path.join(raiz, '02-DOCS', 'wiki', 'sdd', 'plans'));
+      assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/plans/ajena.md'), null, 'se abre lo de un montón enlazado de un proyecto');
+      assert.equal(proyectosM.dondeVive('plans/ajena.md'), null, 'se abre lo de un montón enlazado de la raíz');
+      assert.ok(!JSON.stringify([proyectosM.queHay(), proyectosM.deLosProyectos()]).includes('ajena'), 'se lista lo de un montón enlazado');
+      // Un proyecto con espacios en el nombre, como en Proyectos.
+      escribir('02-DOCS/wiki/proyectos/mi proyecto/sdd/specs/con-espacio.md', '---\ntitle: Con espacio\n---\n');
+      escribir('02-DOCS/wiki/proyectos/mi proyecto/ftd/a-medias.md', doc('A medias', 'Terminar lo del espacio'));
+      assert.ok(proyectosM.deLosProyectos().some((p) => p.nombre === 'mi proyecto'), 'un proyecto con espacio no sale en En qué estamos');
+      assert.equal(ibasM.porDondeIbas(raiz, '').ruta, '02-DOCS/wiki/proyectos/mi proyecto/ftd/a-medias.md', 'ni en Seguir donde lo dejé');
+      const html = require('./panel-falso').montarPanel().mandar({ tipo: 'proyectos', montones: proyectosM.queHay(), deLosProyectos: proyectosM.deLosProyectos() });
+      assert.match(html, /Lo de la raíz[\s\S]*<h2>Proyectos<\/h2>[\s\S]*data-abrir="enQueEstamos:panel-fundae"[\s\S]*panel-fundae<span class="cuantos">1 documento<\/span>[\s\S]*Los cinco registros<\/p>\s*<p class="pista">acordado · 1 tarea/);
+      // Sin proyectos, como siempre: nada de «Proyectos».
+      assert.ok(!/<h2>Proyectos<\/h2>/.test(require('./panel-falso').montarPanel().mandar({ tipo: 'proyectos', montones: proyectosM.queHay() })));
+
+      // Conocimiento: la documentación de un proyecto no está «sin ordenar», y «Que los ordene» la deja quieta.
+      const cerebroM = cargar('cerebro');
+      escribir('02-DOCS/wiki/proyectos/sin-indice-ni-clon/nota.md', '# Una nota\n');
+      // Con su índice y sin clon en este ordenador («Clona solo los que necesites»): sigue siendo suya.
+      escribir('02-DOCS/wiki/proyectos/sin-clonar/index.md', '# Sin clonar\n');
+      escribir('02-DOCS/wiki/proyectos/sin-clonar/ftd/algo.md', '# Algo\n');
+      // «mi proyecto» no tiene índice: cuenta por ser un proyecto de dentro.
+      fs.mkdirSync(path.join(raiz, '03-PROYECTOS', 'mi proyecto', '.git'), { recursive: true });
+      const sueltos = cerebroM.sinOrdenar().map((d) => d.ruta);
+      assert.ok(!sueltos.some((r) => /^proyectos\/(panel-fundae|mi proyecto|sin-clonar)\//.test(r)), `la documentación de un proyecto sale sin ordenar: ${sueltos}`);
+      // Todo lo de una carpeta de `proyectos/`, también sin índice ni clon: el encargo de
+      // ordenar dice que lo deje, y con excepciones la lista no se vaciaba nunca.
+      assert.ok(!sueltos.includes('proyectos/sin-indice-ni-clon/nota.md'), 'lo de un proyecto sin índice ni clon sale sin ordenar');
+      escribir('02-DOCS/wiki/proyectos/suelta-arriba.md', '# Suelta\n');
+      assert.ok(cerebroM.sinOrdenar().some((d) => d.ruta === 'proyectos/suelta-arriba.md'), 'una nota suelta en proyectos/, sin carpeta, sí está sin ordenar');
+      const cerebroHtml = require('./panel-falso').montarPanel().mandar({ tipo: 'cerebro', temas: [], sinOrdenar: [{ ruta: 'proyectos/suelta-arriba.md', titulo: 'Una nota' }], cuantosSinOrdenar: 402 });
+      assert.match(cerebroHtml, /Hay 402 documentos escritos que aún no están en su tema/, 'el número es el de los que se enseñan');
+      assert.match(cerebroHtml, /proyectos\/&lt;proyecto&gt;\/ es la documentación de cada proyecto: déjalo donde está|proyectos\/<proyecto>\/ es la documentación de cada proyecto: déjalo donde está/);
+      return 'el del proyecto se ofrece y se abre; el enlazado, no';
+    } finally {
+      vscode.guion.raiz = antes;
+    }
+  });
+
+  await comprobar('lo que la extensión manda de los proyectos llega a la pantalla: En qué estamos, Conocimiento y las copias (decisión 195)', async () => {
+    const proveedor = vscode.registrado.proveedor;
+    const raiz = montarMonorepo();
+    const antes = { raiz: vscode.guion.raiz, enviar: proveedor.enviar };
+    const enviados = [];
+    proveedor.enviar = (m) => enviados.push(m);
+    const escribir = (rel, c) => { const f = path.join(raiz, ...rel.split('/')); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, c); };
+    try {
+      vscode.guion.raiz = raiz;
+      // La raíz sin nada de SDD, y un proyecto con: En qué estamos tiene que salir.
+      fs.rmSync(path.join(raiz, '02-DOCS', 'wiki', 'sdd'), { recursive: true, force: true });
+      escribir('02-DOCS/wiki/proyectos/panel-fundae/sdd/specs/los-registros.md', '---\ntitle: Los cinco registros\nstatus: shipped\n---\n');
+      const proyectosM = cargar('proyectos');
+      assert.equal(proyectosM.hayAlgo(), true, 'con SDD solo en un proyecto, En qué estamos no sale');
+      enviados.length = 0;
+      await proveedor.verProyectos();
+      const enQue = enviados.find((m) => m.tipo === 'proyectos');
+      assert.deepEqual(enQue.montones, []);
+      assert.deepEqual(enQue.deLosProyectos.map((p) => [p.nombre, p.montones[0].cosas[0].estado]), [['panel-fundae', 'terminado']], 'la pantalla no recibe lo de los proyectos');
+      assert.match(require('./panel-falso').montarPanel().mandar(enQue), /Los cinco registros[\s\S]*terminado/);
+      // Conocimiento: cuántos hay de verdad, no los ocho que se enseñan.
+      for (let i = 0; i < 12; i += 1) escribir(`02-DOCS/wiki/sueltos/nota-${i}.md`, `# Nota ${i}\n`);
+      enviados.length = 0;
+      await proveedor.verCerebro();
+      const cerebroM = enviados.find((m) => m.tipo === 'cerebro');
+      assert.equal(cerebroM.sinOrdenar.length, 8);
+      assert.equal(cerebroM.cuantosSinOrdenar, cargar('cerebro').sinOrdenar().length);
+      assert.ok(cerebroM.cuantosSinOrdenar >= 12, `dice ${cerebroM.cuantosSinOrdenar}`);
+      // La línea de las copias: un proyecto sin guardar y otro sin mirar es «sin guardar», no «sin mirar».
+      MONO_G(raiz, 'add', '-A');
+      MONO_G(raiz, 'commit', '-q', '-m', 'Lo de la prueba');
+      const copias = await proveedor.lasCopias([
+        { nombre: 'a', sinGuardar: true, guardar: { etiqueta: 'Guardar «a» en git', accion: { tipo: 'pedir', prompt: 'x' } } },
+        { nombre: 'b', sinGuardar: null, guardar: null },
+      ]);
+      assert.equal(copias.sinGuardar, true);
+      assert.deepEqual(copias.proyectosSinGuardar.map((p) => p.nombre), ['a']);
+      assert.equal((await proveedor.lasCopias([{ nombre: 'b', sinGuardar: null, guardar: null }])).sinGuardar, null, 'con uno sin mirar dice «Todo guardado»');
+      return 'En qué estamos, Conocimiento y las copias, de la extensión a la pantalla';
+    } finally {
+      vscode.guion.raiz = antes.raiz;
+      proveedor.enviar = antes.enviar;
+    }
+  });
+
+  await comprobar('cómo está cada cosa de En qué estamos se dice con el diccionario, nunca en crudo (decisión 195)', () => {
+    const { comoEsta } = cargar('proyectos');
+    // Los de un monorepo de verdad, el 19-10-2026, y lo que dicen.
+    const esperado = {
+      done: 'terminado', shipped: 'terminado', pass: 'comprobado', draft: 'en borrador', aprobada: 'acordado', verified: 'comprobado',
+      'approved-autopilot': 'acordado', approved: 'acordado', stable: 'acordado', 'aprobado-en-autopiloto': 'acordado', active: 'en marcha',
+      'in-progress': 'en marcha', in_progress: 'en marcha', approve: 'acordado', complete: 'terminado', aprobado: 'acordado',
+      verified_for_publication: 'comprobado', passed: 'comprobado', deferred: 'aplazado', database_import_complete: 'terminado',
+      clarified: 'en revisión', blocked: 'parado', 'authorized-scope': 'acordado', 'approved-shipped': 'terminado', retracted: 'retirado',
+      research_complete_pending_scope_discussion: 'en borrador', ready_for_ship: 'acordado', ratified: 'acordado',
+      'passed-with-fixes': 'comprobado', 'pass-implemented-with-explicit-risk': 'comprobado', superseded: 'sustituido', accepted: 'acordado',
+      failed: 'salió mal', review: 'en revisión', 'Done ': 'terminado', gathering_requirements: 'en borrador',
+      // Los que el vigía del diccionario vio mal dichos por trozos (revisión de la 195).
+      implemented: 'terminado', 'approved-after-review': 'acordado', reviewed: 'acordado', pending_review: 'en revisión',
+      'in review': 'en revisión', Terminado: 'terminado', 'En curso': 'en marcha', 'aprobación pendiente': 'en borrador',
+      // Los de la última revisión: «without», la negación que solo niega una palabra, y lo de ahora.
+      'accepted-without-review': 'acordado', 'closed-without-merge': 'terminado', 'pass-no-failures': 'comprobado',
+      'verified-no-issues': 'comprobado', done_no_regressions: 'terminado', 'aprobado-sin-cambios': 'acordado',
+      'Verificado, sin fallos': 'comprobado', 'failed-then-passed': 'comprobado', 'done (hold removed)': 'terminado',
+      'todavía no revisado': '', 'v2-approved': 'acordado',
+    };
+    const mal = Object.entries(esperado).filter(([v, d]) => comoEsta(v) !== d).map(([v, d]) => `${v}: «${comoEsta(v)}» y no «${d}»`);
+    assert.deepEqual(mal, []);
+    for (const nada of ['', '   ', 'xyz', '42', 'inactive', 'unpassed', 'redone', 'incomplete', 'unapproved', 'disapproved', 'not-approved', 'not_started', 'no aprobado', 'sin empezar', 'todavía no revisado', 'never shipped', 'on hold', null, undefined, 7]) {
+      assert.equal(comoEsta(nada), '', `«${nada}» sale en crudo, o afirma lo que niega`);
+    }
+    // Cada palabra que se entiende, una a una, escrita aquí aparte: quitar una de la tabla
+    // de `proyectos.js` tiene que notarse (revisión del guardián de las pruebas).
+    const cadaUna = {
+      sustituido: 'superseded sustituido sustituida replaced reemplazado reemplazada',
+      retirado: 'retracted cancelled canceled abandoned deprecated rejected withdrawn retirado retirada descartado descartada cancelado cancelada rechazado rechazada',
+      'salió mal': 'failed fail failing fallido fallida suspendido',
+      parado: 'blocked bloqueado bloqueada stuck parado parada',
+      aplazado: 'deferred postponed paused aplazado aplazada pausado pausada',
+      'en revisión': 'review reviewing revision revisando clarified clarificado clarificada',
+      'en borrador': 'draft borrador proposed propuesto propuesta pending pendiente gathering research wip idea',
+      comprobado: 'pass passed verified comprobado comprobada verificado verificada',
+      terminado: 'done shipped complete completed finished implemented delivered merged closed published hecho hecha terminado terminada cerrado cerrada publicado publicada completado completada',
+      acordado: 'approved approve accepted agreed ratified authorized authorised stable ready reviewed aprobado aprobada aceptado aceptada acordado acordada listo lista revisado revisada',
+      'en marcha': 'progress active ongoing started doing implementing curso marcha activo activa empezado empezada',
+    };
+    const malDichas = Object.entries(cadaUna).flatMap(([dicho, palabras]) => palabras.split(' ').filter((w) => comoEsta(w) !== dicho).map((w) => `${w} → «${comoEsta(w)}», no «${dicho}»`));
+    assert.deepEqual(malDichas, []);
+    for (const [v, d] of Object.entries({ 'en curso': 'en marcha', Bloqueado: 'parado', 'pendiente de revisión': 'en revisión', 'Revisión pendiente': 'en revisión', 'Aprobada con cambios': 'acordado' })) assert.equal(comoEsta(v), d, v);
+    // Todo lo que puede salir está en el diccionario.
+    const dicc = fs.readFileSync(path.join(RAIZ, '..', 'docs', 'diccionario.md'), 'utf8');
+    for (const d of new Set(Object.values(esperado))) assert.ok(dicc.includes(d), `«${d}» no está en el diccionario`);
+    return `${Object.keys(esperado).length} valores de verdad, ${Object.values(cadaUna).join(' ').split(' ').length} palabras, negaciones`;
+  });
+
+  await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 195)', async () => {
+    const raiz = montarMonorepo();
+    const brujulaM = cargar('brujula');
+    const proveedor = vscode.registrado.proveedor;
+    const antes = { raiz: vscode.guion.raiz, ejecutados: vscode.registrado.ejecutados.length };
+    const pintar = (estado) => require('./panel-falso').montarPanel().mandar({ tipo: 'estado', estado });
+    try {
+      for (const dentro of ['03-PROYECTOS/panel-fundae', '04-OPERACIONES']) {
+        vscode.guion.raiz = path.join(raiz, ...dentro.split('/'));
+        brujulaM.olvidar();
+        const estado = await brujulaM.estado({ fresco: true });
+        assert.equal(estado.sinArnes, true);
+        assert.deepEqual(estado.parteDe, { nombre: path.basename(raiz) }, `${dentro}: no dice de qué es parte`);
+        assert.equal(estado.donde, `Esta carpeta es parte de «${path.basename(raiz)}»`);
+        const html = pintar(estado);
+        assert.match(html, new RegExp(`class="[^"]*principal[^"]*"[^>]*data-accion="[^"]*abrirLaDeArriba[^"]*"[^>]*>[\\s\\S]*?Abrir «${path.basename(raiz)}»`), `${dentro}: el botón principal no es abrir la de arriba`);
+        assert.match(html, /Prepararla igual/, 'prepararla igual tiene que seguir ahí');
+        assert.ok(!/Preparar esta carpeta|Puedo añadir el asistente/.test(html), `${dentro}: se ofrece montar otro arnés dentro`);
+      }
+      // Abrir: la ruta la mira la extensión, no llega del panel.
+      vscode.guion.raiz = path.join(raiz, '03-PROYECTOS', 'panel-fundae');
+      await proveedor.abrirLaDeArriba();
+      const abierta = vscode.registrado.ejecutados.slice(antes.ejecutados).find((e) => e.id === 'vscode.openFolder');
+      assert.ok(abierta, 'no se abre ninguna carpeta');
+      // Comparadas como rutas, no como texto: en Windows el JSON dobla las «\\» y la unidad cambia de mayúscula.
+      const real = (r) => (fs.realpathSync.native || fs.realpathSync)(r);
+      assert.ok(cargar('rutas').mismoSitio(real(abierta.args[0].fsPath), real(raiz)), `se abre otra: ${abierta.args[0].fsPath}`);
+      // Dentro de un git sin arnés, como siempre: se ofrece preparar.
+      const sinArnes = fs.mkdtempSync(path.join(os.tmpdir(), 'git-sin-arnes-'));
+      MONO_G(sinArnes, 'init', '-q');
+      fs.mkdirSync(path.join(sinArnes, 'dentro'));
+      vscode.guion.raiz = path.join(sinArnes, 'dentro');
+      brujulaM.olvidar();
+      const normal = await brujulaM.estado({ fresco: true });
+      assert.equal(normal.parteDe, undefined, 'dentro de un git sin arnés no es parte de una preparada');
+      assert.match(pintar(normal), /Preparar esta carpeta/);
+      return 'un proyecto y un área: abrir la raíz; un git sin arnés, como siempre';
+    } finally {
+      vscode.guion.raiz = antes.raiz;
+      brujulaM.olvidar();
+    }
+  });
 
   // --------------------------------------------- el wizard, de verdad
   // Monta un arnés entero: tarda minutos y toca la red, así que no va en la

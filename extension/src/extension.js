@@ -82,6 +82,7 @@ const pulso = require('./pulso');
 const fijadas = require('./fijadas');
 const tema = require('./tema');
 const proyectos = require('./proyectos');
+const subproyectos = require('./subproyectos');
 const agentes = require('./agentes');
 const asistentes = require('./asistentes');
 const trato = require('./trato');
@@ -892,6 +893,8 @@ ${cabecera}
     this.ponerleElNombre();
     this.enviar({ tipo: 'cargando' });
     const suya = marca.leer();
+    // Una vez por repintado: lo usan Proyectos y la línea de las copias (decisión 195).
+    const deDentro = await this.losProyectosDeDentro();
     this.enviar({
       tipo: 'estado',
       estado: await brujula.estado({ fresco }),
@@ -950,7 +953,9 @@ ${cabecera}
       sigueSinCopias: this.eligioSinCopias(),
       // Para la sencilla: lo que hay en Acciones, la línea de las copias y la versión.
       habilidades: this.habilidadesSuyas(),
-      copias: await this.lasCopias(),
+      copias: await this.lasCopias(deDentro),
+      // En un monorepo, sus proyectos: cómo está cada uno y sus botones (decisión 195).
+      proyectosDeDentro: deDentro,
       versionDeLaBarra: this.versionDeLaBarra(),
       // Lo nuevo de la versión que acaba de poner. Antes de mirar si hay otra:
       // mirar deja escrito en el almacén que esta barra ya se usaba.
@@ -994,18 +999,42 @@ ${cabecera}
   }
 
   // La línea de las copias: solo si la carpeta las tiene.
-  async lasCopias() {
+  //
+  // En un monorepo, «✓ Todo guardado» tiene que valer también para sus proyectos,
+  // que tienen su propio git y el de la raíz deja fuera (decisión 195). Los que
+  // tienen cambios van con su botón; uno que no se pudo mirar no deja decir
+  // «Todo guardado».
+  async lasCopias(deDentro = []) {
     try {
       const [ultima] = await copias.copias(1);
       if (!ultima) return null;
       const hace = copias.haceUnRato(ultima.cuando);
       const subir = Boolean(await copias.puedeSubir()) || Boolean(await github.remoto());
       const cambios = await copias.cambiosSinGuardar();
+      const proyectosSinGuardar = deDentro.filter((p) => p.sinGuardar === true)
+        .map((p) => ({ nombre: p.nombre, boton: p.guardar }));
+      const sinMirar = cambios === null || deDentro.some((p) => p.sinGuardar === null);
       // `null`: no se pudo mirar, y la barra no dice «todo guardado» (decisión 189).
-      return { hace, sinGuardar: cambios === null ? null : cambios > 0, subir };
+      return {
+        hace,
+        sinGuardar: cambios > 0 ? true : proyectosSinGuardar.length ? true : sinMirar ? null : false,
+        raizSinGuardar: cambios === null ? null : cambios > 0,
+        proyectosSinGuardar,
+        subir,
+      };
     } catch (error) {
       this.salida.appendLine(`[copias] ${error.message}`); // diccionario: interno
       return null;
+    }
+  }
+
+  // Los proyectos de dentro, si esto es un monorepo (decisión 195). Vacío si no.
+  async losProyectosDeDentro() {
+    try {
+      return (await subproyectos.comoEstan(subproyectos.cuales(), { conConfianza: vscode.workspace.isTrusted !== false })).map(subproyectos.enPantalla);
+    } catch (error) {
+      this.salida.appendLine(`[proyectos de dentro] ${error.message}`); // diccionario: interno
+      return [];
     }
   }
 
@@ -1672,6 +1701,9 @@ ${cabecera}
       abrirCarpetaDeSalida: () => salidas.abrirLaCarpeta(mensaje.herramienta),
       ponerLaCara: () => this.ponerLaCara(),
       elegirCarpeta: () => this.elegirCarpeta(),
+      abrirLaDeArriba: () => this.abrirLaDeArriba(),
+      // La pantalla del editor para darle la confianza; al darla se repinta (decisión 195).
+      confiarEnLaCarpeta: () => vscode.commands.executeCommand('workbench.trust.manage'),
       // La salida de una carpeta que no se prepara: una nueva, dentro de la
       // personal (B1).
       crearCarpeta: () => arrancar.crearUnaCarpetaDentro(os.homedir(), this.salida),
@@ -2595,7 +2627,8 @@ ${cabecera}
     this.enviar({
       tipo: 'cerebro',
       temas: cerebro.catalogo(),
-      sinOrdenar: cerebro.sinOrdenar().slice(0, 8),
+      // Ocho a la vista, y cuántos son de verdad: decía «Hay 8» habiendo 402 (decisión 195).
+      ...((todos) => ({ sinOrdenar: todos.slice(0, 8), cuantosSinOrdenar: todos.length }))(cerebro.sinOrdenar()),
       esperando: cerebro.esperandoLectura(),
       yaLeidos: cerebro.yaLeidos(),
       hayPanel: cerebro.hayPanel(),
@@ -3317,7 +3350,7 @@ ${cabecera}
   // Lo que se acordó construir. Solo existe donde se construya algo con SDD.
   async verProyectos() {
     this.donde = { tipo: 'quieto' };
-    this.enviar({ tipo: 'proyectos', montones: proyectos.queHay() });
+    this.enviar({ tipo: 'proyectos', montones: proyectos.queHay(), deLosProyectos: proyectos.deLosProyectos() });
   }
 
   async verProyecto(fichero) {
@@ -4406,6 +4439,18 @@ ${cabecera}
   // Elegir sobre qué carpeta se trabaja. Hace falta al arrancar —quien abre
   // esto sin nada abierto no tiene por dónde empezar— y después, para cambiar
   // de sitio sin tener que saber dónde está el menú de VS Code.
+
+  // La carpeta de arriba, ya preparada: un proyecto de un monorepo se trabaja
+  // desde su raíz (decisión 195). La ruta se vuelve a mirar aquí: del panel solo
+  // llega que se pulsó. En esta misma ventana, como al elegir carpeta.
+  async abrirLaDeArriba() {
+    const arriba = terreno.queHayEncima(proyecto.raiz());
+    if (!arriba || !arriba.conArnes) {
+      this.dejarElAviso('No encuentro la carpeta de arriba. Pulsa «Elegir otra carpeta» y elígela.', { etiqueta: 'Elegir otra carpeta', accion: { tipo: 'elegirCarpeta' } });
+      return this.refrescar(true);
+    }
+    return vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(arriba.ruta), { forceNewWindow: false });
+  }
   async elegirCarpeta() {
     const elegida = await vscode.window.showOpenDialog({
       canSelectFolders: true,
@@ -4558,7 +4603,9 @@ function loQueMira() {
 
   const reglasDelAsistente = donde.paraQuien() === 'codex'
     ? ['AGENTS.md', 'AGENTS.override.md'] : ['CLAUDE.md'];
-  return `{${[...LO_FIJO, ...reglasDelAsistente, ...new Set(suyas)].join(',')}}`;
+  // Y los registros del git de cada proyecto de un monorepo (decisión 195): una copia
+  // nueva o una subida cambian cómo está, y si no, la barra no se enteraba.
+  return `{${[...LO_FIJO, ...reglasDelAsistente, ...new Set(suyas), ...subproyectos.LOS_REGISTROS].join(',')}}`;
 }
 
 // Volver a vigilar lo del asistente de ahora. Cambiar de asistente ya no toca
@@ -4588,6 +4635,8 @@ function vigilarElArnes(contexto, panel) {
     const esMarca = marca.esDeLaMarca(uri.fsPath);
     // El índice del buscador se hizo con lo que había antes de este cambio.
     buscador.olvidar();
+    // Y cómo estaba un proyecto, si se ha movido su git (decisión 195).
+    if (subproyectos.esDeUnRegistro(uri.fsPath)) subproyectos.olvidar();
     // Cambiar de asistente cambia dónde vive todo lo suyo, y eso se escribe en
     // `.rsc.json`. Sin rearmar, se seguirían vigilando las carpetas del
     // anterior: la barra dejaría de enterarse de lo que pasa en las de ahora.
@@ -4824,6 +4873,13 @@ function activate(contexto) {
   );
 
   vigilarElArnes(contexto, panel);
+  // Al darle la confianza a la carpeta, lo que sin ella no se miraba —cómo está cada
+  // proyecto de un monorepo— se mira ya, sin recargar (decisión 195).
+  if (vscode.workspace.onDidGrantWorkspaceTrust) {
+    contexto.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
+      panel.repintarLoQueHaya().catch((error) => salida.appendLine(`[confianza] ${error.message}`)); // diccionario: interno
+    }));
+  }
 
   // Decisión 190: si cambia la primera carpeta, el vigía mira la nueva y se
   // olvida lo que se sabía de la anterior (la brújula y la continuación). Sin

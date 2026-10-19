@@ -950,14 +950,34 @@ function pantallaAgentes({ agentes = [] }) {
   `;
 }
 
-function pantallaProyectos({ montones = [] }) {
-  const ESTADOS = {
-    draft: 'en borrador',
-    accepted: 'acordado',
-    approved: 'acordado',
-    done: 'terminado',
-    superseded: 'sustituido',
-  };
+function pantallaProyectos({ montones = [], deLosProyectos = [] }) {
+  // Cómo está cada cosa llega ya dicho con el diccionario (`proyectos.comoEsta`):
+  // aquí no se traduce ni se enseña nada en crudo (decisión 195).
+  const losMontones = (lista) => lista.map((m) => `
+      <h2>${texto(m.etiqueta)}</h2>
+      <p class="detalle">${texto(m.pista)}</p>
+      ${m.cosas.map((c) => `
+        <div class="entrada">
+          <p class="nombre">${texto(c.titulo)}</p>
+          ${c.estado || c.tareas ? `<p class="pista">${texto([
+            c.estado,
+            c.tareas ? plural(c.tareas, '1 tarea', '{n} tareas') : '',
+          ].filter(Boolean).join(' · '))}</p>` : ''}
+          ${boton({ etiqueta: 'Abrirlo', icono: '▸', pequeno: true, accion: { tipo: 'verProyecto', fichero: c.fichero } })}
+        </div>`).join('')}`).join('<hr class="separador">');
+
+  // En un monorepo, lo de cada proyecto va en el suyo, plegado: con ocho proyectos
+  // salían noventa documentos mezclados con los de la raíz (decisión 195).
+  const porProyecto = deLosProyectos.length ? `
+    ${montones.length ? '<hr class="separador">' : ''}
+    <h2>Proyectos</h2>
+    <p class="detalle">${texto('Lo de cada proyecto, en el suyo.')}</p>
+    ${deLosProyectos.map((p) => grupo({
+      id: `enQueEstamos:${p.nombre}`,
+      etiqueta: p.nombre,
+      cuantos: plural(p.montones.reduce((n, m) => n + m.cosas.length, 0), '1 documento', '{n} documentos'),
+      dentro: losMontones(p.montones),
+    })).join('')}` : '';
 
   return `
     ${migas([{ etiqueta: 'Principal', accion: { tipo: 'volver' } }, { etiqueta: 'En qué estamos' }])}
@@ -969,18 +989,8 @@ function pantallaProyectos({ montones = [] }) {
       <p class="hiciste">Lo que se acordó construir, por qué, y cómo se va a hacer.</p>
     </div>
 
-    ${montones.map((m) => `
-      <h2>${texto(m.etiqueta)}</h2>
-      <p class="detalle">${texto(m.pista)}</p>
-      ${m.cosas.map((c) => `
-        <div class="entrada">
-          <p class="nombre">${texto(c.titulo)}</p>
-          ${c.estado || c.tareas ? `<p class="pista">${texto([
-            ESTADOS[c.estado] || c.estado,
-            c.tareas ? plural(c.tareas, '1 tarea', '{n} tareas') : '',
-          ].filter(Boolean).join(' · '))}</p>` : ''}
-          ${boton({ etiqueta: 'Abrirlo', icono: '▸', pequeno: true, accion: { tipo: 'verProyecto', fichero: c.fichero } })}
-        </div>`).join('')}`).join('<hr class="separador">')}
+    ${losMontones(montones)}
+    ${porProyecto}
   `;
 }
 
@@ -1896,7 +1906,11 @@ function pantallaSinArnes() {
   // le haría pensar que va a empezar de cero y a perder lo que ya hay. Tampoco
   // una con las respuestas guardadas (decisión 165).
   const terminar = estado.aMedioPreparar || estado.esperandoAGit;
-  const ofrecer = estado.yaEmpezada && !estado.esperandoAGit
+  // Parte de una carpeta ya preparada (decisión 195): abrir esa, y prepararla igual detrás.
+  const ofrecer = estado.parteDe ? `
+    ${boton({ etiqueta: `Abrir «${estado.parteDe.nombre}»`, icono: '📂', principal: true, accion: { tipo: 'abrirLaDeArriba' } })}
+    ${boton({ etiqueta: 'Prepararla igual', icono: '✳', discreto: true, accion: { tipo: 'arrancar' } })}`
+    : estado.yaEmpezada && !estado.esperandoAGit
     ? bloqueYaEmpezada()
     : boton({
       etiqueta: terminar ? 'Terminar de prepararla' : 'Preparar esta carpeta',
@@ -2016,6 +2030,7 @@ function pantallaPrincipalSencilla() {
     ${encendida('conocimiento') ? grupoConocimiento() : ''}
     ${encendida('acciones') ? grupoAccionesSencillo() : ''}
     ${encendida('enQueEstamos') ? grupoEnQueEstamos() : ''}
+    ${encendida('proyectos') ? grupoProyectosDeDentro() : ''}
     ${encendida('ayuda') ? grupoAyudaSencillo() : ''}
     ${encendida('ajustes') ? grupoAjustes() : ''}
     ${encendida('copias') ? lineaDeLasCopias() : ''}
@@ -2106,17 +2121,47 @@ function grupoAyudaSencillo() {
 
 // «✓ Todo guardado»: solo si la carpeta tiene copias. Ver que todo está
 // guardado quita el miedo; dentro, lo de git.
+//
+// En un monorepo, los proyectos de dentro tienen su propio git: «Todo guardado»
+// vale para todos, y uno con cambios lleva aquí su botón (decisión 195).
 function lineaDeLasCopias() {
   const c = estado.copias;
   if (!c) return '';
+  const deDentro = c.proyectosSinGuardar || [];
+  const soloDentro = deDentro.length && c.raizSinGuardar === false;
+  const enCual = deDentro.length === 1 ? `en «${deDentro[0].nombre}»` : `en ${deDentro.length} proyectos`;
   return grupo({
     id: 'grupo:copias',
     // `null`: no se ha podido mirar. No se dice «Todo guardado» sin saberlo (decisión 189).
-    etiqueta: c.sinGuardar === null ? 'No he podido mirar si hay cambios sin guardar' : c.sinGuardar ? 'Hay cambios sin guardar' : `✓ Todo guardado, ${c.hace}`,
+    etiqueta: c.sinGuardar === null ? 'No he podido mirar si hay cambios sin guardar'
+      : soloDentro ? `Hay cambios sin guardar ${enCual}`
+        : c.sinGuardar ? 'Hay cambios sin guardar' : `✓ Todo guardado, ${c.hace}`,
     dentro: `
       ${boton({ etiqueta: 'Guardar en git', icono: '💾', pequeno: true, accion: { tipo: 'guardarCopia' } })}
+      ${deDentro.filter((p) => p.boton).map((p) => boton({ ...p.boton, pequeno: true })).join('')}
       ${boton({ etiqueta: 'Ver las copias guardadas', icono: '🕑', pequeno: true, accion: { tipo: 'verCopias' } })}
-      ${c.subir ? boton({ etiqueta: 'Subir a GitHub', icono: '☁️', pequeno: true, accion: { tipo: 'verCopiaFuera' } }) : ''}`,
+      ${c.subir ? boton({ etiqueta: 'Subir a GitHub', icono: '☁️', pequeno: true, accion: { tipo: 'verCopiaFuera' } }) : ''}
+      ${deDentro.length ? `<p class="pista">${texto('Cada proyecto se guarda aparte, con su botón. «Guardar en git» guarda el resto de la carpeta.')}</p>` : ''}`,
+  });
+}
+
+// Los proyectos de dentro de un monorepo (decisión 195), solo si los hay: cómo
+// está cada uno y sus botones, que llegan hechos (P6).
+function grupoProyectosDeDentro() {
+  const lista = estado.proyectosDeDentro || [];
+  if (!lista.length) return '';
+  const sinGuardar = lista.filter((p) => p.sinGuardar === true).length;
+  return grupo({
+    id: 'grupo:proyectos-de-dentro',
+    etiqueta: 'Proyectos',
+    cuantos: sinGuardar ? plural(sinGuardar, '1 sin guardar', '{n} sin guardar') : '',
+    // Sin confianza no se mira cómo está ninguno, y se dice una vez, con su salida (183).
+    dentro: (lista.some((p) => p.sinConfianza) ? `
+      <p class="pista">${texto('El editor no confía en esta carpeta, y no miro cómo está cada proyecto.')}</p>
+      ${boton({ etiqueta: 'Confiar en esta carpeta', icono: '🔓', pequeno: true, accion: { tipo: 'confiarEnLaCarpeta' } })}` : '') + lista.map((p) => `
+      <h3>${texto(p.nombre)}</h3>
+      ${p.estado ? `<p class="pista">${texto(p.estado)}</p>` : ''}
+      ${(p.botones || []).map((b) => boton({ ...b, pequeno: true })).join('')}`).join(''),
   });
 }
 
@@ -2193,6 +2238,8 @@ function pantallaPrincipalCompleta() {
     ${grupoHistorico()}
 
     ${grupoEnQueEstamos()}
+
+    ${grupoProyectosDeDentro()}
 
     ${grupoAccionesCompleto()}
 
@@ -3046,7 +3093,7 @@ function pantallaResultado({ titulo, texto: salida, proveedor }) {
 
 // ---------------------------------------------------------------- cerebro
 
-function pantallaCerebro({ temas, sinOrdenar = [], esperando, yaLeidos, hayPanel, aviso: avisoLocal }) {
+function pantallaCerebro({ temas, sinOrdenar = [], cuantosSinOrdenar, esperando, yaLeidos, hayPanel, aviso: avisoLocal }) {
   const porTemas = temas.length
     ? temas.map((t) => `
         <div class="conexion">
@@ -3060,7 +3107,7 @@ function pantallaCerebro({ temas, sinOrdenar = [], esperando, yaLeidos, hayPanel
   // de llegar a ello desde aquí: existía en el disco y punto.
   const sueltos = sinOrdenar.length
     ? `<hr class="separador"><h2>Sin ordenar todavía</h2>` +
-      `<p class="detalle">${texto(plural(sinOrdenar.length,
+      `<p class="detalle">${texto(plural(cuantosSinOrdenar || sinOrdenar.length,
         'Hay 1 documento escrito que aún no está en su tema.',
         'Hay {n} documentos escritos que aún no están en su tema.'))}</p>` +
       sinOrdenar.map((d) => boton({
@@ -3072,7 +3119,7 @@ function pantallaCerebro({ temas, sinOrdenar = [], esperando, yaLeidos, hayPanel
         etiqueta: 'Que los ordene',
         icono: '🗂️',
         discreto: true,
-        accion: { tipo: 'pedir', prompt: 'Hay documentos en la wiki que no están en el índice. Ponlos en su tema, con su resumen y su fecha, y deja el índice al día.' },
+        accion: { tipo: 'pedir', prompt: 'Hay documentos en la wiki que no están en el índice. Ponlos en su tema, con su resumen y su fecha, y deja el índice al día. Lo que esté en proyectos/<proyecto>/ es la documentación de cada proyecto: déjalo donde está.' },
       })
     : '';
 
@@ -3710,7 +3757,7 @@ function atender(data) {
       if (estado) {
         for (const campo of ['consejo', 'hayVersionNueva', 'versionPuesta', 'versionDePrueba', 'hayProyectos', 'hayAgentes', 'hayRecordatorios', 'avisoParaExecutiveLab', 'arreglado', 'queTrae',
           'barraCompleta', 'piezas', 'comandos', 'habilidades', 'copias', 'versionDeLaBarra', 'recordatorio', 'costumbrePuesta', 'datosDeClientes', 'enganchesDeCodex',
-          'seAdapta', 'sigueSinCopias', 'laUltimaVez', 'clavesEnLasCopias', 'clavesFueraDeSitio']) {
+          'seAdapta', 'sigueSinCopias', 'laUltimaVez', 'clavesEnLasCopias', 'clavesFueraDeSitio', 'proyectosDeDentro']) {
           if (data[campo] !== undefined) estado[campo] = data[campo];
         }
       }

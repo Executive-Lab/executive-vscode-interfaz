@@ -38,6 +38,12 @@ la suya — mismos botones, sus colores, su logotipo:
 
 ![El mismo panel con la marca de Executive Lab y con la de la empresa del alumno](docs/marca.png)
 
+Y si la carpeta guarda varios proyectos, cada uno con su propio git —un monorepo como el de Executive
+Lab, con el arnés en la raíz y los proyectos en `03-PROYECTOS/`—, la barra los enseña en **Proyectos**.
+Dice cómo está cada uno: cambios sin guardar, copias sin subir y la rama. Trae un botón para trabajar en
+él y otro para ver su conocimiento, y guardarlo o subirlo se le encarga al asistente, que sigue las
+reglas de ese proyecto (decisión 195).
+
 ### La regla que ordena el panel
 
 **No hay ni una herramienta, ni una tarea, ni un tema escritos en el código.** Todo lo que se ve sale
