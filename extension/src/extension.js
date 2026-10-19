@@ -2584,7 +2584,8 @@ ${cabecera}
     this.enviar({
       tipo: 'cerebro',
       temas: cerebro.catalogo(),
-      sinOrdenar: cerebro.sinOrdenar().slice(0, 8),
+      // Ocho a la vista, y cuántos son de verdad: decía «Hay 8» habiendo 402 (decisión 195).
+      ...((todos) => ({ sinOrdenar: todos.slice(0, 8), cuantosSinOrdenar: todos.length }))(cerebro.sinOrdenar()),
       esperando: cerebro.esperandoLectura(),
       yaLeidos: cerebro.yaLeidos(),
       hayPanel: cerebro.hayPanel(),
@@ -3306,7 +3307,7 @@ ${cabecera}
   // Lo que se acordó construir. Solo existe donde se construya algo con SDD.
   async verProyectos() {
     this.donde = { tipo: 'quieto' };
-    this.enviar({ tipo: 'proyectos', montones: proyectos.queHay() });
+    this.enviar({ tipo: 'proyectos', montones: proyectos.queHay(), deLosProyectos: proyectos.deLosProyectos() });
   }
 
   async verProyecto(fichero) {

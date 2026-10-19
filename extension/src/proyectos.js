@@ -90,10 +90,7 @@ function losProyectosConSdd() {
 }
 
 function leerMonton(cual) {
-  return [
-    ...leerUnMonton(proyecto.ruta(...SDD, cual), `${cual}/`, null),
-    ...losProyectosConSdd().flatMap((p) => leerUnMonton(proyecto.ruta(...DE_LOS_PROYECTOS, p, 'sdd', cual), `proyectos/${p}/sdd/${cual}/`, p)),
-  ];
+  return leerUnMonton(proyecto.ruta(...SDD, cual), `${cual}/`, null);
 }
 
 // `delante`: cómo se nombra el fichero para volver a abrirlo (`dondeVive`).
@@ -122,20 +119,60 @@ function leerUnMonton(carpeta, delante, deProyecto) {
       // El nombre de su proyecto, en un monorepo; null, lo de la raíz.
       proyecto: deProyecto,
       titulo: titulo(crudo, nombre),
-      // `status` lo escribe SDD; si no está, no se inventa.
-      estado: typeof campos.status === 'string' ? campos.status.trim() : '',
+      // `status` lo escribe SDD; si no está, no se inventa. Dicho con el diccionario.
+      estado: comoEsta(campos.status),
       tareas,
     };
   });
 }
 
-function queHay() {
-  return MONTONES
-    .map((m) => ({ ...m, cosas: leerMonton(m.id) }))
-    .filter((m) => m.cosas.length);
+// ── Cómo está, en pocas palabras ─────────────────────────────────────────
+//
+// `status` es texto libre: lo escribe la cadena SDD o quien sea, en inglés o en
+// español. En un monorepo de verdad salieron treinta valores distintos —`shipped`,
+// `pass`, `approved-autopilot`, `aprobado-en-autopiloto`, `verified_for_publication`,
+// `research_complete_pending_scope_discussion`…—, y la pantalla los enseñaba tal
+// cual, en inglés (decisión 195). Se reducen a las palabras del diccionario por lo
+// que dicen, y en este orden: lo primero que casa gana («approved-shipped» está
+// terminado; «pass-implemented-with-explicit-risk», comprobado). Lo que no se
+// entiende no se enseña: mejor nada que una palabra que nadie sabe leer.
+const COMO_ESTA = [
+  [/supersed|sustitu/, 'sustituido'],
+  [/retract|cancel|abandon|deprecat|retirad|descartad/, 'retirado'],
+  [/fail|fallid/, 'salió mal'],
+  [/block|bloque/, 'parado'],
+  [/defer|aplaz/, 'aplazado'],
+  [/pending|pendiente|draft|borrador|propos|gathering|research/, 'en borrador'],
+  [/review|revisi/, 'en revisión'],
+  [/pass|verified|comprobad/, 'salió bien'],
+  [/ready|listo/, 'acordado'],
+  [/done|ship|complete|hecho|terminad|closed|cerrad|merged/, 'terminado'],
+  [/progress|active|curso|marcha|implement/, 'en marcha'],
+  [/approv|aprob|accept|acord|ratif|clarif|authoriz|stable/, 'acordado'],
+];
+function comoEsta(status) {
+  if (typeof status !== 'string' || !status.trim()) return '';
+  const dicho = status.trim().toLowerCase();
+  const casa = COMO_ESTA.find(([patron]) => patron.test(dicho));
+  return casa ? casa[1] : '';
 }
 
-const hayAlgo = () => queHay().length > 0;
+const conCosas = (leer) => MONTONES.map((m) => ({ ...m, cosas: leer(m.id) })).filter((m) => m.cosas.length);
+
+// Lo de la raíz.
+function queHay() {
+  return conCosas(leerMonton);
+}
+
+// Y lo de cada proyecto de un monorepo, aparte (decisión 195): con ocho proyectos
+// salían noventa documentos mezclados con los de la raíz. Cada uno con lo suyo.
+function deLosProyectos() {
+  return losProyectosConSdd()
+    .map((p) => ({ nombre: p, montones: conCosas((cual) => leerUnMonton(proyecto.ruta(...DE_LOS_PROYECTOS, p, 'sdd', cual), `proyectos/${p}/sdd/${cual}/`, p)) }))
+    .filter((p) => p.montones.length);
+}
+
+const hayAlgo = () => queHay().length > 0 || deLosProyectos().length > 0;
 
 // Abrir uno. El nombre viene de un mensaje del panel, así que se comprueba que
 // sigue siendo de ahí dentro y que es un `.md`. Lo de un proyecto (decisión 195)
@@ -154,4 +191,4 @@ function dondeVive(fichero) {
   return esFichero(completa) ? completa : null;
 }
 
-module.exports = { queHay, hayAlgo, dondeVive, MONTONES };
+module.exports = { queHay, deLosProyectos, hayAlgo, dondeVive, comoEsta, MONTONES };

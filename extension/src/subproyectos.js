@@ -82,9 +82,14 @@ function describir(raiz, rel) {
   const nombre = path.posix.basename(rel);
   const docsRel = path.posix.join(...DOCUMENTACION, nombre);
   const docs = esCarpetaDeVerdad(path.join(raiz, ...DOCUMENTACION, nombre)) ? docsRel : null;
-  // Lo que conviene leer antes de tocarlo, por este orden y solo lo que existe:
-  // sus reglas y su índice en la documentación de la raíz, y lo que lleve dentro.
+  // Lo que conviene leer antes de tocarlo, por este orden y solo lo que existe: lo
+  // común a todos los proyectos (el índice de su documentación y el README de la
+  // carpeta que los guarda, donde el monorepo de verdad dice qué subida despliega),
+  // sus reglas y su índice, y lo que lleve dentro.
+  const arriba = path.posix.dirname(rel);
   const candidatos = [
+    `${DOCUMENTACION.join('/')}/README.md`,
+    ...(arriba !== '.' ? [`${arriba}/README.md`] : []),
     ...(docs ? [`${docs}/reglas-del-asistente.md`, `${docs}/index.md`] : []),
     `${rel}/AGENTS.md`, `${rel}/CLAUDE.md`, `${rel}/README.md`,
   ];
@@ -95,7 +100,9 @@ function describir(raiz, rel) {
       return false;
     }
   });
-  return { nombre, rel, ruta: path.join(raiz, ...rel.split('/')), docs, paraLeer };
+  // Su índice, para «Lo que sabe de…»: relativo a la wiki, que es como lo abre la barra.
+  const indice = docs && paraLeer.includes(`${docs}/index.md`) ? `proyectos/${nombre}/index.md` : null;
+  return { nombre, rel, ruta: path.join(raiz, ...rel.split('/')), docs, paraLeer, indice };
 }
 
 // Los proyectos de dentro, en orden. Vacío si la carpeta no es un monorepo.
@@ -289,6 +296,8 @@ function enPantalla(p) {
   const guardarlo = p.sinGuardar ? boton('guardar', p) : null;
   const botones = [
     boton('trabajar', p),
+    // Su documentación, que en Conocimiento no está entre los temas de la raíz.
+    ...(p.indice ? [{ etiqueta: `Lo que sabe de «${p.nombre}»`, icono: '📚', accion: { tipo: 'leerArticulo', ruta: p.indice } }] : []),
     ...(guardarlo ? [guardarlo] : []),
     ...(p.sinSubir || p.ramaSinSubir ? [boton('subir', p)] : []),
   ];

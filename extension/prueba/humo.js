@@ -27957,8 +27957,15 @@ exec git "$@"
     const [panel, web] = lista;
     assert.equal(panel.nombre, 'panel-fundae');
     assert.equal(panel.docs, '02-DOCS/wiki/proyectos/panel-fundae');
-    assert.deepEqual(panel.paraLeer, ['02-DOCS/wiki/proyectos/panel-fundae/reglas-del-asistente.md', '02-DOCS/wiki/proyectos/panel-fundae/index.md', '03-PROYECTOS/panel-fundae/README.md']);
+    // Lo común primero: el README de la carpeta que guarda los proyectos, donde el monorepo
+    // de verdad dice qué subida despliega; y su índice (aquí no hay `02-DOCS/wiki/proyectos/README.md`).
+    assert.deepEqual(panel.paraLeer, ['03-PROYECTOS/README.md', '02-DOCS/wiki/proyectos/panel-fundae/reglas-del-asistente.md', '02-DOCS/wiki/proyectos/panel-fundae/index.md', '03-PROYECTOS/panel-fundae/README.md']);
+    assert.equal(panel.indice, 'proyectos/panel-fundae/index.md');
     assert.equal(web.docs, null, 'sin documentación, no se inventa');
+    assert.deepEqual(web.paraLeer, [], 'uno del primer nivel no tiene carpeta de arriba que leer');
+    assert.equal(web.indice, null);
+    fs.writeFileSync(path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'README.md'), '# Proyectos\n');
+    assert.equal(sp.cuales(raiz)[0].paraLeer[0], '02-DOCS/wiki/proyectos/README.md', 'el índice de la documentación de los proyectos no se lee');
     assert.equal(sp.deCualEs('03-PROYECTOS/panel-fundae/apps/web/index.js', lista), panel);
     assert.equal(sp.deCualEs('03-PROYECTOS/panel-fundaex/a', lista), null, 'un nombre que empieza igual no es el mismo');
     // Un `.git` que es un enlace no hace proyecto, ni una documentación que es un enlace.
@@ -28036,15 +28043,18 @@ exec git "$@"
     const raiz = montarMonorepo();
     const sp = cargar('subproyectos');
     const [panel] = sp.cuales(raiz);
-    const limpio = sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
+    const limpio = sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false, indice: null });
     assert.deepEqual(limpio.botones.map((b) => b.etiqueta), ['Trabajar en «panel-fundae»']);
     assert.equal(limpio.estado, '✓ Todo guardado');
     assert.equal(limpio.guardar, null);
-    const sucio = sp.enPantalla({ ...panel, sinGuardar: 3, sinSubir: 2, rama: 'arreglo', ramaSinSubir: false });
+    const sucio = sp.enPantalla({ ...panel, sinGuardar: 3, sinSubir: 2, rama: 'arreglo', ramaSinSubir: false, indice: null });
     assert.deepEqual(sucio.botones.map((b) => b.etiqueta), ['Trabajar en «panel-fundae»', 'Guardar «panel-fundae» en git', 'Subir «panel-fundae» a GitHub']);
+    // Con índice, su documentación a un clic, que en Conocimiento no está entre los temas.
+    const conIndice = sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
+    assert.deepEqual(conIndice.botones[1], { etiqueta: 'Lo que sabe de «panel-fundae»', icono: '📚', accion: { tipo: 'leerArticulo', ruta: 'proyectos/panel-fundae/index.md' } });
     assert.equal(sucio.estado, 'Cambios sin guardar · 2 copias sin subir · En la rama «arreglo»');
     assert.equal(sucio.guardar, sucio.botones[1]);
-    assert.deepEqual(sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'nueva', ramaSinSubir: true }).botones.map((b) => b.etiqueta).slice(1), ['Subir «panel-fundae» a GitHub'], 'una rama que no está en GitHub se puede subir');
+    assert.deepEqual(sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'nueva', ramaSinSubir: true }).botones.map((b) => b.etiqueta).filter((e) => e.startsWith('Subir')), ['Subir «panel-fundae» a GitHub'], 'una rama que no está en GitHub se puede subir');
     const sinMirar = sp.enPantalla({ ...panel, sinGuardar: null, sinSubir: 0, rama: null, ramaSinSubir: false });
     assert.equal(sinMirar.estado, 'No he podido mirar si hay cambios sin guardar');
     assert.equal(sinMirar.sinGuardar, null);
@@ -28172,7 +28182,7 @@ exec git "$@"
     escribir('02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', doc('El informe', 'Sacar los cinco registros'));
     let ibas = ibasM.porDondeIbas(raiz, '');
     assert.equal(ibas.ruta, '02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', 'el más reciente es el del proyecto');
-    assert.match(ibas.texto, /Sacar los cinco registros/);
+    assert.match(ibas.texto, /Sacar los cinco registros, y te quedan 2 pasos de «El informe», en «panel-fundae»\./, 'no dice de qué proyecto es');
     assert.match(ibas.accion.prompt, /02-DOCS\/wiki\/proyectos\/panel-fundae\/ftd\/el-informe\.md/);
     // La línea `next:` de RSC también puede nombrar uno de un proyecto.
     ibas = ibasM.porDondeIbas(raiz, 'next: 02-DOCS/wiki/ftd/lo-de-la-raiz.md: Ordenar las facturas (2 open)');
@@ -28200,11 +28210,14 @@ exec git "$@"
       escribir('02-DOCS/wiki/proyectos/enlazado-no/sdd', '');
       fs.mkdirSync(path.join(fuera, 'sdd', 'specs'), { recursive: true });
       fs.writeFileSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), '# Ajena\n');
+      // Lo de la raíz, solo; lo de cada proyecto, aparte.
       const specs = proyectosM.queHay().find((m) => m.id === 'specs').cosas;
-      const vistas = specs.map((c) => [c.fichero, c.proyecto, c.titulo]);
-      assert.deepEqual(vistas.find((v) => v[0] === 'specs/la-raiz.md'), ['specs/la-raiz.md', null, 'Lo de la raíz']);
-      assert.deepEqual(vistas.find((v) => v[1]), ['proyectos/panel-fundae/sdd/specs/los-registros.md', 'panel-fundae', 'Los cinco registros'], 'lo de un proyecto no sale');
-      assert.ok(!vistas.some((v) => /ajena|enlazado/i.test(v.join(' '))), 'sale lo de uno enlazado');
+      assert.ok(specs.some((c) => c.fichero === 'specs/la-raiz.md' && c.estado === 'acordado'));
+      assert.ok(!specs.some((c) => c.proyecto), 'lo de un proyecto sale mezclado con lo de la raíz');
+      const aparte = proyectosM.deLosProyectos();
+      assert.deepEqual(aparte.map((p) => p.nombre), ['panel-fundae'], 'lo de un proyecto no sale, o sale lo de uno enlazado');
+      assert.deepEqual(aparte[0].montones.map((m) => [m.id, m.cosas.map((c) => [c.fichero, c.titulo, c.estado, c.tareas])]),
+        [['specs', [['proyectos/panel-fundae/sdd/specs/los-registros.md', 'Los cinco registros', 'acordado', 1]]]]);
       assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/specs/los-registros.md'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'specs', 'los-registros.md'));
       assert.ok(proyectosM.dondeVive('specs/la-raiz.md'), 'lo de la raíz deja de abrirse');
       for (const malo of ['proyectos/enlazado/sdd/specs/ajena.md', 'proyectos/../sdd/specs/la-raiz.md', 'proyectos/panel-fundae/sdd/specs/../../../../../etc/x.md', 'proyectos/panel-fundae/otra/specs/a.md', '../proyectos/panel-fundae/sdd/specs/los-registros.md']) {
@@ -28213,21 +28226,58 @@ exec git "$@"
       // Un .md que es un enlace no sale ni se abre, tampoco en la raíz (revisión de seguridad de la 195).
       fs.symlinkSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'specs', 'enlace.md'));
       fs.symlinkSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), path.join(raiz, '02-DOCS', 'wiki', 'sdd', 'specs', 'enlace.md'));
-      const conEnlaces = proyectosM.queHay().find((m) => m.id === 'specs').cosas.map((c) => c.fichero);
+      const conEnlaces = [...proyectosM.queHay(), ...proyectosM.deLosProyectos().flatMap((p) => p.montones)].find((m) => m.id === 'specs').cosas.map((c) => c.fichero)
+        .concat(...proyectosM.deLosProyectos().flatMap((p) => p.montones.map((m) => m.cosas.map((c) => c.fichero))));
       assert.ok(!conEnlaces.some((f) => f.endsWith('enlace.md')), `sale un enlace: ${conEnlaces}`);
       assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/specs/enlace.md'), null);
       assert.equal(proyectosM.dondeVive('specs/enlace.md'), null);
       // Un proyecto con espacios en el nombre, como en Proyectos.
       escribir('02-DOCS/wiki/proyectos/mi proyecto/sdd/specs/con-espacio.md', '---\ntitle: Con espacio\n---\n');
       escribir('02-DOCS/wiki/proyectos/mi proyecto/ftd/a-medias.md', doc('A medias', 'Terminar lo del espacio'));
-      assert.ok(proyectosM.queHay().find((m) => m.id === 'specs').cosas.some((c) => c.proyecto === 'mi proyecto'), 'un proyecto con espacio no sale en En qué estamos');
+      assert.ok(proyectosM.deLosProyectos().some((p) => p.nombre === 'mi proyecto'), 'un proyecto con espacio no sale en En qué estamos');
       assert.equal(ibasM.porDondeIbas(raiz, '').ruta, '02-DOCS/wiki/proyectos/mi proyecto/ftd/a-medias.md', 'ni en Seguir donde lo dejé');
-      const html = require('./panel-falso').montarPanel().mandar({ tipo: 'proyectos', montones: proyectosM.queHay() });
-      assert.match(html, /Los cinco registros<\/p>\s*<p class="pista">«panel-fundae» · /);
+      const html = require('./panel-falso').montarPanel().mandar({ tipo: 'proyectos', montones: proyectosM.queHay(), deLosProyectos: proyectosM.deLosProyectos() });
+      assert.match(html, /Lo de la raíz[\s\S]*<h2>Proyectos<\/h2>[\s\S]*data-abrir="enQueEstamos:panel-fundae"[\s\S]*panel-fundae<span class="cuantos">1 documento<\/span>[\s\S]*Los cinco registros<\/p>\s*<p class="pista">acordado · 1 tarea/);
+      // Sin proyectos, como siempre: nada de «Proyectos».
+      assert.ok(!/<h2>Proyectos<\/h2>/.test(require('./panel-falso').montarPanel().mandar({ tipo: 'proyectos', montones: proyectosM.queHay() })));
+
+      // Conocimiento: la documentación de un proyecto no está «sin ordenar», y «Que los ordene» la deja quieta.
+      const cerebroM = cargar('cerebro');
+      escribir('02-DOCS/wiki/proyectos/sin-indice-ni-clon/nota.md', '# Una nota\n');
+      // «mi proyecto» no tiene índice: cuenta por ser un proyecto de dentro.
+      fs.mkdirSync(path.join(raiz, '03-PROYECTOS', 'mi proyecto', '.git'), { recursive: true });
+      const sueltos = cerebroM.sinOrdenar().map((d) => d.ruta);
+      assert.ok(!sueltos.some((r) => /^proyectos\/(panel-fundae|mi proyecto)\//.test(r)), `la documentación de un proyecto sale sin ordenar: ${sueltos}`);
+      assert.ok(sueltos.includes('proyectos/sin-indice-ni-clon/nota.md'), 'sin índice ni proyecto de dentro, sí está sin ordenar');
+      const cerebroHtml = require('./panel-falso').montarPanel().mandar({ tipo: 'cerebro', temas: [], sinOrdenar: sueltos.slice(0, 1).map((ruta) => ({ ruta, titulo: 'Una nota' })), cuantosSinOrdenar: 402 });
+      assert.match(cerebroHtml, /Hay 402 documentos escritos que aún no están en su tema/, 'el número es el de los que se enseñan');
+      assert.match(cerebroHtml, /proyectos\/&lt;proyecto&gt;\/ es la documentación de cada proyecto: déjalo donde está|proyectos\/<proyecto>\/ es la documentación de cada proyecto: déjalo donde está/);
       return 'el del proyecto se ofrece y se abre; el enlazado, no';
     } finally {
       vscode.guion.raiz = antes;
     }
+  });
+
+  await comprobar('cómo está cada cosa de En qué estamos se dice con el diccionario, nunca en crudo (decisión 195)', () => {
+    const { comoEsta } = cargar('proyectos');
+    // Los de un monorepo de verdad, el 19-10-2026, y lo que dicen.
+    const esperado = {
+      done: 'terminado', shipped: 'terminado', pass: 'salió bien', draft: 'en borrador', aprobada: 'acordado', verified: 'salió bien',
+      'approved-autopilot': 'acordado', approved: 'acordado', stable: 'acordado', 'aprobado-en-autopiloto': 'acordado', active: 'en marcha',
+      'in-progress': 'en marcha', in_progress: 'en marcha', approve: 'acordado', complete: 'terminado', aprobado: 'acordado',
+      verified_for_publication: 'salió bien', passed: 'salió bien', deferred: 'aplazado', database_import_complete: 'terminado',
+      clarified: 'acordado', blocked: 'parado', 'authorized-scope': 'acordado', 'approved-shipped': 'terminado', retracted: 'retirado',
+      research_complete_pending_scope_discussion: 'en borrador', ready_for_ship: 'acordado', ratified: 'acordado',
+      'passed-with-fixes': 'salió bien', 'pass-implemented-with-explicit-risk': 'salió bien', superseded: 'sustituido', accepted: 'acordado',
+      failed: 'salió mal', review: 'en revisión', 'Done ': 'terminado', gathering_requirements: 'en borrador',
+    };
+    const mal = Object.entries(esperado).filter(([v, d]) => comoEsta(v) !== d).map(([v, d]) => `${v}: «${comoEsta(v)}» y no «${d}»`);
+    assert.deepEqual(mal, []);
+    for (const nada of ['', '   ', 'xyz', '42', null, undefined, 7]) assert.equal(comoEsta(nada), '', `${nada} sale en crudo`);
+    // Todo lo que puede salir está en el diccionario.
+    const dicc = fs.readFileSync(path.join(RAIZ, '..', 'docs', 'diccionario.md'), 'utf8');
+    for (const d of new Set(Object.values(esperado))) assert.ok(dicc.includes(d), `«${d}» no está en el diccionario`);
+    return `${Object.keys(esperado).length} valores, ${new Set(Object.values(esperado)).size} palabras`;
   });
 
   await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 195)', async () => {

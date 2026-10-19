@@ -950,14 +950,34 @@ function pantallaAgentes({ agentes = [] }) {
   `;
 }
 
-function pantallaProyectos({ montones = [] }) {
-  const ESTADOS = {
-    draft: 'en borrador',
-    accepted: 'acordado',
-    approved: 'acordado',
-    done: 'terminado',
-    superseded: 'sustituido',
-  };
+function pantallaProyectos({ montones = [], deLosProyectos = [] }) {
+  // Cómo está cada cosa llega ya dicho con el diccionario (`proyectos.comoEsta`):
+  // aquí no se traduce ni se enseña nada en crudo (decisión 195).
+  const losMontones = (lista) => lista.map((m) => `
+      <h2>${texto(m.etiqueta)}</h2>
+      <p class="detalle">${texto(m.pista)}</p>
+      ${m.cosas.map((c) => `
+        <div class="entrada">
+          <p class="nombre">${texto(c.titulo)}</p>
+          ${c.estado || c.tareas ? `<p class="pista">${texto([
+            c.estado,
+            c.tareas ? plural(c.tareas, '1 tarea', '{n} tareas') : '',
+          ].filter(Boolean).join(' · '))}</p>` : ''}
+          ${boton({ etiqueta: 'Abrirlo', icono: '▸', pequeno: true, accion: { tipo: 'verProyecto', fichero: c.fichero } })}
+        </div>`).join('')}`).join('<hr class="separador">');
+
+  // En un monorepo, lo de cada proyecto va en el suyo, plegado: con ocho proyectos
+  // salían noventa documentos mezclados con los de la raíz (decisión 195).
+  const porProyecto = deLosProyectos.length ? `
+    ${montones.length ? '<hr class="separador">' : ''}
+    <h2>Proyectos</h2>
+    <p class="detalle">${texto('Lo de cada proyecto, en el suyo.')}</p>
+    ${deLosProyectos.map((p) => grupo({
+      id: `enQueEstamos:${p.nombre}`,
+      etiqueta: p.nombre,
+      cuantos: plural(p.montones.reduce((n, m) => n + m.cosas.length, 0), '1 documento', '{n} documentos'),
+      dentro: losMontones(p.montones),
+    })).join('')}` : '';
 
   return `
     ${migas([{ etiqueta: 'Principal', accion: { tipo: 'volver' } }, { etiqueta: 'En qué estamos' }])}
@@ -969,20 +989,8 @@ function pantallaProyectos({ montones = [] }) {
       <p class="hiciste">Lo que se acordó construir, por qué, y cómo se va a hacer.</p>
     </div>
 
-    ${montones.map((m) => `
-      <h2>${texto(m.etiqueta)}</h2>
-      <p class="detalle">${texto(m.pista)}</p>
-      ${m.cosas.map((c) => `
-        <div class="entrada">
-          <p class="nombre">${texto(c.titulo)}</p>
-          ${c.proyecto || c.estado || c.tareas ? `<p class="pista">${texto([
-            // En un monorepo, de qué proyecto es (decisión 195).
-            c.proyecto ? `«${c.proyecto}»` : '',
-            ESTADOS[c.estado] || c.estado,
-            c.tareas ? plural(c.tareas, '1 tarea', '{n} tareas') : '',
-          ].filter(Boolean).join(' · '))}</p>` : ''}
-          ${boton({ etiqueta: 'Abrirlo', icono: '▸', pequeno: true, accion: { tipo: 'verProyecto', fichero: c.fichero } })}
-        </div>`).join('')}`).join('<hr class="separador">')}
+    ${losMontones(montones)}
+    ${porProyecto}
   `;
 }
 
@@ -3075,7 +3083,7 @@ function pantallaResultado({ titulo, texto: salida, proveedor }) {
 
 // ---------------------------------------------------------------- cerebro
 
-function pantallaCerebro({ temas, sinOrdenar = [], esperando, yaLeidos, hayPanel, aviso: avisoLocal }) {
+function pantallaCerebro({ temas, sinOrdenar = [], cuantosSinOrdenar, esperando, yaLeidos, hayPanel, aviso: avisoLocal }) {
   const porTemas = temas.length
     ? temas.map((t) => `
         <div class="conexion">
@@ -3089,7 +3097,7 @@ function pantallaCerebro({ temas, sinOrdenar = [], esperando, yaLeidos, hayPanel
   // de llegar a ello desde aquí: existía en el disco y punto.
   const sueltos = sinOrdenar.length
     ? `<hr class="separador"><h2>Sin ordenar todavía</h2>` +
-      `<p class="detalle">${texto(plural(sinOrdenar.length,
+      `<p class="detalle">${texto(plural(cuantosSinOrdenar || sinOrdenar.length,
         'Hay 1 documento escrito que aún no está en su tema.',
         'Hay {n} documentos escritos que aún no están en su tema.'))}</p>` +
       sinOrdenar.map((d) => boton({
@@ -3101,7 +3109,7 @@ function pantallaCerebro({ temas, sinOrdenar = [], esperando, yaLeidos, hayPanel
         etiqueta: 'Que los ordene',
         icono: '🗂️',
         discreto: true,
-        accion: { tipo: 'pedir', prompt: 'Hay documentos en la wiki que no están en el índice. Ponlos en su tema, con su resumen y su fecha, y deja el índice al día.' },
+        accion: { tipo: 'pedir', prompt: 'Hay documentos en la wiki que no están en el índice. Ponlos en su tema, con su resumen y su fecha, y deja el índice al día. Lo que esté en proyectos/<proyecto>/ es la documentación de cada proyecto: déjalo donde está.' },
       })
     : '';
 

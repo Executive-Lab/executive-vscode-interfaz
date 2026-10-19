@@ -333,9 +333,12 @@ function porDondeIbas(raiz, continuacion, { reloj = Date.now } = {}) {
     quedan: tarea.quedan,
   };
   if (ibas.titulo === null || ibas.siguiente === null) return null;
+  // En un monorepo, de qué proyecto es (decisión 195): con varios, el título solo no lo dice.
+  const deProyecto = (/^02-DOCS\/wiki\/proyectos\/([^/]+)\//.exec(ibas.ruta) || [])[1];
+  const enCual = deProyecto ? paraEnsenar(deProyecto, LARGO_DEL_TITULO) : null;
   return {
     ...ibas,
-    texto: `Ibas por: ${ibas.siguiente}, y te ${pasos(ibas.quedan)} de «${ibas.titulo}».`,
+    texto: `Ibas por: ${ibas.siguiente}, y te ${pasos(ibas.quedan)} de «${ibas.titulo}»${enCual ? `, en «${enCual}»` : ''}.`,
     accion: { tipo: 'pedir', prompt: encargo(ibas) },
   };
 }

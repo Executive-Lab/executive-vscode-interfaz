@@ -298,12 +298,35 @@ function todosLosDocumentos() {
   return encontrados;
 }
 
+// En un monorepo, `proyectos/<proyecto>/` es la documentación de cada proyecto, con
+// su propio índice (decisión 195). No está «sin ordenar» para el índice de la raíz,
+// y «Que los ordene» le pedía al asistente meterla en temas: desmontarla. En uno de
+// verdad eran 380 de 402. Se reconoce por su índice o por ser un proyecto de dentro;
+// sigue saliendo en el buscador y en Proyectos («Lo que sabe de…»).
+function laDocumentacionDeLosProyectos() {
+  const deDentro = new Set(require('./subproyectos').cuales().map((p) => p.nombre));
+  const vistos = new Map();
+  return (ruta) => {
+    const m = /^proyectos\/([^/]+)\/./.exec(ruta);
+    if (!m) return false;
+    if (!vistos.has(m[1])) {
+      let conIndice = false;
+      try {
+        conIndice = fs.lstatSync(path.join(proyecto.ruta(...WIKI), 'proyectos', m[1], 'index.md')).isFile();
+      } catch { /* sin índice propio */ }
+      vistos.set(m[1], conIndice || deDentro.has(m[1]));
+    }
+    return vistos.get(m[1]);
+  };
+}
+
 // Lo que está escrito pero el índice no menciona. Hasta ahora era invisible
 // desde el panel: existía en el disco y no había forma de llegar a ello.
 function sinOrdenar() {
   const indexados = new Set(catalogo().flatMap((t) => t.articulos.map((a) => a.ruta.replace(/^\.\//, ''))));
+  const deUnProyecto = laDocumentacionDeLosProyectos();
   return todosLosDocumentos()
-    .filter((r) => !indexados.has(r))
+    .filter((r) => !indexados.has(r) && !deUnProyecto(r))
     .map((ruta) => ({
       ruta,
       titulo: (leer(...WIKI, ruta) || '')
