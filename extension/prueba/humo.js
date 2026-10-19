@@ -28016,7 +28016,7 @@ exec git "$@"
 
   await comprobar('la pantalla: Proyectos solo en un monorepo, y «✓ Todo guardado» solo si los proyectos también (decisión 192)', () => {
     const pintar = (estado) => require('./panel-falso').montarPanel().mandar({ tipo: 'estado', estado: { listo: true, barraCompleta: false, piezas: { copias: true, proyectos: true }, ...estado } });
-    const proyectosDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:proyectos"[\s\S]*?<\/details>/) || [''])[0];
+    const proyectosDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:proyectos-de-dentro"[\s\S]*?<\/details>/) || [''])[0];
     const copiasDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:copias"[\s\S]*?<\/details>/) || [''])[0];
     const pedir = (p) => ({ tipo: 'pedir', prompt: `Encargo de ${p}` });
     const guardarlo = { etiqueta: 'Guardar «panel» en git', icono: '💾', accion: pedir('guardar') };
@@ -28069,7 +28069,7 @@ exec git "$@"
       assert.equal(estado.copias.proyectosSinGuardar[0].boton.etiqueta, 'Guardar «panel-fundae» en git');
       const html = require('./panel-falso').montarPanel().mandar({ ...estado, barraCompleta: false });
       assert.match(html, /Hay cambios sin guardar en «panel-fundae»/);
-      assert.match(html, /data-abrir="grupo:proyectos"[\s\S]*Trabajar en «panel-fundae»/);
+      assert.match(html, /data-abrir="grupo:proyectos-de-dentro"[\s\S]*Trabajar en «panel-fundae»/);
       // En la carpeta de siempre no cambia nada.
       vscode.guion.raiz = empresa;
       estado = await otraVez();
@@ -28079,6 +28079,67 @@ exec git "$@"
       vscode.guion.raiz = antes.raiz;
       proveedor.enviar = antes.enviar;
       sp.olvidar();
+    }
+  });
+
+  await comprobar('«Seguir donde lo dejé» y «En qué estamos» leen la documentación de cada proyecto (decisión 192)', () => {
+    const raiz = montarMonorepo();
+    const ibasM = cargar('por-donde-ibas');
+    const escribir = (rel, c, cuando) => {
+      const f = path.join(raiz, ...rel.split('/'));
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      fs.writeFileSync(f, c);
+      if (cuando) fs.utimesSync(f, cuando, cuando);
+    };
+    const doc = (titulo, paso) => `---\ntype: ftd\ntitle: ${titulo}\nstatus: en curso\n---\n\n# ${titulo}\n\n## Checklist\n\n- [ ] ${paso}\n- [ ] Otra cosa\n\n## Next\n\n${paso}\n`;
+    const ayer = new Date(Date.now() - 86400000);
+    escribir('02-DOCS/wiki/ftd/lo-de-la-raiz.md', doc('Lo de la raíz', 'Ordenar las facturas'), ayer);
+    escribir('02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', doc('El informe', 'Sacar los cinco registros'));
+    let ibas = ibasM.porDondeIbas(raiz, '');
+    assert.equal(ibas.ruta, '02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', 'el más reciente es el del proyecto');
+    assert.match(ibas.texto, /Sacar los cinco registros/);
+    assert.match(ibas.accion.prompt, /02-DOCS\/wiki\/proyectos\/panel-fundae\/ftd\/el-informe\.md/);
+    // La línea `next:` de RSC también puede nombrar uno de un proyecto.
+    ibas = ibasM.porDondeIbas(raiz, 'next: 02-DOCS/wiki/ftd/lo-de-la-raiz.md: Ordenar las facturas (2 open)');
+    assert.equal(ibas.ruta, '02-DOCS/wiki/ftd/lo-de-la-raiz.md');
+    fs.utimesSync(path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'ftd', 'el-informe.md'), ayer, ayer);
+    fs.utimesSync(path.join(raiz, '02-DOCS', 'wiki', 'ftd', 'lo-de-la-raiz.md'), new Date(), new Date());
+    ibas = ibasM.porDondeIbas(raiz, 'next: 02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md: Sacar los cinco registros (2 open)');
+    assert.equal(ibas.ruta, '02-DOCS/wiki/proyectos/panel-fundae/ftd/el-informe.md', 'el next de un proyecto no se lee');
+    assert.deepEqual(ibasM.porDondeIbas(raiz, 'next: 02-DOCS/wiki/proyectos/../ftd/x.md: a (1 open)').ruta, '02-DOCS/wiki/ftd/lo-de-la-raiz.md', 'un next que sale de su sitio se lee');
+    // Una carpeta de proyecto que es un enlace no se lee.
+    const fuera = fs.mkdtempSync(path.join(os.tmpdir(), 'ftd-fuera-'));
+    fs.mkdirSync(path.join(fuera, 'ftd'));
+    fs.writeFileSync(path.join(fuera, 'ftd', 'ajeno.md'), doc('Ajeno', 'No debería salir'));
+    fs.symlinkSync(fuera, path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'enlazado'));
+    fs.utimesSync(path.join(raiz, '02-DOCS', 'wiki', 'ftd', 'lo-de-la-raiz.md'), ayer, ayer);
+    assert.ok(!/No debería salir/.test(JSON.stringify(ibasM.porDondeIbas(raiz, ''))), 'una carpeta enlazada se lee');
+
+    // «En qué estamos».
+    const antes = vscode.guion.raiz;
+    try {
+      vscode.guion.raiz = raiz;
+      const proyectosM = cargar('proyectos');
+      escribir('02-DOCS/wiki/sdd/specs/la-raiz.md', '---\ntitle: Lo de la raíz\nstatus: approved\n---\n');
+      escribir('02-DOCS/wiki/proyectos/panel-fundae/sdd/specs/los-registros.md', '---\ntitle: Los cinco registros\nstatus: approved\n---\n| T001 | a |\n');
+      escribir('02-DOCS/wiki/proyectos/enlazado-no/sdd', '');
+      fs.mkdirSync(path.join(fuera, 'sdd', 'specs'), { recursive: true });
+      fs.writeFileSync(path.join(fuera, 'sdd', 'specs', 'ajena.md'), '# Ajena\n');
+      const specs = proyectosM.queHay().find((m) => m.id === 'specs').cosas;
+      const vistas = specs.map((c) => [c.fichero, c.proyecto, c.titulo]);
+      assert.deepEqual(vistas.find((v) => v[0] === 'specs/la-raiz.md'), ['specs/la-raiz.md', null, 'Lo de la raíz']);
+      assert.deepEqual(vistas.find((v) => v[1]), ['proyectos/panel-fundae/sdd/specs/los-registros.md', 'panel-fundae', 'Los cinco registros'], 'lo de un proyecto no sale');
+      assert.ok(!vistas.some((v) => /ajena|enlazado/i.test(v.join(' '))), 'sale lo de uno enlazado');
+      assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/specs/los-registros.md'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'specs', 'los-registros.md'));
+      assert.ok(proyectosM.dondeVive('specs/la-raiz.md'), 'lo de la raíz deja de abrirse');
+      for (const malo of ['proyectos/enlazado/sdd/specs/ajena.md', 'proyectos/../sdd/specs/la-raiz.md', 'proyectos/panel-fundae/sdd/specs/../../../../../etc/x.md', 'proyectos/panel-fundae/otra/specs/a.md', '../proyectos/panel-fundae/sdd/specs/los-registros.md']) {
+        assert.equal(proyectosM.dondeVive(malo), null, `se abre ${malo}`);
+      }
+      const html = require('./panel-falso').montarPanel().mandar({ tipo: 'proyectos', montones: proyectosM.queHay() });
+      assert.match(html, /Los cinco registros<\/p>\s*<p class="pista">«panel-fundae» · /);
+      return 'el del proyecto se ofrece y se abre; el enlazado, no';
+    } finally {
+      vscode.guion.raiz = antes;
     }
   });
 

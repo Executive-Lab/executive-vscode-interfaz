@@ -56,9 +56,43 @@ function titulo(crudo, nombre) {
   return (del && del[1].trim()) || nombre.replace(/[-_]+/g, ' ').replace(/\.md$/, '');
 }
 
+// En un monorepo, lo de cada proyecto vive en `02-DOCS/wiki/proyectos/<proyecto>/sdd/`,
+// con la misma forma (decisión 192). Se enseña junto a lo de la raíz, con el
+// nombre de su proyecto. Solo carpetas de verdad, sin enlaces, y con tope.
+const DE_LOS_PROYECTOS = ['02-DOCS', 'wiki', 'proyectos'];
+const TOPE_DE_PROYECTOS = 30;
+const NOMBRE_DE_PROYECTO = /^[\p{L}\p{N}][\p{L}\p{N}_.-]{0,99}$/u;
+const esCarpeta = (completa) => {
+  try {
+    return fs.lstatSync(completa).isDirectory();
+  } catch {
+    return false;
+  }
+};
+
+function losProyectosConSdd() {
+  const base = proyecto.ruta(...DE_LOS_PROYECTOS);
+  if (!base || !esCarpeta(base)) return [];
+  let nombres;
+  try {
+    nombres = fs.readdirSync(base);
+  } catch {
+    return [];
+  }
+  return nombres.filter((n) => NOMBRE_DE_PROYECTO.test(n)).sort().slice(0, TOPE_DE_PROYECTOS)
+    .filter((n) => esCarpeta(path.join(base, n)) && esCarpeta(path.join(base, n, 'sdd')));
+}
+
 function leerMonton(cual) {
-  const carpeta = proyecto.ruta(...SDD, cual);
-  if (!carpeta || !fs.existsSync(carpeta)) return [];
+  return [
+    ...leerUnMonton(proyecto.ruta(...SDD, cual), `${cual}/`, null),
+    ...losProyectosConSdd().flatMap((p) => leerUnMonton(proyecto.ruta(...DE_LOS_PROYECTOS, p, 'sdd', cual), `proyectos/${p}/sdd/${cual}/`, p)),
+  ];
+}
+
+// `delante`: cómo se nombra el fichero para volver a abrirlo (`dondeVive`).
+function leerUnMonton(carpeta, delante, deProyecto) {
+  if (!carpeta || !esCarpeta(carpeta)) return [];
 
   let nombres;
   try {
@@ -76,7 +110,9 @@ function leerMonton(cual) {
     const campos = frontmatter.analizar(crudo);
     const tareas = (crudo.match(CUENTA_TAREAS) || []).length;
     return {
-      fichero: `${cual}/${nombre}`,
+      fichero: `${delante}${nombre}`,
+      // El nombre de su proyecto, en un monorepo; null, lo de la raíz.
+      proyecto: deProyecto,
       titulo: titulo(crudo, nombre),
       // `status` lo escribe SDD; si no está, no se inventa.
       estado: typeof campos.status === 'string' ? campos.status.trim() : '',
@@ -94,12 +130,17 @@ function queHay() {
 const hayAlgo = () => queHay().length > 0;
 
 // Abrir uno. El nombre viene de un mensaje del panel, así que se comprueba que
-// sigue siendo de ahí dentro y que es un `.md`.
+// sigue siendo de ahí dentro y que es un `.md`. Lo de un proyecto (decisión 192)
+// tiene que tener exactamente su forma, y su carpeta no puede ser un enlace.
+const DE_UN_PROYECTO = /^proyectos\/([^/\\]+)\/sdd\/(proposals|specs|plans|verifications)\/[^/\\]+\.md$/;
 function dondeVive(fichero) {
-  const raiz = proyecto.ruta(...SDD);
-  if (!raiz || typeof fichero !== 'string') return null;
+  if (typeof fichero !== 'string') return null;
+  const deProyecto = DE_UN_PROYECTO.exec(fichero);
+  if (deProyecto && !losProyectosConSdd().includes(deProyecto[1])) return null;
+  const raiz = deProyecto ? proyecto.ruta(...DE_LOS_PROYECTOS, deProyecto[1], 'sdd') : proyecto.ruta(...SDD);
+  if (!raiz) return null;
 
-  const completa = path.resolve(raiz, fichero);
+  const completa = path.resolve(raiz, deProyecto ? fichero.split('/').slice(3).join('/') : fichero);
   const dentro = path.resolve(raiz) + path.sep;
   if (!completa.startsWith(dentro) || !completa.endsWith('.md')) return null;
   return fs.existsSync(completa) ? completa : null;

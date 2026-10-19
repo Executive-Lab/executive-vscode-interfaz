@@ -34,9 +34,13 @@ const limpio = require('./limpio');
 const frontmatter = require('./frontmatter');
 
 const CARPETA = ['02-DOCS', 'wiki', 'ftd'];
-// Los que puede nombrar `next:`: los mismos que mira RSC. El nombre, sin barras
-// ni dos puntos: «02-DOCS/wiki/ftd/x.md: el paso (2 open) | …».
-const EN_EL_NEXT = /(?:^|\|\s*)(02-DOCS\/wiki\/(?:ftd|sdd\/(?:specs|plans|progress))\/[^\s/|:]+\.md):/g;
+// En un monorepo, los de cada proyecto (decisión 192): `02-DOCS/wiki/proyectos/<proyecto>/ftd/`.
+const DE_LOS_PROYECTOS = ['02-DOCS', 'wiki', 'proyectos'];
+const TOPE_DE_PROYECTOS = 30;
+// Los que puede nombrar `next:`: los mismos que mira RSC, también los de un
+// proyecto. El nombre, sin barras ni dos puntos: «02-DOCS/wiki/ftd/x.md: el paso
+// (2 open) | …». El del proyecto, con las mismas letras que un nombre de documento.
+const EN_EL_NEXT = /(?:^|\|\s*)(02-DOCS\/wiki\/(?:proyectos\/[\p{L}\p{N}][\p{L}\p{N}_.-]{0,99}\/)?(?:ftd|sdd\/(?:specs|plans|progress))\/[^\s/|:]+\.md):/gu;
 // Un nombre que se puede escribir tal cual en un encargo: letras, números, `_`,
 // `.` y `-`. Lo demás no se lee.
 const NOMBRE = /^[\p{L}\p{N}][\p{L}\p{N}_.-]{0,79}\.md$/u;
@@ -241,31 +245,42 @@ function enElNext(continuacion) {
   return [...linea.slice('next: '.length, 8192).matchAll(EN_EL_NEXT)].map((m) => m[1]);
 }
 
-// El documento de trabajo en marcha más reciente: los de la carpeta, del último
+// Las carpetas de documentos de trabajo: la de la raíz y, en un monorepo, la de
+// cada proyecto (decisión 192). Solo carpetas de verdad, y con tope.
+const NOMBRE_DE_PROYECTO = /^[\p{L}\p{N}][\p{L}\p{N}_.-]{0,99}$/u;
+function lasCarpetas(raiz) {
+  const proyectos = sinEnlaces(raiz, DE_LOS_PROYECTOS);
+  let nombres = [];
+  try {
+    nombres = proyectos ? fs.readdirSync(proyectos).filter((n) => NOMBRE_DE_PROYECTO.test(n)).sort().slice(0, TOPE_DE_PROYECTOS) : [];
+  } catch { /* sin proyectos */ }
+  return [CARPETA, ...nombres.map((n) => [...DE_LOS_PROYECTOS, n, 'ftd'])];
+}
+
+// El documento de trabajo en marcha más reciente: los de las carpetas, del último
 // tocado al primero.
 function elMasReciente(raiz, presupuesto) {
-  const carpeta = sinEnlaces(raiz, CARPETA);
-  if (!carpeta) return null;
-  let nombres;
-  try {
-    nombres = fs.readdirSync(carpeta);
-  } catch {
-    return null;
-  }
-  // Por nombre antes del tope: así los que quedan fuera son siempre los mismos.
-  const porFecha = nombres.filter((n) => NOMBRE.test(n)).sort().slice(0, CUANTOS_SE_MIRAN)
-    .map((nombre) => {
+  const candidatos = [];
+  for (const partes of lasCarpetas(raiz)) {
+    const carpeta = sinEnlaces(raiz, partes);
+    if (!carpeta) continue;
+    let nombres;
+    try {
+      nombres = fs.readdirSync(carpeta);
+    } catch {
+      continue;
+    }
+    // Por nombre antes del tope: así los que quedan fuera son siempre los mismos.
+    for (const nombre of nombres.filter((n) => NOMBRE.test(n)).sort().slice(0, CUANTOS_SE_MIRAN)) {
       try {
-        return { nombre, cuando: fs.lstatSync(path.join(carpeta, nombre)).mtimeMs };
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.cuando - a.cuando || a.nombre.localeCompare(b.nombre));
-  for (const { nombre } of porFecha) {
+        candidatos.push({ rel: [...partes, nombre].join('/'), cuando: fs.lstatSync(path.join(carpeta, nombre)).mtimeMs });
+      } catch { /* se ha ido entre medias */ }
+    }
+  }
+  candidatos.sort((a, b) => b.cuando - a.cuando || a.rel.localeCompare(b.rel));
+  for (const { rel } of candidatos) {
     if (!quedaPresupuesto(presupuesto)) return null;
-    const tarea = laTarea(raiz, [...CARPETA, nombre].join('/'), presupuesto);
+    const tarea = laTarea(raiz, rel, presupuesto);
     if (tarea) return tarea;
   }
   return null;

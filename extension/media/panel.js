@@ -975,7 +975,9 @@ function pantallaProyectos({ montones = [] }) {
       ${m.cosas.map((c) => `
         <div class="entrada">
           <p class="nombre">${texto(c.titulo)}</p>
-          ${c.estado || c.tareas ? `<p class="pista">${texto([
+          ${c.proyecto || c.estado || c.tareas ? `<p class="pista">${texto([
+            // En un monorepo, de qué proyecto es (decisión 192).
+            c.proyecto ? `«${c.proyecto}»` : '',
             ESTADOS[c.estado] || c.estado,
             c.tareas ? plural(c.tareas, '1 tarea', '{n} tareas') : '',
           ].filter(Boolean).join(' · '))}</p>` : ''}
@@ -2131,7 +2133,7 @@ function grupoProyectosDeDentro() {
   if (!lista.length) return '';
   const sinGuardar = lista.filter((p) => p.sinGuardar === true).length;
   return grupo({
-    id: 'grupo:proyectos',
+    id: 'grupo:proyectos-de-dentro',
     etiqueta: 'Proyectos',
     cuantos: sinGuardar ? plural(sinGuardar, '1 sin guardar', '{n} sin guardar') : '',
     dentro: lista.map((p) => `
