@@ -44,7 +44,7 @@ la 182 (nunca): ahora sí, pero solo si la persona lo elige, con «No» por defe
 
 ## La revisión
 
-Ver la decisión 192, «La revisión». Una mutación por arreglo, y la batería entera pasada una vez al final (números en la decisión). Posible refuerzo, no hecho: reglas `permissions.deny` de usuario para los ficheros de los frenos.
+Ver la decisión 192, «La revisión». Una mutación por arreglo, y la batería entera pasada una vez al final: `humo.js` 555 (564 con `--con-arnes`), `mapeos-codex.js` 30, `contrato.js` 15, `empresas-distintas.js`, diccionario y PowerShell limpios. Posible refuerzo, no hecho: reglas `permissions.deny` de usuario para los ficheros de los frenos.
 
 ## Next
 

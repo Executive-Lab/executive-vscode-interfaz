@@ -9495,7 +9495,13 @@ La revisión de seguridad de la PR #99 (19-10-2026) dejó cinco arreglos, ya hec
 
 **Las pruebas de la revisión**: tres comprobaciones nuevas en `humo.js` (un clic, solo lo que nombra; la frase y el riesgo,
 enteros; lo escrito en esta decisión), y las de la pregunta y la tarjeta puestas al texto nuevo. Una mutación por
-arreglo, cada una puesta y restaurada desde copia, y todas caen (ver más abajo los números de la batería).
+arreglo (en realidad ocho, porque el primero tiene cuatro caras), cada una puesta y restaurada desde copia, y las ocho
+caen: el clic de Claude que pone también Codex; elegir otro modo que quita también Codex; la tarjeta de Codex que quita
+o que pone también Claude; los frenos «siguen funcionando»; la pregunta sin el riesgo de Codex; la frase que nombra a
+quien no quedó; y la decisión sin lo de `skipDangerousModePermissionPrompt`. De paso salió un fallo: dos pasadas en el
+mismo segundo chocaban en el nombre de la copia del `config.toml` y la segunda daba `fallo`; ahora la copia se numera.
+**Batería tras la revisión** (con `main` traído): `humo.js` 555 (564 con `--con-arnes`), `mapeos-codex.js` 30,
+`contrato.js` 15, `empresas-distintas.js`, el diccionario y `revisar-powershell.js`, limpios.
 
 **Las pruebas**: `humo.js` pasa a 552 (561 con `--con-arnes`, donde pasa el montaje de verdad). Seis comprobaciones
 nuevas, con casas de mentira y el `vscode` falso: Claude en el terminal (se crea, se suma, no pisa uno suyo, ilegible y
