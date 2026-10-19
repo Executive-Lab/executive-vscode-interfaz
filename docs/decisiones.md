@@ -6904,6 +6904,10 @@ verde. `windows.js` corre en la máquina Windows de GitHub.
 
 **Fecha:** 16 de octubre de 2026 · **Estado:** hecho en el código · FTD `el-instalador-lo-deja-todo`
 
+> **Nota posterior (decisión 192).** Lo de «nunca `bypassPermissions` ni `claudeCode.allowDangerouslySkipPermissions`» quedó
+> cambiado por decisión expresa de Jose: la barra los pone, pero solo si la persona lo elige, con «No» de fábrica. Lo de
+> aquí abajo se deja como se escribió.
+
 Jose: *«que el instalador instale y configure todo para que el usuario no tenga que hacer mierdas. Quiero
 que el instalador active cosas como el remote control siempre de claude code, el focus view, etc. y que
 configure todo lo que se necesite a nivel de visual studio code como lo de trust folder y que claude code se
@@ -8714,6 +8718,10 @@ que se puso el otro asistente; sin apuntar lo puesto; sin el botón de reintento
 
 ## 182. Claude, al día con su documentación
 
+> **Nota posterior (decisión 192).** Lo de «Nunca `bypassPermissions`» (punto 1) quedó
+> cambiado por decisión expresa de Jose: la barra los pone, pero solo si la persona lo elige, con «No» de fábrica. Lo de
+> aquí abajo se deja como se escribió.
+
 El 17-10-2026 se releyó la documentación oficial de Claude Code contra lo que la barra hace. Tres hallazgos.
 
 **1. «Qué puede hacer sin preguntarte» no hacía nada en el editor.** La barra escribía `permissions.defaultMode`
@@ -9346,6 +9354,178 @@ enlace en su sitio, el guion corrido de verdad y Codex) y el botón (sin id, con
 exacto, el editor que no lo recoge, ids que no sirven, Codex, textos sin palabras prohibidas). `mapeos-codex` 30, `contrato` 15, `empresas-distintas`, diccionario y PowerShell, limpios.
 **Mutaciones**: todas caen: el id sin validar al apuntar; apuntar también con Codex; apuntar fuera de las carpetas de la barra; escribir a través de un enlace; apuntar algo más que el id; ofrecer el botón con Codex; la validación del id relajada en la extensión; el id viajando a la pantalla; dar por abierto sin mirar si el editor recogió el enlace; y quitar el botón de la tarjeta (esta no caía: la comprobación miraba toda la pantalla, y se acotó a la tarjeta).
 
+## 192. Trabajar sin pedir permiso, si el alumno lo elige
+
+**Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código · FTD `sin-pedir-permiso`
+
+Jose, literal: *«Mete en el instalador o al iniciar proyecto o donde sea que pregunte si por defecto se usa el modo
+Bypass permissions, y si acepta que sea ese el modo por defecto de claude y codex»*.
+
+**Lo que cambia.** Las decisiones 163 y 182 dijeron que la barra NUNCA pone `bypassPermissions` ni
+`claudeCode.allowDangerouslySkipPermissions`. Esta decisión lo cambia, **por decisión expresa del dueño del producto**,
+como **opción que elige la persona**, con **«No» por defecto** y el riesgo dicho. Es la regla de la 187: lo que es
+decisión de la persona se le pregunta, y esto lo es. Las dos decisiones llevan una nota que remite aquí; su historia no
+se reescribe.
+
+### Lo que dice la documentación (leída el 19-10-2026)
+
+**Claude Code**
+- **Editor.** `claudeCode.initialPermissionMode` admite `default`, `plan`, `acceptEdits` o `bypassPermissions`, y VS Code
+  «reads `initialPermissionMode` from your user settings and ignores workspace values»
+  (https://code.claude.com/docs/en/vs-code, «Extension settings»). **Hace falta además**
+  `claudeCode.allowDangerouslySkipPermissions`: «Bypass permissions requires the **Allow dangerously skip permissions**
+  toggle in the extension settings. Without it, the permission mode doesn't appear in the indicator, and a
+  `bypassPermissions` value from item 1 or item 3 starts the conversation in Manual instead»
+  (https://code.claude.com/docs/en/permission-modes, «Switch permission modes»). La propia página dice de ese ajuste:
+  «Use it only in sandboxes with no internet access».
+- **Terminal.** `permissions.defaultMode: "bypassPermissions"` en `~/.claude/settings.json`, de usuario, `--settings` o
+  gestionado («Start in a different permission mode»). En el `.claude/settings.json` o `.claude/settings.local.json` de
+  la carpeta, «it doesn't take effect either, and the session starts in Manual mode»: por eso solo va en el de usuario.
+- **La pantalla de aceptación.** La primera vez que se arranca una sesión interactiva con este modo, Claude muestra un
+  aviso en el que la persona acepta la responsabilidad: «If you accept: Claude Code sets
+  `skipDangerousModePermissionPrompt` to `true` in `~/.claude/settings.json`… If you decline: Claude Code exits».
+  La documentación dice «interactive session» y no aclara si el editor la enseña; **no está documentado**. **La barra no
+  escribe `skipDangerousModePermissionPrompt`**: esa aceptación la da la persona, no la barra. Si la pantalla sale, es
+  una segunda confirmación suya.
+- **Los frenos siguen.** «`PreToolUse` hooks fire before any permission-mode check, in every permission mode… A hook
+  that returns `permissionDecision: "deny"` blocks the tool even in `bypassPermissions` mode or with
+  `--dangerously-skip-permissions`» (https://code.claude.com/docs/en/hooks-guide). Y «Deny rules block in every mode,
+  including `bypassPermissions`» (permission-modes). Los frenos del arnés son enganches de ese tipo, así que **con Claude
+  siguen puestos y pueden denegar**. Pero el mismo modo deja a Claude escribir en rutas protegidas («Writes to protected
+  paths are never auto-approved except in `bypassPermissions` mode»), así que sin pedir permiso también podría quitarlos:
+  eso es lo que se le dice a la persona (ver «La revisión»). Siguen pidiendo permiso, en cualquier
+  modo, las acciones que ningún modo aprueba (permission-modes, «Actions no mode auto-approves»), como `rm -rf` sobre una
+  ruta crítica.
+- **El riesgo que describe la documentación**: «Only use this mode in isolated environments like containers, VMs, or dev
+  containers without internet access, where Claude Code cannot damage your host system».
+
+**Codex**
+- Para quedarse sin aprobaciones y sin sandbox, en `config.toml`: `sandbox_mode = "danger-full-access"` y
+  `approval_policy = "never"` (https://learn.chatgpt.com/docs/sandboxing). `approval_policy` admite `on-request | never`
+  y `sandbox_mode` `read-only | workspace-write | danger-full-access`
+  (https://learn.chatgpt.com/docs/config-file/config-reference); la extensión del editor y el terminal comparten
+  configuración: «The CLI and IDE extension share the same configuration layers»
+  (https://learn.chatgpt.com/docs/config-file/config-basic). `default_permissions` no se combina con `sandbox_mode`.
+- Solo `approval_policy = "never"` **no** quita el sandbox: «works with every `--sandbox` mode»
+  (https://learn.chatgpt.com/docs/agent-approvals-security). Por eso se escriben las dos.
+- El riesgo: «`danger-full-access`: The agent runs without sandbox restrictions… removes the filesystem and network
+  boundaries and should be used only when you want the agent to act with full access»
+  (https://learn.chatgpt.com/docs/sandboxing); «Dangerous full access… Elevated Risk… No sandbox; no approvals (not
+  recommended)» (agent-approvals-security); y en el selector, «Full access: Unrestricted access to the internet and any
+  file on your computer» (https://learn.chatgpt.com/docs/permission-modes).
+- **No está documentado**: que los frenos de seguridad del arnés valgan con Codex en este modo (RSC no les engancha a
+  Codex los de Claude). Por eso la línea de riesgo solo habla de los frenos «con Claude».
+
+### Lo que se hizo
+
+**1. La pregunta, una vez por ordenador.** Al terminar de preparar una carpeta nueva (a continuación de la vista sencilla
+y los consejos), un aviso del editor, con «No» el primero y de fábrica. Con Claude:
+
+> ¿Quieres que Claude trabaje sin pedirte permiso para cada cosa? Puede cambiar o borrar ficheros y ejecutar programas
+> sin preguntarte. Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos.
+
+Con los dos, «Claude y Codex trabajen» y, detrás, «Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.»; con Codex solo, «Codex trabaje», sin la frase de los
+frenos de Claude y con la de Codex. Botones:
+**No, que me pregunte** · **Sí, sin pedirme permiso**. Con el no se apunta y no vuelve a salir; cerrarlo sin contestar
+vuelve a salir al preparar otra carpeta. No sale si ya está puesto, si la carpeta no es de confianza o si no hay ni Claude ni
+Codex. La respuesta vive en el estado de la barra (`globalState`), que es de este ordenador, no de la carpeta. Solo se
+pregunta al montar de cero; al poner al día una carpeta que ya estaba, no.
+
+**2. Con el sí**, en los ajustes de **usuario** y solo para el asistente que se usa (extensión instalada o arnés
+montado para él; Codex también por terminal):
+
+| Dónde | Clave | Valor |
+|---|---|---|
+| Ajustes de usuario del editor (`ConfigurationTarget.Global`) | `claudeCode.initialPermissionMode` | `"bypassPermissions"` |
+| Ajustes de usuario del editor | `claudeCode.allowDangerouslySkipPermissions` | `true` |
+| `~/.claude/settings.json` (o `CLAUDE_CONFIG_DIR`) | `permissions.defaultMode` | `"bypassPermissions"` |
+| `~/.codex/config.toml` (o `CODEX_HOME`), arriba, antes de la primera tabla | `approval_policy` | `"never"` |
+| `~/.codex/config.toml` | `sandbox_mode` | `"danger-full-access"` |
+
+El cuidado de la 143 y la 171 (`src/sin-pedir-permiso.js`):
+- **Lo suyo no se pisa.** Si ya tenía otro valor en cualquiera de las claves del editor, o `permissions.defaultMode`
+  distinto en Claude, o cualquiera de `approval_policy`, `sandbox_mode`, `default_permissions` o un `profile` en Codex, no
+  se toca ese sitio y se le dice: «Ya tenías puesto cómo quieres que pida permiso, y no lo he tocado.»
+- **Entero o nada**: escritura a un temporal y cambio de golpe; el `config.toml` se valida antes con el lector de la barra
+  (`retirados.leerElToml`) y con una copia (`config.toml.copia-executive-lab-…`); lo que no se entiende, no se escribe;
+  sin seguir enlaces; sin escribir nunca en la carpeta de la persona.
+- **Constancia**: un fichero al lado de cada ajuste (`.executive-lab-sin-pedir-permiso`, en `~/.claude` y en `~/.codex`,
+  no dentro de `~/.codex/executive-lab/`, que es de la 171) y, para el editor, el valor anterior en el estado de la barra.
+- **«Quitarlo»** (botón del aviso, y al elegir cualquier otro modo): quita solo lo que puso la barra y solo si sigue como
+  lo dejó, y no se vuelve a proponer. Lo que la persona cambió después, no se toca.
+
+**3. Cambiarlo después**, en «Qué puede hacer sin preguntarte» (`ajustes.js`, `permisoDeAhora`/`ponerPermiso`): una
+opción más, la última, **Sin pedirme permiso**, con la misma línea de riesgo («No te pregunta nada. Puede cambiar o
+borrar ficheros y ejecutar programas sin preguntarte. Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos. Ten copias al día.»). El estado se lee de los ajustes (si lo pone a mano, la pantalla lo ve). Aquí el clic de la persona
+es el sí: sí cambia el modo del editor aunque tuviera otro (para eso es la pantalla) y apunta cómo estaba para
+devolverlo. Esta opción es la de Claude y solo toca lo de Claude (editor y `~/.claude/settings.json`); elegir cualquiera de las
+otras (**Que me pregunte al cambiar algo**, etc.) quita solo lo que puso la barra de Claude. Con Codex solo, donde la
+lista no sale, una tarjeta propia, con el riesgo de Codex y «Ponme así» / «Que me pregunte», que pone y quita solo lo de
+Codex.
+
+### Lo que no se hizo
+
+- **El instalador NO se toca.** Sus diálogos no se han podido probar con una persona. Más adelante, si se quiere: la misma
+  pregunta en el instalador de macOS y en el de Windows, que escribiría lo mismo con `instalador/comun/` (la lógica de
+  `control-remoto.js` ya sirve para el JSON de Claude).
+- `skipDangerousModePermissionPrompt`: no se escribe (ver arriba).
+- Los ajustes gestionados o de organización pueden mandar sobre estos (`permissions.disableBypassPermissionsMode`: «Prevent
+  anyone from entering bypassPermissions mode»): la barra no lo lee ni lo cambia.
+- Una conversación ya abierta no ve el cambio: «se nota en la próxima conversación que abras».
+
+### La revisión
+
+La revisión de seguridad de la PR #99 (19-10-2026) dejó cinco arreglos, ya hechos:
+
+1. **Un clic vale solo para lo que nombra** (consentimiento). «Sin pedirme permiso» en la pantalla pone y quita solo lo
+   de Claude, aunque Codex esté en el PATH; la tarjeta de «solo Codex» pone y quita solo lo de Codex (`ponerSinPedirCodex`,
+   `quitarSinPedir(['codex'])`). La pregunta de la primera carpeta sí puede poner los dos, porque los nombra a los dos.
+   Con Claude y Codex a la vez, el clic de la pantalla de Claude no toca `~/.codex/config.toml` y el de la tarjeta de
+   Codex no toca nada de Claude.
+2. **Los frenos, dichos como son.** En este modo Claude puede escribir en rutas protegidas y, por tanto, quitar los
+   frenos sin pedir permiso. La línea pasa a: «Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos.» **Posible refuerzo, no hecho aquí**:
+   reglas `permissions.deny` de usuario (valen en todos los modos, incluido este) que protejan los ficheros de los frenos.
+3. **Con Codex, el riesgo entero**: «Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.» (la documentación: «Unrestricted access to the internet and any file on
+   your computer»). Sale en la pregunta cuando incluye a Codex y en su tarjeta.
+4. **La frase dice solo lo que quedó puesto.** `laFrase` nombra los asistentes donde algo quedó `puesto` o `yaEstaba`; si
+   uno dio `raro`, `ilegible`, `enlace` o `fallo`, lo dice aparte: «Con Codex no he podido ponerlo: lo he dejado como
+   estaba.»; y si no quedó ninguno, no dice «Hecho».
+5. **«Quitarlo» no quita `skipDangerousModePermissionPrompt`.** Si la persona acepta la pantalla de Claude, es Claude
+   quien escribe esa clave en `~/.claude/settings.json`, por orden de la persona: la barra no la puso y no la quita.
+
+**Las pruebas de la revisión**: tres comprobaciones nuevas en `humo.js` (un clic, solo lo que nombra; la frase y el riesgo,
+enteros; lo escrito en esta decisión), y las de la pregunta y la tarjeta puestas al texto nuevo. Una mutación por
+arreglo (en realidad ocho, porque el primero tiene cuatro caras), cada una puesta y restaurada desde copia, y las ocho
+caen: el clic de Claude que pone también Codex; elegir otro modo que quita también Codex; la tarjeta de Codex que quita
+o que pone también Claude; los frenos «siguen funcionando»; la pregunta sin el riesgo de Codex; la frase que nombra a
+quien no quedó; y la decisión sin lo de `skipDangerousModePermissionPrompt`. De paso salió un fallo: dos pasadas en el
+mismo segundo chocaban en el nombre de la copia del `config.toml` y la segunda daba `fallo`; ahora la copia se numera.
+**Batería tras la revisión** (con `main` traído): `humo.js` 555 (564 con `--con-arnes`), `mapeos-codex.js` 30,
+`contrato.js` 15, `empresas-distintas.js`, el diccionario y `revisar-powershell.js`, limpios.
+
+**Las pruebas**: `humo.js` pasa a 552 (561 con `--con-arnes`, donde pasa el montaje de verdad). Seis comprobaciones
+nuevas, con casas de mentira y el `vscode` falso: Claude en el terminal (se crea, se suma, no pisa uno suyo, ilegible y
+enlace intactos, «Quitarlo» devuelve el fichero tal cual); Codex (cinco formas de `config.toml` que quedan byte a byte
+como estaban, lo suyo, lo raro y los enlaces, una línea cambiada); el editor (las dos claves en Global y nunca en la
+carpeta, lo suyo no se pisa, con el clic se cambia y se devuelve, nada a medias); la pregunta (texto exacto, «No» el
+primero, sin contestar no apunta, con el no no se escribe nada, con el sí las claves de cada asistente que se usa,
+«Quitarlo»); dónde se pregunta y que nunca se escribe `skipDangerousModePermissionPrompt`; y la pantalla (la opción con su
+riesgo, el estado sale de los ajustes, elegir otra la quita sin llevarse lo suyo, la tarjeta con Codex solo). Las de la
+182 cambian a lo que ahora es verdad (la opción sí se ofrece; el valor raro puesto a mano pasa a ser `dontAsk`).
+`mapeos-codex.js` 30, `contrato.js` 15, `empresas-distintas.js`, el diccionario y `revisar-powershell.js`, limpios.
+
+**Mutaciones**, cada una puesta y restaurada desde copia, y las doce caen: sin contestar cuenta como sí; con el no se
+pone igual; el no no se apunta; se pisa el `defaultMode` suyo de Claude; no se pone `allowDangerouslySkipPermissions`;
+las líneas de Codex al final del fichero (dentro de la última tabla); «Quitarlo» del editor sin mirar si sigue como se
+dejó; elegir otro modo sin quitar lo puesto; el editor escrito por carpeta; «Quitarlo» sin apuntar el no; Codex sin mirar
+lo suyo; y Claude sin mirar los enlaces.
+
+**Fuentes** (leídas el 19-10-2026): https://code.claude.com/docs/en/permission-modes, https://code.claude.com/docs/en/vs-code,
+https://code.claude.com/docs/en/hooks-guide, https://code.claude.com/docs/en/hooks, https://code.claude.com/docs/en/settings-reference
+(`skipDangerousModePermissionPrompt`: ajustes de usuario, locales o gestionados); https://learn.chatgpt.com/docs/sandboxing,
+https://learn.chatgpt.com/docs/agent-approvals-security, https://learn.chatgpt.com/docs/config-file/config-reference,
+https://learn.chatgpt.com/docs/config-file/config-basic, https://learn.chatgpt.com/docs/permission-modes.
+
 ## 193. El acceso directo del Mac se abre
 
 **Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código · **Vía rápida** `el-acceso-directo-del-mac`
@@ -9530,3 +9710,11 @@ Y «Seguir donde lo dejé» dice de qué proyecto es el documento («…de «El 
 **Fuera**: guardar o subir un proyecto desde la barra sin el asistente; zonas de la brújula por proyecto o por área; vigilar
 `03-PROYECTOS/**` para repintar (con sus `node_modules` sería caro: se mira al repintar); el escaneo de RSC, que cuenta el
 código de los proyectos como evidencia del plan (es de RSC, y en un monorepo es verdad).
+
+## 196. Otra prueba que fallaba en falso en Windows
+
+**Qué fallaba.** En la máquina de Windows, una vez, la prueba «al pasar a la 3 o al montar, justo antes de escribir» esperaba `[]` en «se decide otra vez en una que ya va en la 3» y salieron las cuatro marcas `.no-*`: la barra creyó que la carpeta seguía en la 2.
+
+**Por qué.** La prueba reescribe `.rsc.json` varias veces seguidas, y las versiones «2.0.15» y «3.0.22» miden lo mismo. La caché de lecturas de la 188 da un fichero por el mismo si coinciden fecha de cambio, tamaño e inodo. En Windows la fecha avanza a saltos de unos 15 ms, así que con dos escrituras en el mismo salto se servía el `.rsc.json` viejo. El fallo era de la prueba, no del código: en la vida real quien escribe el fichero es otro proceso, con segundos de por medio, y haría falta reescribirlo con el mismo tamaño dentro de esos milisegundos.
+
+**Cómo se arregló.** La prueba olvida la caché (`lecturas.olvidar()`) cada vez que declara un `.rsc.json`, como la 188 ya hacía con el caso «claude»→«codex». Pasada varias veces seguidas con el Mac cargado, sin fallar.
