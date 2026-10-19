@@ -28143,6 +28143,47 @@ exec git "$@"
     }
   });
 
+  await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 192)', async () => {
+    const raiz = montarMonorepo();
+    const brujulaM = cargar('brujula');
+    const proveedor = vscode.registrado.proveedor;
+    const antes = { raiz: vscode.guion.raiz, ejecutados: vscode.registrado.ejecutados.length };
+    const pintar = (estado) => require('./panel-falso').montarPanel().mandar({ tipo: 'estado', estado });
+    try {
+      for (const dentro of ['03-PROYECTOS/panel-fundae', '04-OPERACIONES']) {
+        vscode.guion.raiz = path.join(raiz, ...dentro.split('/'));
+        brujulaM.olvidar();
+        const estado = await brujulaM.estado({ fresco: true });
+        assert.equal(estado.sinArnes, true);
+        assert.deepEqual(estado.parteDe, { nombre: path.basename(raiz) }, `${dentro}: no dice de qué es parte`);
+        assert.equal(estado.donde, `Esta carpeta es parte de «${path.basename(raiz)}»`);
+        const html = pintar(estado);
+        assert.match(html, new RegExp(`class="[^"]*principal[^"]*"[^>]*data-accion="[^"]*abrirLaDeArriba[^"]*"[^>]*>[\\s\\S]*?Abrir «${path.basename(raiz)}»`), `${dentro}: el botón principal no es abrir la de arriba`);
+        assert.match(html, /Prepararla igual/, 'prepararla igual tiene que seguir ahí');
+        assert.ok(!/Preparar esta carpeta|Puedo añadir el asistente/.test(html), `${dentro}: se ofrece montar otro arnés dentro`);
+      }
+      // Abrir: la ruta la mira la extensión, no llega del panel.
+      vscode.guion.raiz = path.join(raiz, '03-PROYECTOS', 'panel-fundae');
+      await proveedor.abrirLaDeArriba();
+      const abierta = vscode.registrado.ejecutados.slice(antes.ejecutados).find((e) => (e.id || e[0] || e.comando) === 'vscode.openFolder' || JSON.stringify(e).includes('vscode.openFolder'));
+      assert.ok(abierta, 'no se abre ninguna carpeta');
+      assert.ok(JSON.stringify(abierta).includes(fs.realpathSync(raiz)), `se abre otra: ${JSON.stringify(abierta)}`);
+      // Dentro de un git sin arnés, como siempre: se ofrece preparar.
+      const sinArnes = fs.mkdtempSync(path.join(os.tmpdir(), 'git-sin-arnes-'));
+      MONO_G(sinArnes, 'init', '-q');
+      fs.mkdirSync(path.join(sinArnes, 'dentro'));
+      vscode.guion.raiz = path.join(sinArnes, 'dentro');
+      brujulaM.olvidar();
+      const normal = await brujulaM.estado({ fresco: true });
+      assert.equal(normal.parteDe, undefined, 'dentro de un git sin arnés no es parte de una preparada');
+      assert.match(pintar(normal), /Preparar esta carpeta/);
+      return 'un proyecto y un área: abrir la raíz; un git sin arnés, como siempre';
+    } finally {
+      vscode.guion.raiz = antes.raiz;
+      brujulaM.olvidar();
+    }
+  });
+
   // --------------------------------------------- el wizard, de verdad
   // Monta un arnés entero: tarda minutos y toca la red, así que no va en la
   // pasada normal. `node prueba/humo.js --con-arnes` lo incluye.

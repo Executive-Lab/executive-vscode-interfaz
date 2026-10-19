@@ -1660,6 +1660,7 @@ ${cabecera}
       abrirCarpetaDeSalida: () => salidas.abrirLaCarpeta(mensaje.herramienta),
       ponerLaCara: () => this.ponerLaCara(),
       elegirCarpeta: () => this.elegirCarpeta(),
+      abrirLaDeArriba: () => this.abrirLaDeArriba(),
       // La salida de una carpeta que no se prepara: una nueva, dentro de la
       // personal (B1).
       crearCarpeta: () => arrancar.crearUnaCarpetaDentro(os.homedir(), this.salida),
@@ -4393,6 +4394,18 @@ ${cabecera}
   // Elegir sobre qué carpeta se trabaja. Hace falta al arrancar —quien abre
   // esto sin nada abierto no tiene por dónde empezar— y después, para cambiar
   // de sitio sin tener que saber dónde está el menú de VS Code.
+
+  // La carpeta de arriba, ya preparada: un proyecto de un monorepo se trabaja
+  // desde su raíz (decisión 192). La ruta se vuelve a mirar aquí: del panel solo
+  // llega que se pulsó. En esta misma ventana, como al elegir carpeta.
+  async abrirLaDeArriba() {
+    const arriba = terreno.queHayEncima(proyecto.raiz());
+    if (!arriba || !arriba.conArnes) {
+      this.dejarElAviso('No encuentro la carpeta de arriba. Pulsa «Elegir otra carpeta» y elígela.', { etiqueta: 'Elegir otra carpeta', accion: { tipo: 'elegirCarpeta' } });
+      return this.refrescar(true);
+    }
+    return vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(arriba.ruta), { forceNewWindow: false });
+  }
   async elegirCarpeta() {
     const elegida = await vscode.window.showOpenDialog({
       canSelectFolders: true,

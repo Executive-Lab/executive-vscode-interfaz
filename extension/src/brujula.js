@@ -203,6 +203,19 @@ async function calcular() {
       ...(await loDeGit()),
     };
 
+    // Dentro de una carpeta ya preparada, como un proyecto de un monorepo, no se
+    // ofrece montar otro arnés: se trabaja desde la de arriba (decisión 192).
+    // Prepararla igual sigue a un clic, detrás.
+    const arriba = terreno.queHayEncima(proyecto.raiz());
+    if (arriba && arriba.conArnes) {
+      return conLoContestado({
+        ...comun,
+        donde: `Esta carpeta es parte de «${arriba.nombre}»`,
+        aviso: `«${arriba.nombre}» ya está preparada. Ábrela y trabaja desde allí: esta carpeta está dentro.`,
+        parteDe: { nombre: arriba.nombre },
+      });
+    }
+
     if (hay.tipo !== 'empezada') {
       return conLoContestado({
         ...comun,

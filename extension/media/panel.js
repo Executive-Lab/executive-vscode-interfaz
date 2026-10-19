@@ -1891,7 +1891,11 @@ function pantallaSinArnes() {
   // le haría pensar que va a empezar de cero y a perder lo que ya hay. Tampoco
   // una con las respuestas guardadas (decisión 165).
   const terminar = estado.aMedioPreparar || estado.esperandoAGit;
-  const ofrecer = estado.yaEmpezada && !estado.esperandoAGit
+  // Parte de una carpeta ya preparada (decisión 192): abrir esa, y prepararla igual detrás.
+  const ofrecer = estado.parteDe ? `
+    ${boton({ etiqueta: `Abrir «${estado.parteDe.nombre}»`, icono: '📂', principal: true, accion: { tipo: 'abrirLaDeArriba' } })}
+    ${boton({ etiqueta: 'Prepararla igual', icono: '✳', discreto: true, accion: { tipo: 'arrancar' } })}`
+    : estado.yaEmpezada && !estado.esperandoAGit
     ? bloqueYaEmpezada()
     : boton({
       etiqueta: terminar ? 'Terminar de prepararla' : 'Preparar esta carpeta',
