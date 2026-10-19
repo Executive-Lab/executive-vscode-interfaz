@@ -12,7 +12,7 @@ status: hecho
 ## Intent
 
 Jose, 19-10-2026: *«hay que adaptar la interfaz del arnés a un proyecto monorepo estilo
-mono-repo-executive-lab»*. Esa forma es esta:
+[el monorepo de Executive Lab]»*. Esa forma es esta:
 
 - **la raíz** lleva el arnés entero (`.rsc.json`, `.claude/`, `.codex/`, `01-TOOLS/`, `02-DOCS/`) y su
   propio git, que solo guarda el arnés y las áreas;
@@ -27,7 +27,7 @@ La barra daba por hecho una carpeta, un git y una documentación. En esa forma, 
 
 1. **Lo de dentro de un proyecto se tomaba por desorden.** `sueltas.js` solo reconocía una aplicación por
    su manifiesto (`package.json` y compañía) en la carpeta del primer o del segundo nivel.
-   `conectores-pymes` y `panel-inspeccion-fundae` no lo tienen arriba (`apps/`, `services/`, `datos/`).
+   Dos de los proyectos de ese monorepo no lo tienen arriba (`apps/`, `services/`, `datos/`).
    Medido con un monorepo de mentira y el código de `main`: una cuenta de servicio en
    `03-PROYECTOS/<proyecto>/` salía como fichero de acceso fuera de sitio, y el `.env` de un proyecto del
    primer nivel, como claves fuera de sitio. Las dos con un botón que se las llevaba a `01-TOOLS/`, y eso
@@ -99,7 +99,7 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 - [x] Diccionario, decisión 195 y `humo.js` con un monorepo de mentira.
 - [x] Batería entera y mutaciones de lo importante.
 - [x] Revisiones adversarias (seguridad y corrección) y sus arreglos.
-- [x] Auditada contra `mono-repo-executive-lab` de verdad, solo leyendo, y arreglado lo que salió: Conocimiento, En qué
+- [x] Auditada contra el monorepo de Executive Lab de verdad, solo leyendo, y arreglado lo que salió: Conocimiento, En qué
       estamos, los estados y lo que leen los encargos.
 - [x] El vigía del diccionario y el guardián de las pruebas, y sus arreglos.
 - [x] Una última revisión adversaria de lo de la auditoría, y sus arreglos.
@@ -116,7 +116,7 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 - **Batería**: ver la PR (humo, `--con-arnes`, mapeos-codex, contrato, empresas-distintas, diccionario).
 - **Contra el monorepo de verdad** (19-10-2026, solo leyendo): 8 proyectos en 9 ms, cómo está cada uno en 0,6 s, nada fuera de
   sitio, «sin ordenar» de 402 a 23, En qué estamos con 3 de la raíz y un desplegable por proyecto, todos los estados
-  traducidos (los 18 sin nada no tienen `status`), y el encargo de `executive-certificados` leyendo la tabla que dice que
+  traducidos (los 18 sin nada no tienen `status`), y el encargo del proyecto que despliega al subir leyendo la tabla que dice que
   subir a `main` despliega.
 - **Mutaciones**: 41, todas cazadas. Una sobrevivió por una guarda doble: se quitó la que sobraba y se comprobó que la que
   queda cae sola. Entre otras: sueltas sin mirar el git propio, un `.git` enlazado que cuenta, entrar en
@@ -128,6 +128,6 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 ## Next
 
 Jose la aprobó el 19-10-2026 («si, publica, revisa y documenta todo»): fusionada en la PR #98 y publicada con la
-0.58.0, junto con la 192, la 193, la 194 y la 196. Después, probarla abierta sobre `mono-repo-executive-lab` de verdad:
+0.58.0, junto con la 192, la 193, la 194 y la 196. Después, probarla abierta sobre el monorepo de Executive Lab de verdad:
 qué proyectos salen, si «Trabajar en «…»» se entiende, y si los encargos de guardar y subir respetan las reglas de
-`executive-certificados` (subir a `main` despliega).
+el proyecto en el que subir a `main` despliega.

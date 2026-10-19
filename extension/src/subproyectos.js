@@ -3,7 +3,7 @@
 // ── La forma ─────────────────────────────────────────────────────────────
 //
 // Jose, 19-10-2026: «hay que adaptar la interfaz del arnés a un proyecto monorepo
-// estilo mono-repo-executive-lab». En esa forma la raíz lleva el arnés y su git,
+// estilo [el monorepo de Executive Lab]». En esa forma la raíz lleva el arnés y su git,
 // y cada proyecto es un clon de su propio repositorio dentro de `03-PROYECTOS/`,
 // que el git de la raíz deja fuera. Su documentación no está dentro: vive en la
 // raíz, en `02-DOCS/wiki/proyectos/<proyecto>/`, y se trabaja siempre desde la raíz.
