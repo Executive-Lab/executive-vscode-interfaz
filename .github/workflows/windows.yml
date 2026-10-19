@@ -111,6 +111,25 @@ jobs:
           awk -F'\t' 'END { exit !($1 == "FIN" && $2 == "ok") }' "$RUNNER_TEMP/progreso-2.txt"
       - name: Comprobarlo
         run: bash instalador/mac/probar.sh --casa "$RUNNER_TEMP/casa-falsa" --sin-firma --asistente losDos
+      # El acceso directo de verdad: se abre con `open`, como el botón «Abrir» del
+      # instalador (decisión 193: en un Mac real daba el error -10669), y el editor
+      # tiene que arrancar. Aquí no hay nada que romper.
+      - name: Abrir el acceso directo y ver que arranca el editor
+        run: |
+          CASA="$RUNNER_TEMP/casa-falsa"
+          ACCESO="$CASA/Applications/Mi Empresa.app"
+          EDITOR="$CASA/Applications/Visual Studio Code.app"
+          if [ -d "$EDITOR" ]; then
+            open "$ACCESO"
+            for i in $(seq 1 45); do
+              if pgrep -f "$EDITOR/Contents/MacOS" >/dev/null; then echo "El editor ha arrancado a los ${i} s"; exit 0; fi
+              sleep 1
+            done
+            echo "El acceso directo se abrió pero el editor no arrancó en 45 s"; exit 1
+          else
+            echo "No hay editor en la casa de mentira: solo se comprueba que el acceso directo se abre"
+            open -g "$ACCESO"
+          fi
       - name: El informe y el registro de la instalación
         if: always()
         run: cp "${TMPDIR:-/tmp}/executive-lab-instalacion.log" instalador/mac/ 2>/dev/null || true

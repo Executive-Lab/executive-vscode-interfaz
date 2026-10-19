@@ -9345,3 +9345,35 @@ algo más en los ajustes de cada carpeta, y el de avisos ya está.
 enlace en su sitio, el guion corrido de verdad y Codex) y el botón (sin id, con id, Ayuda y tarjeta, el enlace
 exacto, el editor que no lo recoge, ids que no sirven, Codex, textos sin palabras prohibidas). `mapeos-codex` 30, `contrato` 15, `empresas-distintas`, diccionario y PowerShell, limpios.
 **Mutaciones**: todas caen: el id sin validar al apuntar; apuntar también con Codex; apuntar fuera de las carpetas de la barra; escribir a través de un enlace; apuntar algo más que el id; ofrecer el botón con Codex; la validación del id relajada en la extensión; el id viajando a la pantalla; dar por abierto sin mirar si el editor recogió el enlace; y quitar el botón de la tarjeta (esta no caía: la comprobación miraba toda la pantalla, y se acotó a la tarjeta).
+
+## 193. El acceso directo del Mac se abre
+
+**Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código · **Vía rápida** `el-acceso-directo-del-mac`
+
+**El fallo**: al terminar una instalación de verdad en un Mac con macOS 26, el diálogo final «Ya está. Te lo abro.» → «Abrir»
+dio `_LSOpenURLsWithCompletionHandler() failed with error -10669`. El botón hacía `open <acceso directo>`, y el acceso
+directo era una app hecha a mano: un `Info.plist` y un guion de bash como ejecutable (`Contents/MacOS/abrir`, un `open -a`).
+El mismo acceso va al Dock y a Aplicaciones, así que si no abría, no abría en ningún sitio.
+
+**Lo que se sabe y lo que no**: -10669 no está en la lista pública de errores de LaunchServices; es interno. En este Mac no se
+pudo reproducir con apps de prueba, así que **la causa exacta no se conoce**. La sospecha razonable es que una app cuyo
+ejecutable es un guion, sin firma, no le gusta a macOS 26; pero es una sospecha, no un hecho. Por eso los dos cambios no
+dependen de la causa.
+
+**Lo que se ha cambiado**:
+1. `elAccesoDirecto` (`instalador/mac/instalar.js`) crea ahora un applet con `/usr/bin/osacompile`: ejecutable Mach-O de
+   verdad, con firma ad hoc. Después se le pone el nombre («Mi Empresa»), el identificador y el icono (`executivelab.icns` en
+   `Resources`, `CFBundleIconFile`; se quita `CFBundleIconName` y `Assets.car`, que traen el icono genérico del applet y
+   mandan sobre el nuestro) y se vuelve a firmar con `codesign --force --sign -`, porque tocar el `Info.plist` rompe la firma.
+   Si `osacompile` (o lo que sigue) falla, la instalación no se cae: se apunta en el registro y se deja la app de siempre.
+2. `EXECUTIVE_LAB_HOME`: el guion lo exportaba, pero una variable exportada ahí nunca llegó a un editor abierto con `open -a`.
+   La barra no la necesita en Mac: `carpetaDeLaApp` (`extension/src/entorno.js`) cae sola a
+   `~/Library/Application Support/ExecutiveLab`, y el bloque de `~/.zprofile` ya la exporta. No se pasa con `open --env`.
+3. «Abrir» (`instalar.applescript`) nunca enseña un error de sistema: si `open <acceso directo>` falla, abre el editor
+   (`~/Applications/Visual Studio Code.app`, y si no `/Applications`), y solo si eso también falla, un diálogo de una frase
+   que manda a abrir «Visual Studio Code» desde Aplicaciones.
+
+**Las pruebas**: `probar.sh` comprueba siempre el acceso directo (nombre, icono con su `.icns`, sin `CFBundleIconName`,
+`CFBundleExecutable` es un Mach-O, `codesign --verify --deep`), y la máquina `el-dmg` lo ABRE con `open` y mira que el editor
+arranca. `humo.js` crea el acceso sobre una carpeta de mentira (se salta fuera de macOS). Lo que sigue sin comprobarse: que en
+un Mac con macOS 26 de un alumno el botón abra de verdad; hasta que alguien lo pruebe, la causa y la cura son una hipótesis.

@@ -333,15 +333,69 @@ function ponerloEnElArranqueDelShell() {
   }
 }
 
-// 6. El acceso directo. Es una app de las de siempre: un Info.plist y un
-// script de dos líneas. Al crearse aquí no lleva cuarentena, así que se abre
-// sin que Gatekeeper diga nada aunque no esté firmada.
+// 6. El acceso directo. Es un applet de AppleScript hecho con `osacompile`: una
+// app de verdad, con su ejecutable Mach-O y su firma ad hoc. Antes era una app
+// hecha a mano (un Info.plist y un guion de bash como ejecutable) y en macOS 26
+// el botón «Abrir» del final daba el error -10669 de LaunchServices, que no está
+// documentado (decisión 193). Al crearse aquí no lleva cuarentena, así que se
+// abre sin que Gatekeeper diga nada.
+//
+// No hace falta pasarle EXECUTIVE_LAB_HOME: la barra lo calcula sola
+// (`carpetaDeLaApp`) y el bloque de ~/.zprofile ya lo exporta.
 function elAccesoDirecto(editor) {
   contar('Dejándote el acceso directo');
   const app = path.join(APLICACIONES, `${NOMBRE_DEL_ACCESO}.app`);
   if (SECO) return app;
 
   fs.rmSync(app, { recursive: true, force: true });
+  fs.mkdirSync(APLICACIONES, { recursive: true });
+
+  try {
+    elAppletDeAppleScript(app, editor);
+  } catch (error) {
+    anotar(`osacompile no ha podido (${error.message}); dejo el acceso directo de siempre`);
+    fs.rmSync(app, { recursive: true, force: true });
+    elAccesoDeSiempre(app, editor);
+  }
+
+  // Sin esto, el Finder puede seguir enseñando el icono genérico de la app
+  // anterior con el mismo nombre.
+  correr('/usr/bin/touch', [app]);
+  return app;
+}
+
+function elAppletDeAppleScript(app, editor) {
+  const texto = String(editor).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const guion = `do shell script "/usr/bin/open -a " & quoted form of "${texto}"`;
+  const r = correr('/usr/bin/osacompile', ['-o', app, '-e', guion]);
+  if (r.codigo !== 0) throw new Error(`osacompile salió con ${r.codigo}: ${(r.salida || '').trim().slice(0, 200)}`);
+
+  const plist = path.join(app, 'Contents', 'Info.plist');
+  const poner = (clave, valor) => {
+    const f = correr('/usr/bin/plutil', ['-replace', clave, '-string', valor, plist]);
+    if (f.codigo !== 0) throw new Error(`plutil ${clave}: ${(f.salida || '').trim().slice(0, 200)}`);
+  };
+  poner('CFBundleName', NOMBRE_DEL_ACCESO);
+  poner('CFBundleDisplayName', NOMBRE_DEL_ACCESO);
+  poner('CFBundleIdentifier', 'ai.executivelab.abrir');
+
+  const icono = path.join(CARGA, 'executivelab.icns');
+  if (fs.existsSync(icono)) {
+    fs.copyFileSync(icono, path.join(app, 'Contents', 'Resources', 'executivelab.icns'));
+    poner('CFBundleIconFile', 'executivelab');
+    // El applet trae su icono genérico en un catálogo (CFBundleIconName), y en
+    // los macOS nuevos manda sobre CFBundleIconFile: se quita para que gane el nuestro.
+    correr('/usr/bin/plutil', ['-remove', 'CFBundleIconName', plist]);
+    fs.rmSync(path.join(app, 'Contents', 'Resources', 'Assets.car'), { force: true });
+  }
+
+  // Tocar el Info.plist invalida la firma del applet: se vuelve a firmar.
+  const f = correr('/usr/bin/codesign', ['--force', '--sign', '-', app]);
+  if (f.codigo !== 0) throw new Error(`codesign salió con ${f.codigo}: ${(f.salida || '').trim().slice(0, 200)}`);
+}
+
+// Lo de antes: una app hecha a mano. Solo si osacompile no ha podido.
+function elAccesoDeSiempre(app, editor) {
   fs.mkdirSync(path.join(app, 'Contents', 'MacOS'), { recursive: true });
   fs.mkdirSync(path.join(app, 'Contents', 'Resources'), { recursive: true });
 
@@ -374,10 +428,6 @@ exec /usr/bin/open -a ${JSON.stringify(editor)}
 `);
   fs.chmodSync(abrir, 0o755);
 
-  // Sin esto, el Finder puede seguir enseñando el icono genérico de la app
-  // anterior con el mismo nombre.
-  correr('/usr/bin/touch', [app]);
-  return app;
 }
 
 // 6. Al Dock, que es donde lo va a buscar. Si el Dock no se deja, no pasa
@@ -418,7 +468,7 @@ async function main() {
 }
 
 // Se puede cargar sin instalar nada, para probar lo que decide (`humo.js`).
-module.exports = { asistentesDe, EXTENSION_DEL_ASISTENTE, reponer };
+module.exports = { asistentesDe, EXTENSION_DEL_ASISTENTE, reponer, elAccesoDirecto };
 
 if (require.main === module) {
   main().catch((error) => {
