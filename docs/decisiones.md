@@ -9586,3 +9586,11 @@ porque solo se probaba la primera instalación y el camino bueno. En Windows se 
 **Lo que sigue sin comprobarse**: reinstalar con el `node.exe` EN USO (un editor abierto con los enganches corriendo); el
 cuadro de verdad (solo se ve sin `/SILENT`); y que el instalador sigue saliendo con 0 aunque falle el último paso (el informe
 y el cuadro son lo que avisa).
+
+## 196. Otra prueba que fallaba en falso en Windows
+
+**Qué fallaba.** En la máquina de Windows, una vez, la prueba «al pasar a la 3 o al montar, justo antes de escribir» esperaba `[]` en «se decide otra vez en una que ya va en la 3» y salieron las cuatro marcas `.no-*`: la barra creyó que la carpeta seguía en la 2.
+
+**Por qué.** La prueba reescribe `.rsc.json` varias veces seguidas, y las versiones «2.0.15» y «3.0.22» miden lo mismo. La caché de lecturas de la 188 da un fichero por el mismo si coinciden fecha de cambio, tamaño e inodo. En Windows la fecha avanza a saltos de unos 15 ms, así que con dos escrituras en el mismo salto se servía el `.rsc.json` viejo. El fallo era de la prueba, no del código: en la vida real quien escribe el fichero es otro proceso, con segundos de por medio, y haría falta reescribirlo con el mismo tamaño dentro de esos milisegundos.
+
+**Cómo se arregló.** La prueba olvida la caché (`lecturas.olvidar()`) cada vez que declara un `.rsc.json`, como la 188 ya hacía con el caso «claude»→«codex». Pasada varias veces seguidas con el Mac cargado, sin fallar.
