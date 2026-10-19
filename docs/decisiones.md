@@ -9597,14 +9597,14 @@ y el cuadro son lo que avisa).
 
 **Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código; sale con la 0.58.0 · **Vía rápida** `la-barra-en-el-monorepo`
 
-Jose: *«hay que adaptar la interfaz del arnés a un proyecto monorepo estilo mono-repo-executive-lab»*. Esa forma: la raíz
+Jose: *«hay que adaptar la interfaz del arnés a un proyecto monorepo estilo [el monorepo de Executive Lab]»*. Esa forma: la raíz
 lleva el arnés y su propio git; cada proyecto es un clon de su repositorio en `03-PROYECTOS/<proyecto>/`, con su propio git,
 que el de la raíz deja fuera en su `.gitignore`; su documentación vive en la raíz, en `02-DOCS/wiki/proyectos/<proyecto>/`;
 y se trabaja siempre desde la raíz. La barra daba por hecho una carpeta, un git y una documentación.
 
 **Lo que salía mal, medido con un monorepo de mentira y el código de `main`**:
 1. Lo de dentro de un proyecto se tomaba por desorden. `sueltas.js` solo reconocía una aplicación por su manifiesto arriba,
-   y `conectores-pymes` o `panel-inspeccion-fundae` no lo tienen (`apps/`, `services/`, `datos/`). Una cuenta de servicio en
+   y dos de los proyectos de ese monorepo no lo tienen (`apps/`, `services/`, `datos/`). Una cuenta de servicio en
    `03-PROYECTOS/<proyecto>/` salía como fichero de acceso fuera de sitio, y el `.env` de un proyecto del primer nivel, como
    claves fuera de sitio. Las dos, con un botón que se las llevaba a `01-TOOLS/` y rompía el proyecto.
 2. «✓ Todo guardado» callaba los proyectos: el git de la raíz no los ve.
@@ -9658,7 +9658,7 @@ confianza, cada uno sale «No he podido mirar si hay cambios sin guardar» y no 
   Ahora solo ficheros de verdad.
 
 **La auditoría contra el monorepo de verdad** (Jose: *«revisa, audita y hazlo bien»*). Se cargaron los módulos de la barra
-apuntando a `mono-repo-executive-lab`, solo leyendo, y se vio lo que vería la persona. Salieron ocho proyectos, mirarlos tarda
+apuntando al monorepo de Executive Lab, solo leyendo, y se vio lo que vería la persona. Salieron ocho proyectos, mirarlos tarda
 0,6 s y no salía nada fuera de sitio, pero había cuatro cosas mal:
 - **«Que los ordene» habría desmontado la documentación de los proyectos.** Conocimiento contaba 402 documentos «sin
   ordenar», 380 de ellos de `proyectos/<proyecto>/`, y su botón le pide al asistente meterlos en temas. Además decía «Hay 8»
