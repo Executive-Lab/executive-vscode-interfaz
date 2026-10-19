@@ -12655,7 +12655,13 @@ exec git "$@"
     const terrenoM = cargar('terreno');
     const r = fs.mkdtempSync(path.join(os.tmpdir(), 'a-la-tres-'));
     const marcas = () => (fs.existsSync(path.join(r, '.rsc')) ? fs.readdirSync(path.join(r, '.rsc')).filter((f) => f.startsWith('.no-')).sort() : []);
-    const declarar = (extra) => fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'], skills: ['orient'], catalogVersion: '2.0.15', ...extra }));
+    // «2.0.15» y «3.0.22» miden lo mismo: reescrito en el mismo instante (en Windows la fecha
+    // de un fichero avanza a saltos de ~15 ms), la caché de la 188 lo daría por el mismo
+    // y serviría el viejo. Se olvida a mano, como hace quien lo escribe de verdad (decisión 196).
+    const declarar = (extra) => {
+      fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'], skills: ['orient'], catalogVersion: '2.0.15', ...extra }));
+      cargar('lecturas').olvidar();
+    };
     const limpiar = () => fs.rmSync(path.join(r, '.rsc'), { recursive: true, force: true });
     const antes = { node: procesosM.node, nuestro: terrenoM.podemosGuardarElPuntoDePartida, aqui: terrenoM.montadaAqui };
     // La marca de este ordenador (decisión 157), como si la barra la hubiera montado aquí.
