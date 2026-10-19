@@ -115,6 +115,8 @@ on leerLoUltimo(fichero)
 	set AppleScript's text item delimiters to antes
 
 	if (count of trozos) is 1 then return {clase:item 1 of trozos, dato:"", resto:{}}
+	-- Un DETALLE trae solo dos trozos: «items 3 thru -1» de una lista de dos revienta (-1728).
+	if (count of trozos) is 2 then return {clase:item 1 of trozos, dato:item 2 of trozos, resto:{}}
 	return {clase:item 1 of trozos, dato:item 2 of trozos, resto:items 3 thru -1 of trozos}
 end leerLoUltimo
 

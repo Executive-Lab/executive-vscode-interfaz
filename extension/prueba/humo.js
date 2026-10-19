@@ -2951,6 +2951,13 @@ exec git "$@"
     }
   });
 
+  await comprobar('el diálogo del instalador de macOS lee cada línea de progreso (DETALLE trae dos trozos)', () => {
+    // El AppleScript lo ve la persona y no lo corría ninguna prueba: «items 3 thru -1»
+    // de un DETALLE reventaba la primera vez que alguien lo abrió de verdad.
+    const r = require(path.join(RAIZ, '..', 'instalador', 'mac', 'probar-el-dialogo.js')).probar();
+    return r.saltada || `${r.bien} clases de línea, con osascript`;
+  });
+
   await comprobar('el instalador de Windows va con la barra: su versión, y probar.ps1 no busca lo que ya no viaja', () => {
     // El .iss se quedó en la 0.9.0 mientras la barra iba por la 0.41, y el .exe
     // sale rotulado con lo que diga él. Y `probar.ps1` seguía buscando dentro

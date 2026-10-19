@@ -89,6 +89,8 @@ jobs:
         run: |
           npm ci --prefix extension/media/harness --no-audit --no-fund
           node extension/preparar-paquete.js
+      - name: El diálogo del instalador lee el progreso
+        run: node instalador/mac/probar-el-dialogo.js
       - name: Construir el .dmg
         run: bash instalador/mac/construir.sh
       - name: Instalarlo en una carpeta personal de mentira
