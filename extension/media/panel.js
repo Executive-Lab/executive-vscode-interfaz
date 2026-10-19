@@ -2009,6 +2009,7 @@ function pantallaPrincipalSencilla() {
     ${encendida('conocimiento') ? grupoConocimiento() : ''}
     ${encendida('acciones') ? grupoAccionesSencillo() : ''}
     ${encendida('enQueEstamos') ? grupoEnQueEstamos() : ''}
+    ${encendida('proyectos') ? grupoProyectosDeDentro() : ''}
     ${encendida('ayuda') ? grupoAyudaSencillo() : ''}
     ${encendida('ajustes') ? grupoAjustes() : ''}
     ${encendida('copias') ? lineaDeLasCopias() : ''}
@@ -2099,17 +2100,44 @@ function grupoAyudaSencillo() {
 
 // «✓ Todo guardado»: solo si la carpeta tiene copias. Ver que todo está
 // guardado quita el miedo; dentro, lo de git.
+//
+// En un monorepo, los proyectos de dentro tienen su propio git: «Todo guardado»
+// vale para todos, y uno con cambios lleva aquí su botón (decisión 192).
 function lineaDeLasCopias() {
   const c = estado.copias;
   if (!c) return '';
+  const deDentro = c.proyectosSinGuardar || [];
+  const soloDentro = deDentro.length && c.raizSinGuardar === false;
+  const enCual = deDentro.length === 1 ? `en «${deDentro[0].nombre}»` : `en ${deDentro.length} proyectos`;
   return grupo({
     id: 'grupo:copias',
     // `null`: no se ha podido mirar. No se dice «Todo guardado» sin saberlo (decisión 189).
-    etiqueta: c.sinGuardar === null ? 'No he podido mirar si hay cambios sin guardar' : c.sinGuardar ? 'Hay cambios sin guardar' : `✓ Todo guardado, ${c.hace}`,
+    etiqueta: c.sinGuardar === null ? 'No he podido mirar si hay cambios sin guardar'
+      : soloDentro ? `Hay cambios sin guardar ${enCual}`
+        : c.sinGuardar ? 'Hay cambios sin guardar' : `✓ Todo guardado, ${c.hace}`,
     dentro: `
       ${boton({ etiqueta: 'Guardar en git', icono: '💾', pequeno: true, accion: { tipo: 'guardarCopia' } })}
+      ${deDentro.filter((p) => p.boton).map((p) => boton({ ...p.boton, pequeno: true })).join('')}
       ${boton({ etiqueta: 'Ver las copias guardadas', icono: '🕑', pequeno: true, accion: { tipo: 'verCopias' } })}
-      ${c.subir ? boton({ etiqueta: 'Subir a GitHub', icono: '☁️', pequeno: true, accion: { tipo: 'verCopiaFuera' } }) : ''}`,
+      ${c.subir ? boton({ etiqueta: 'Subir a GitHub', icono: '☁️', pequeno: true, accion: { tipo: 'verCopiaFuera' } }) : ''}
+      ${deDentro.length ? `<p class="pista">${texto('Cada proyecto tiene sus propias copias. «Guardar en git» guarda lo demás.')}</p>` : ''}`,
+  });
+}
+
+// Los proyectos de dentro de un monorepo (decisión 192), solo si los hay: cómo
+// está cada uno y sus botones, que llegan hechos (P6).
+function grupoProyectosDeDentro() {
+  const lista = estado.proyectosDeDentro || [];
+  if (!lista.length) return '';
+  const sinGuardar = lista.filter((p) => p.sinGuardar === true).length;
+  return grupo({
+    id: 'grupo:proyectos',
+    etiqueta: 'Proyectos',
+    cuantos: sinGuardar ? plural(sinGuardar, '1 sin guardar', '{n} sin guardar') : '',
+    dentro: lista.map((p) => `
+      <h3>${texto(p.nombre)}</h3>
+      <p class="pista">${texto(p.estado)}</p>
+      ${(p.botones || []).map((b) => boton({ ...b, pequeno: true })).join('')}`).join(''),
   });
 }
 
@@ -2186,6 +2214,8 @@ function pantallaPrincipalCompleta() {
     ${grupoHistorico()}
 
     ${grupoEnQueEstamos()}
+
+    ${grupoProyectosDeDentro()}
 
     ${grupoAccionesCompleto()}
 
@@ -3703,7 +3733,7 @@ function atender(data) {
       if (estado) {
         for (const campo of ['consejo', 'hayVersionNueva', 'versionPuesta', 'versionDePrueba', 'hayProyectos', 'hayAgentes', 'hayRecordatorios', 'avisoParaExecutiveLab', 'arreglado', 'queTrae',
           'barraCompleta', 'piezas', 'comandos', 'habilidades', 'copias', 'versionDeLaBarra', 'recordatorio', 'costumbrePuesta', 'datosDeClientes', 'enganchesDeCodex',
-          'seAdapta', 'sigueSinCopias', 'laUltimaVez', 'clavesEnLasCopias', 'clavesFueraDeSitio']) {
+          'seAdapta', 'sigueSinCopias', 'laUltimaVez', 'clavesEnLasCopias', 'clavesFueraDeSitio', 'proyectosDeDentro']) {
           if (data[campo] !== undefined) estado[campo] = data[campo];
         }
       }

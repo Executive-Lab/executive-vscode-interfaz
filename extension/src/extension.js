@@ -82,6 +82,7 @@ const pulso = require('./pulso');
 const fijadas = require('./fijadas');
 const tema = require('./tema');
 const proyectos = require('./proyectos');
+const subproyectos = require('./subproyectos');
 const agentes = require('./agentes');
 const asistentes = require('./asistentes');
 const trato = require('./trato');
@@ -854,6 +855,8 @@ ${cabecera}
     this.ponerleElNombre();
     this.enviar({ tipo: 'cargando' });
     const suya = marca.leer();
+    // Una vez por repintado: lo usan Proyectos y la línea de las copias (decisión 192).
+    const deDentro = await this.losProyectosDeDentro();
     this.enviar({
       tipo: 'estado',
       estado: await brujula.estado({ fresco }),
@@ -912,7 +915,9 @@ ${cabecera}
       sigueSinCopias: this.eligioSinCopias(),
       // Para la sencilla: lo que hay en Acciones, la línea de las copias y la versión.
       habilidades: this.habilidadesSuyas(),
-      copias: await this.lasCopias(),
+      copias: await this.lasCopias(deDentro),
+      // En un monorepo, sus proyectos: cómo está cada uno y sus botones (decisión 192).
+      proyectosDeDentro: deDentro,
       versionDeLaBarra: this.versionDeLaBarra(),
       // Lo nuevo de la versión que acaba de poner. Antes de mirar si hay otra:
       // mirar deja escrito en el almacén que esta barra ya se usaba.
@@ -956,18 +961,42 @@ ${cabecera}
   }
 
   // La línea de las copias: solo si la carpeta las tiene.
-  async lasCopias() {
+  //
+  // En un monorepo, «✓ Todo guardado» tiene que valer también para sus proyectos,
+  // que tienen su propio git y el de la raíz deja fuera (decisión 192). Los que
+  // tienen cambios van con su botón; uno que no se pudo mirar no deja decir
+  // «Todo guardado».
+  async lasCopias(deDentro = []) {
     try {
       const [ultima] = await copias.copias(1);
       if (!ultima) return null;
       const hace = copias.haceUnRato(ultima.cuando);
       const subir = Boolean(await copias.puedeSubir()) || Boolean(await github.remoto());
       const cambios = await copias.cambiosSinGuardar();
+      const proyectosSinGuardar = deDentro.filter((p) => p.sinGuardar === true)
+        .map((p) => ({ nombre: p.nombre, boton: p.guardar }));
+      const sinMirar = cambios === null || deDentro.some((p) => p.sinGuardar === null);
       // `null`: no se pudo mirar, y la barra no dice «todo guardado» (decisión 189).
-      return { hace, sinGuardar: cambios === null ? null : cambios > 0, subir };
+      return {
+        hace,
+        sinGuardar: cambios > 0 ? true : proyectosSinGuardar.length ? true : sinMirar ? null : false,
+        raizSinGuardar: cambios === null ? null : cambios > 0,
+        proyectosSinGuardar,
+        subir,
+      };
     } catch (error) {
       this.salida.appendLine(`[copias] ${error.message}`); // diccionario: interno
       return null;
+    }
+  }
+
+  // Los proyectos de dentro, si esto es un monorepo (decisión 192). Vacío si no.
+  async losProyectosDeDentro() {
+    try {
+      return (await subproyectos.comoEstan()).map(subproyectos.enPantalla);
+    } catch (error) {
+      this.salida.appendLine(`[proyectos de dentro] ${error.message}`); // diccionario: interno
+      return [];
     }
   }
 

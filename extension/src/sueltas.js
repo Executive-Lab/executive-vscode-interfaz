@@ -40,6 +40,7 @@ const proyecto = require('./proyecto');
 const lecturas = require('./lecturas');
 const entorno = require('./entorno');
 const limpio = require('./limpio');
+const subproyectos = require('./subproyectos');
 
 const HERRAMIENTAS = '01-TOOLS';
 
@@ -80,7 +81,12 @@ const TOPE = 128 * 1024;
 // que sí los cuenta. Lo que cambia es que no se cuentan como desorden.
 const DE_UNA_APP = ['package.json', 'pyproject.toml', 'pubspec.yaml', 'Cargo.toml', 'go.mod'];
 
-const esUnaApp = (carpetaRelativa) => DE_UNA_APP.some((f) => proyecto.existe(carpetaRelativa, f));
+// Y una carpeta con su propio git es un proyecto aparte (decisión 192): en un
+// monorepo, `03-PROYECTOS/<proyecto>/` es un clon de su repositorio, tenga o no un
+// manifiesto arriba (`apps/`, `services/`, `datos/`). Lo de dentro es suyo como lo
+// de una aplicación. La raíz no cuenta: su git es el de la carpeta.
+const esUnaApp = (carpetaRelativa) => (Boolean(carpetaRelativa) && subproyectos.tieneSuGit(proyecto.ruta(carpetaRelativa)))
+  || DE_UNA_APP.some((f) => proyecto.existe(carpetaRelativa, f));
 
 // Y si la carpeta entera es una aplicación (decisión 167), los ficheros de claves
 // de su raíz también son suyos. La 135 solo miraba las de dentro: una web hecha
