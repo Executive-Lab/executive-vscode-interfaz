@@ -9469,7 +9469,7 @@ tres sitios. Con Codex solo, donde la lista no sale, una tarjeta con el mismo te
   anyone from entering bypassPermissions mode»): la barra no lo lee ni lo cambia.
 - Una conversación ya abierta no ve el cambio: «se nota en la próxima conversación que abras».
 
-**Las pruebas**: `humo.js` pasa a 550 (559 con `--con-arnes`, donde pasa el montaje de verdad). Seis comprobaciones
+**Las pruebas**: `humo.js` pasa a 552 (561 con `--con-arnes`, donde pasa el montaje de verdad). Seis comprobaciones
 nuevas, con casas de mentira y el `vscode` falso: Claude en el terminal (se crea, se suma, no pisa uno suyo, ilegible y
 enlace intactos, «Quitarlo» devuelve el fichero tal cual); Codex (cinco formas de `config.toml` que quedan byte a byte
 como estaban, lo suyo, lo raro y los enlaces, una línea cambiada); el editor (las dos claves en Global y nunca en la
