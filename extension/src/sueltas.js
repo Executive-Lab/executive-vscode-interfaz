@@ -81,7 +81,7 @@ const TOPE = 128 * 1024;
 // que sí los cuenta. Lo que cambia es que no se cuentan como desorden.
 const DE_UNA_APP = ['package.json', 'pyproject.toml', 'pubspec.yaml', 'Cargo.toml', 'go.mod'];
 
-// Y una carpeta con su propio git es un proyecto aparte (decisión 192): en un
+// Y una carpeta con su propio git es un proyecto aparte (decisión 194): en un
 // monorepo, `03-PROYECTOS/<proyecto>/` es un clon de su repositorio, tenga o no un
 // manifiesto arriba (`apps/`, `services/`, `datos/`). Lo de dentro es suyo como lo
 // de una aplicación. La raíz no cuenta: su git es el de la carpeta.

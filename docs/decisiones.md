@@ -9377,3 +9377,55 @@ dependen de la causa.
 `CFBundleExecutable` es un Mach-O, `codesign --verify --deep`), y la máquina `el-dmg` lo ABRE con `open` y mira que el editor
 arranca. `humo.js` crea el acceso sobre una carpeta de mentira (se salta fuera de macOS). Lo que sigue sin comprobarse: que en
 un Mac con macOS 26 de un alumno el botón abra de verdad; hasta que alguien lo pruebe, la causa y la cura son una hipótesis.
+
+## 194. La barra en un monorepo
+
+**Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código · **Vía rápida** `la-barra-en-el-monorepo`
+
+Jose: *«hay que adaptar la interfaz del arnés a un proyecto monorepo estilo mono-repo-executive-lab»*. Esa forma: la raíz
+lleva el arnés y su propio git; cada proyecto es un clon de su repositorio en `03-PROYECTOS/<proyecto>/`, con su propio git,
+que el de la raíz deja fuera en su `.gitignore`; su documentación vive en la raíz, en `02-DOCS/wiki/proyectos/<proyecto>/`;
+y se trabaja siempre desde la raíz. La barra daba por hecho una carpeta, un git y una documentación.
+
+**Lo que salía mal, medido con un monorepo de mentira y el código de `main`**:
+1. Lo de dentro de un proyecto se tomaba por desorden. `sueltas.js` solo reconocía una aplicación por su manifiesto arriba,
+   y `conectores-pymes` o `panel-inspeccion-fundae` no lo tienen (`apps/`, `services/`, `datos/`). Una cuenta de servicio en
+   `03-PROYECTOS/<proyecto>/` salía como fichero de acceso fuera de sitio, y el `.env` de un proyecto del primer nivel, como
+   claves fuera de sitio. Las dos, con un botón que se las llevaba a `01-TOOLS/` y rompía el proyecto.
+2. «✓ Todo guardado» callaba los proyectos: el git de la raíz no los ve.
+3. No había proyectos: ni se veían ni se podía decir «vamos a trabajar en este».
+4. «En qué estamos» y «Seguir donde lo dejé» no leían la documentación de cada proyecto.
+5. Abrir un proyecto solo ofrecía «Preparar esta carpeta»: montar un segundo arnés donde no debe haberlo.
+
+**Qué es un proyecto de dentro (P5)**: una carpeta del primer o del segundo nivel con su propio `.git`, carpeta o fichero (un
+clon, un worktree o un submódulo), sin entrar en las carpetas con punto, `node_modules`, `01-TOOLS/` ni `02-DOCS/`, sin
+seguir enlaces y con tope de 30. No hace falta que la de arriba se llame `03-PROYECTOS`. Lo lee `subproyectos.js`, nuevo.
+
+**Lo que se ha cambiado**:
+1. `sueltas.js`: una carpeta con su propio git es un proyecto aparte, como una aplicación. Lo de dentro no es desorden ni se
+   mueve; sus claves siguen en `paraProteger` y se tapan donde se enseñan.
+2. La línea de las copias solo dice «✓ Todo guardado» si la carpeta **y** cada proyecto lo están; uno que no se pudo mirar
+   no deja decirlo (189). Con la carpeta guardada y un proyecto sin guardar: «Hay cambios sin guardar en «{proyecto}»», con su
+   botón dentro. «Guardar en git» sigue guardando la carpeta, y se dice: «Cada proyecto tiene sus propias copias.».
+3. El apartado **Proyectos** (pieza `proyectos` de `piezas.json`, también en la completa), solo si hay alguno: cómo está cada
+   uno —cambios sin guardar, copias sin subir, la rama si no es la principal— y tres botones: Trabajar en «{proyecto}»,
+   Guardar «{proyecto}» en git (si tiene cambios) y Subir «{proyecto}» a GitHub (si tiene copias sin subir o su rama no está).
+   **Los tres son encargos al asistente**, con las cuatro partes de `encargos.js`: dónde está, qué leer antes (sus reglas y su
+   índice en la documentación, y su `AGENTS.md`, `CLAUDE.md` o `README.md`, solo los que existen) y dónde se documenta. Cada
+   proyecto tiene sus reglas —cómo se escriben las copias, en qué rama, si subir a `main` publica una web o despliega— y
+   saberlas pide leer (P5). La barra **nunca escribe en el git de un proyecto**. Guardar dice «No subas nada a GitHub»; subir
+   pide mirar en sus reglas si eso publica o despliega y, si es así, decirlo y esperar el sí (P9: salir del ordenador en su
+   nombre, solo con su clic). Cómo está cada uno sale de un `git status --porcelain=v2 --branch` por proyecto, todos a la vez,
+   con 5 segundos de tope y lo visto guardado 15 segundos, para que el repintado no se atasque (188).
+4. «En qué estamos» lee también `02-DOCS/wiki/proyectos/<proyecto>/sdd/`, cada cosa con su proyecto, y abrirla exige esa forma
+   exacta y una carpeta que no sea un enlace. «Seguir donde lo dejé» mira también `02-DOCS/wiki/proyectos/<proyecto>/ftd/`, y la
+   línea `next:` de RSC puede nombrarlos.
+5. Dentro de una carpeta que ya tiene el arnés (`queHayEncima` dice ahora `conArnes`), la brújula no ofrece preparar: «Esta
+   carpeta es parte de «{nombre}»», y el botón principal es Abrir «{nombre}». La ruta la vuelve a mirar la extensión; del
+   panel solo llega que se pulsó. Prepararla igual sigue detrás, con el aviso de siempre.
+
+**Lo que no cambia**: el guardado solo sigue sin correr en un historial que no creó la barra (P4), y un monorepo clonado lo es.
+
+**Fuera**: guardar o subir un proyecto desde la barra sin el asistente; zonas de la brújula por proyecto o por área; vigilar
+`03-PROYECTOS/**` para repintar (con sus `node_modules` sería caro: se mira al repintar); el escaneo de RSC, que cuenta el
+código de los proyectos como evidencia del plan (es de RSC, y en un monorepo es verdad).

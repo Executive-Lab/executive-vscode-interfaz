@@ -976,7 +976,7 @@ function pantallaProyectos({ montones = [] }) {
         <div class="entrada">
           <p class="nombre">${texto(c.titulo)}</p>
           ${c.proyecto || c.estado || c.tareas ? `<p class="pista">${texto([
-            // En un monorepo, de qué proyecto es (decisión 192).
+            // En un monorepo, de qué proyecto es (decisión 194).
             c.proyecto ? `«${c.proyecto}»` : '',
             ESTADOS[c.estado] || c.estado,
             c.tareas ? plural(c.tareas, '1 tarea', '{n} tareas') : '',
@@ -1891,7 +1891,7 @@ function pantallaSinArnes() {
   // le haría pensar que va a empezar de cero y a perder lo que ya hay. Tampoco
   // una con las respuestas guardadas (decisión 165).
   const terminar = estado.aMedioPreparar || estado.esperandoAGit;
-  // Parte de una carpeta ya preparada (decisión 192): abrir esa, y prepararla igual detrás.
+  // Parte de una carpeta ya preparada (decisión 194): abrir esa, y prepararla igual detrás.
   const ofrecer = estado.parteDe ? `
     ${boton({ etiqueta: `Abrir «${estado.parteDe.nombre}»`, icono: '📂', principal: true, accion: { tipo: 'abrirLaDeArriba' } })}
     ${boton({ etiqueta: 'Prepararla igual', icono: '✳', discreto: true, accion: { tipo: 'arrancar' } })}`
@@ -2108,7 +2108,7 @@ function grupoAyudaSencillo() {
 // guardado quita el miedo; dentro, lo de git.
 //
 // En un monorepo, los proyectos de dentro tienen su propio git: «Todo guardado»
-// vale para todos, y uno con cambios lleva aquí su botón (decisión 192).
+// vale para todos, y uno con cambios lleva aquí su botón (decisión 194).
 function lineaDeLasCopias() {
   const c = estado.copias;
   if (!c) return '';
@@ -2130,7 +2130,7 @@ function lineaDeLasCopias() {
   });
 }
 
-// Los proyectos de dentro de un monorepo (decisión 192), solo si los hay: cómo
+// Los proyectos de dentro de un monorepo (decisión 194), solo si los hay: cómo
 // está cada uno y sus botones, que llegan hechos (P6).
 function grupoProyectosDeDentro() {
   const lista = estado.proyectosDeDentro || [];

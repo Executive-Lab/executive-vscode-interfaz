@@ -41,7 +41,7 @@ La barra daba por hecho una carpeta, un git y una documentación. En esa forma, 
 Y una quinta, al revés: abrir `03-PROYECTOS/<proyecto>/` sola ofrecía «Preparar esta carpeta», o sea montar
 un segundo arnés dentro de un proyecto que no debe llevarlo.
 
-## Decisión (192)
+## Decisión (194)
 
 **Qué es un proyecto de dentro, leído del disco (P5).** Una carpeta del primer o del segundo nivel que
 tiene su propio `.git` (carpeta o fichero: un clon, un worktree o un submódulo). Sin mirar las carpetas
@@ -82,7 +82,7 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 
 - Dentro: `subproyectos.js` (nuevo), `sueltas.js`, `extension.js` (estado y acciones), `panel.js`
   (Proyectos y la línea de las copias), `piezas.json`, `proyectos.js`, `por-donde-ibas.js`, `terreno.js`
-  y `arrancar.js` (el proyecto abierto solo), diccionario, decisión 192 y pruebas.
+  y `arrancar.js` (el proyecto abierto solo), diccionario, decisión 194 y pruebas.
 - Fuera: guardar o subir los proyectos desde la barra sin el asistente; la brújula con zonas por
   proyecto o por área; vigilar `03-PROYECTOS/**` para repintar (con sus `node_modules`, sería caro: se
   mira al repintar); el escaneo de RSC, que ve el código de los proyectos como evidencia del plan (eso es
@@ -96,7 +96,7 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 - [ ] Apartado Proyectos en la pantalla principal, con su pieza en `piezas.json`.
 - [ ] «En qué estamos» y «Seguir donde lo dejé» leen la documentación de cada proyecto.
 - [ ] Un proyecto abierto solo ofrece abrir su monorepo.
-- [ ] Diccionario, decisión 192 y `humo.js` con un monorepo de mentira.
+- [ ] Diccionario, decisión 194 y `humo.js` con un monorepo de mentira.
 - [ ] Batería entera y mutaciones de lo importante.
 
 ## Evidence

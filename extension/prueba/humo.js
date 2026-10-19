@@ -14975,7 +14975,9 @@ exec git "$@"
     vscode.guion.raiz = hija;
     try {
       const parte = cargar('terreno').mirarYClasificar();
-      assert.deepEqual(parte.dentroDeOtro, { nombre: path.basename(padre) }, 'no se ve el proyecto de encima');
+      assert.equal(parte.dentroDeOtro.nombre, path.basename(padre), 'no se ve el proyecto de encima');
+      // Sin arnés arriba no es parte de una carpeta preparada (decisión 194).
+      assert.equal(parte.dentroDeOtro.conArnes, false);
 
       vscode.registrado.mensajes.length = 0;
       vscode.guion.eleccion = undefined;
@@ -18106,6 +18108,8 @@ exec git "$@"
       assert.deepEqual(encendidas, {
         tarjetaUnica: true, documentos: true, documentosPlegable: false, acciones: true, ayuda: true, copias: true, pie: true,
         accionesRapidas: false, pulso: false, conocimiento: false, enQueEstamos: false, ajustes: false, comandos: false,
+        // Decisión 194: solo sale en un monorepo.
+        proyectos: true,
       }, 'la tabla de piezas ha cambiado');
       const ajuste = require(path.join(RAIZ, 'package.json')).contributes.configuration.properties['executiveLab.barraCompleta'];
       assert.equal(ajuste.default, false, 'de fábrica tiene que salir la sencilla');
@@ -18233,9 +18237,10 @@ exec git "$@"
         assert.equal(await proveedor.lasCopias(), null, 'sin copias, sale la línea de las copias');
         guardar.copias = async () => [{ cuando: new Date(Date.now() - 5 * 60000).toISOString() }];
         guardar.puedeSubir = async () => false; github.remoto = async () => null; guardar.cambiosSinGuardar = async () => false;
-        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: false, subir: false });
+        // `raizSinGuardar` y `proyectosSinGuardar`: lo de un monorepo (decisión 194); aquí no hay proyectos.
+        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: false, raizSinGuardar: false, proyectosSinGuardar: [], subir: false });
         github.remoto = async () => 'https://github.com/alguien/algo'; guardar.cambiosSinGuardar = async () => true;
-        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: true, subir: true }, 'con sitio en GitHub o cambios, no lo dice');
+        assert.deepEqual(await proveedor.lasCopias(), { hace: 'hace 5 minutos', sinGuardar: true, raizSinGuardar: true, proyectosSinGuardar: [], subir: true }, 'con sitio en GitHub o cambios, no lo dice');
         github.remoto = async () => null; guardar.puedeSubir = async () => true;
         assert.equal((await proveedor.lasCopias()).subir, true, 'con cuenta de GitHub, no ofrece subir');
         guardar.copias = async () => { throw new Error('git roto'); };
@@ -27891,7 +27896,7 @@ exec git "$@"
     return 'uno a la vez; terminado, el siguiente sí';
   });
 
-  // ── La barra en un monorepo (decisión 192) ───────────────────────────────
+  // ── La barra en un monorepo (decisión 194) ───────────────────────────────
   //
   // La raíz con el arnés y su git; cada proyecto, un clon con su propio git que el
   // de la raíz deja fuera. Uno del segundo nivel sin manifiesto (`apps/`), con una
@@ -27924,7 +27929,7 @@ exec git "$@"
     return raiz;
   };
 
-  await comprobar('en un monorepo, lo de dentro de un proyecto no es desorden, y sus claves se siguen tapando (decisión 192)', () => {
+  await comprobar('en un monorepo, lo de dentro de un proyecto no es desorden, y sus claves se siguen tapando (decisión 194)', () => {
     const raiz = montarMonorepo();
     const antes = vscode.guion.raiz;
     try {
@@ -27944,7 +27949,7 @@ exec git "$@"
     }
   });
 
-  await comprobar('los proyectos de dentro se leen del disco: su propio git, primer o segundo nivel, su documentación (decisión 192)', () => {
+  await comprobar('los proyectos de dentro se leen del disco: su propio git, primer o segundo nivel, su documentación (decisión 194)', () => {
     const raiz = montarMonorepo();
     const sp = cargar('subproyectos');
     const lista = sp.cuales(raiz);
@@ -27976,7 +27981,7 @@ exec git "$@"
     return `${lista.length} proyectos, con tope de ${sp.TOPE}`;
   });
 
-  await comprobar('cómo está cada proyecto sale de su propio git, y lo que no se puede mirar no es «guardado» (decisión 192)', async () => {
+  await comprobar('cómo está cada proyecto sale de su propio git, y lo que no se puede mirar no es «guardado» (decisión 194)', async () => {
     const raiz = montarMonorepo();
     const sp = cargar('subproyectos');
     sp.olvidar();
@@ -28007,7 +28012,7 @@ exec git "$@"
     return 'sin guardar, sin subir, rama, y null si no se puede';
   });
 
-  await comprobar('cada proyecto lleva sus botones hechos, y los encargos dicen dónde, sus reglas, y que subir pide el sí (decisión 192)', () => {
+  await comprobar('cada proyecto lleva sus botones hechos, y los encargos dicen dónde, sus reglas, y que subir pide el sí (decisión 194)', () => {
     const raiz = montarMonorepo();
     const sp = cargar('subproyectos');
     const [panel] = sp.cuales(raiz);
@@ -28039,7 +28044,7 @@ exec git "$@"
     return 'tres botones, cuatro partes cada uno';
   });
 
-  await comprobar('la pantalla: Proyectos solo en un monorepo, y «✓ Todo guardado» solo si los proyectos también (decisión 192)', () => {
+  await comprobar('la pantalla: Proyectos solo en un monorepo, y «✓ Todo guardado» solo si los proyectos también (decisión 194)', () => {
     const pintar = (estado) => require('./panel-falso').montarPanel().mandar({ tipo: 'estado', estado: { listo: true, barraCompleta: false, piezas: { copias: true, proyectos: true }, ...estado } });
     const proyectosDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:proyectos-de-dentro"[\s\S]*?<\/details>/) || [''])[0];
     const copiasDe = (html) => (html.match(/<details[^>]*data-abrir="grupo:copias"[\s\S]*?<\/details>/) || [''])[0];
@@ -28071,19 +28076,33 @@ exec git "$@"
     return 'apartado, línea y nota';
   });
 
-  await comprobar('la barra entera en un monorepo: el estado lleva los proyectos y la línea de las copias no los calla (decisión 192)', async () => {
+  await comprobar('la barra entera en un monorepo: el estado lleva los proyectos y la línea de las copias no los calla (decisión 194)', async () => {
     const proveedor = vscode.registrado.proveedor;
     const brujulaM = cargar('brujula');
     const rscM = cargar('rsc');
     const sp = cargar('subproyectos');
     const raiz = montarMonorepo();
-    const antes = { raiz: vscode.guion.raiz, enviar: proveedor.enviar };
+    const procesosM = cargar('procesos');
+    const antes = { raiz: vscode.guion.raiz, enviar: proveedor.enviar, confianza: vscode.guion.confianza, ejecutar: procesosM.ejecutar };
     const enviados = [];
     proveedor.enviar = (m) => enviados.push(m);
     const otraVez = async () => { rscM.olvidarLaContinuacion(); brujulaM.olvidar(); sp.olvidar(); enviados.length = 0; await proveedor.refrescar(true); return [...enviados].reverse().find((m) => m.tipo === 'estado'); };
     try {
       vscode.guion.raiz = raiz;
+      // Sin confianza no se lanza ningún git dentro de un proyecto, y nada es «guardado».
+      const dentro = [];
+      procesosM.ejecutar = (programa, args, opciones) => {
+        if (args.includes('-C') && /03-PROYECTOS|web-suelta/.test(args[args.indexOf('-C') + 1])) dentro.push(args);
+        return antes.ejecutar(programa, args, opciones);
+      };
+      vscode.guion.confianza = false;
       let estado = await otraVez();
+      assert.deepEqual(dentro, [], 'sin confianza se mira dentro de un proyecto');
+      assert.deepEqual(estado.proyectosDeDentro.map((p) => p.estado), ['No he podido mirar si hay cambios sin guardar', 'No he podido mirar si hay cambios sin guardar']);
+      assert.notEqual(estado.copias && estado.copias.sinGuardar, false, 'sin mirar los proyectos dice «Todo guardado»');
+      vscode.guion.confianza = true;
+      estado = await otraVez();
+      assert.equal(dentro.length, 2, 'con confianza, un git por proyecto');
       assert.deepEqual(estado.proyectosDeDentro.map((p) => p.nombre), ['panel-fundae', 'web-suelta']);
       assert.equal(estado.copias.sinGuardar, false, `con todo guardado: ${JSON.stringify(estado.copias)}`);
       fs.writeFileSync(path.join(raiz, '03-PROYECTOS', 'panel-fundae', 'nuevo.md'), 'hola\n');
@@ -28102,12 +28121,14 @@ exec git "$@"
       return 'dos proyectos; uno sin guardar, dicho';
     } finally {
       vscode.guion.raiz = antes.raiz;
+      vscode.guion.confianza = antes.confianza;
+      procesosM.ejecutar = antes.ejecutar;
       proveedor.enviar = antes.enviar;
       sp.olvidar();
     }
   });
 
-  await comprobar('«Seguir donde lo dejé» y «En qué estamos» leen la documentación de cada proyecto (decisión 192)', () => {
+  await comprobar('«Seguir donde lo dejé» y «En qué estamos» leen la documentación de cada proyecto (decisión 194)', () => {
     const raiz = montarMonorepo();
     const ibasM = cargar('por-donde-ibas');
     const escribir = (rel, c, cuando) => {
@@ -28168,7 +28189,7 @@ exec git "$@"
     }
   });
 
-  await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 192)', async () => {
+  await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 194)', async () => {
     const raiz = montarMonorepo();
     const brujulaM = cargar('brujula');
     const proveedor = vscode.registrado.proveedor;

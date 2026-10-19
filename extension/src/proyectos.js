@@ -57,7 +57,7 @@ function titulo(crudo, nombre) {
 }
 
 // En un monorepo, lo de cada proyecto vive en `02-DOCS/wiki/proyectos/<proyecto>/sdd/`,
-// con la misma forma (decisión 192). Se enseña junto a lo de la raíz, con el
+// con la misma forma (decisión 194). Se enseña junto a lo de la raíz, con el
 // nombre de su proyecto. Solo carpetas de verdad, sin enlaces, y con tope.
 const DE_LOS_PROYECTOS = ['02-DOCS', 'wiki', 'proyectos'];
 const TOPE_DE_PROYECTOS = 30;
@@ -130,7 +130,7 @@ function queHay() {
 const hayAlgo = () => queHay().length > 0;
 
 // Abrir uno. El nombre viene de un mensaje del panel, así que se comprueba que
-// sigue siendo de ahí dentro y que es un `.md`. Lo de un proyecto (decisión 192)
+// sigue siendo de ahí dentro y que es un `.md`. Lo de un proyecto (decisión 194)
 // tiene que tener exactamente su forma, y su carpeta no puede ser un enlace.
 const DE_UN_PROYECTO = /^proyectos\/([^/\\]+)\/sdd\/(proposals|specs|plans|verifications)\/[^/\\]+\.md$/;
 function dondeVive(fichero) {

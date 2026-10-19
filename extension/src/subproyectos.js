@@ -1,4 +1,4 @@
-// Los proyectos de dentro: la carpeta como monorepo (decisión 192).
+// Los proyectos de dentro: la carpeta como monorepo (decisión 194).
 //
 // ── La forma ─────────────────────────────────────────────────────────────
 //
@@ -125,6 +125,7 @@ function deCualEs(rel, lista = cuales()) {
 // guarda unos segundos. Lo que no se pudo mirar es `null`, nunca «guardado»
 // (decisión 189).
 const TOPE_DE_GIT = 5000;
+const SIN_MIRAR = Object.freeze({ sinGuardar: null, sinSubir: 0, rama: null, ramaSinSubir: false });
 const VALE_DURANTE = 15000;
 const vistos = new Map();
 
@@ -155,7 +156,7 @@ async function comoEsta(p, { ahora = Date.now() } = {}) {
     [...procesos.ARGS_DE_GIT, '-C', p.ruta, 'status', '--porcelain=v2', '--branch'],
     { tiempoMaximo: TOPE_DE_GIT },
   );
-  const estado = r.codigo === 0 ? leerElEstado(r.salida) : { sinGuardar: null, sinSubir: 0, rama: null, ramaSinSubir: false };
+  const estado = r.codigo === 0 ? leerElEstado(r.salida) : SIN_MIRAR;
   vistos.set(p.ruta, { cuando: ahora, estado });
   return estado;
 }
@@ -163,8 +164,13 @@ async function comoEsta(p, { ahora = Date.now() } = {}) {
 // Tras pedirle algo al asistente, lo visto ya no vale.
 const olvidar = () => vistos.clear();
 
-async function comoEstan(lista = cuales()) {
-  return Promise.all(lista.map(async (p) => ({ ...p, ...(await comoEsta(p)) })));
+// Solo en una carpeta de confianza: un `git status` dentro de un repositorio corre
+// su configuración, y un filtro `clean` suyo es una orden de quien hizo esa carpeta
+// (la revisión de seguridad de la 147 lo reprodujo; `core.fsmonitor` ya va apagado).
+// Es la misma línea que el git del propio editor, que no entra en una carpeta sin
+// confianza. Sin ella, cada uno sale sin mirar: nunca «guardado».
+async function comoEstan(lista = cuales(), { conConfianza = true } = {}) {
+  return Promise.all(lista.map(async (p) => ({ ...p, ...(conConfianza ? await comoEsta(p) : SIN_MIRAR) })));
 }
 
 // ── Los tres encargos ────────────────────────────────────────────────────

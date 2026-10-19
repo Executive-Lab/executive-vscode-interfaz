@@ -855,7 +855,7 @@ ${cabecera}
     this.ponerleElNombre();
     this.enviar({ tipo: 'cargando' });
     const suya = marca.leer();
-    // Una vez por repintado: lo usan Proyectos y la línea de las copias (decisión 192).
+    // Una vez por repintado: lo usan Proyectos y la línea de las copias (decisión 194).
     const deDentro = await this.losProyectosDeDentro();
     this.enviar({
       tipo: 'estado',
@@ -916,7 +916,7 @@ ${cabecera}
       // Para la sencilla: lo que hay en Acciones, la línea de las copias y la versión.
       habilidades: this.habilidadesSuyas(),
       copias: await this.lasCopias(deDentro),
-      // En un monorepo, sus proyectos: cómo está cada uno y sus botones (decisión 192).
+      // En un monorepo, sus proyectos: cómo está cada uno y sus botones (decisión 194).
       proyectosDeDentro: deDentro,
       versionDeLaBarra: this.versionDeLaBarra(),
       // Lo nuevo de la versión que acaba de poner. Antes de mirar si hay otra:
@@ -963,7 +963,7 @@ ${cabecera}
   // La línea de las copias: solo si la carpeta las tiene.
   //
   // En un monorepo, «✓ Todo guardado» tiene que valer también para sus proyectos,
-  // que tienen su propio git y el de la raíz deja fuera (decisión 192). Los que
+  // que tienen su propio git y el de la raíz deja fuera (decisión 194). Los que
   // tienen cambios van con su botón; uno que no se pudo mirar no deja decir
   // «Todo guardado».
   async lasCopias(deDentro = []) {
@@ -990,10 +990,10 @@ ${cabecera}
     }
   }
 
-  // Los proyectos de dentro, si esto es un monorepo (decisión 192). Vacío si no.
+  // Los proyectos de dentro, si esto es un monorepo (decisión 194). Vacío si no.
   async losProyectosDeDentro() {
     try {
-      return (await subproyectos.comoEstan()).map(subproyectos.enPantalla);
+      return (await subproyectos.comoEstan(subproyectos.cuales(), { conConfianza: vscode.workspace.isTrusted !== false })).map(subproyectos.enPantalla);
     } catch (error) {
       this.salida.appendLine(`[proyectos de dentro] ${error.message}`); // diccionario: interno
       return [];
@@ -4396,7 +4396,7 @@ ${cabecera}
   // de sitio sin tener que saber dónde está el menú de VS Code.
 
   // La carpeta de arriba, ya preparada: un proyecto de un monorepo se trabaja
-  // desde su raíz (decisión 192). La ruta se vuelve a mirar aquí: del panel solo
+  // desde su raíz (decisión 194). La ruta se vuelve a mirar aquí: del panel solo
   // llega que se pulsó. En esta misma ventana, como al elegir carpeta.
   async abrirLaDeArriba() {
     const arriba = terreno.queHayEncima(proyecto.raiz());

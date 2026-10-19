@@ -204,7 +204,7 @@ async function calcular() {
     };
 
     // Dentro de una carpeta ya preparada, como un proyecto de un monorepo, no se
-    // ofrece montar otro arnés: se trabaja desde la de arriba (decisión 192).
+    // ofrece montar otro arnés: se trabaja desde la de arriba (decisión 194).
     // Prepararla igual sigue a un clic, detrás.
     const arriba = terreno.queHayEncima(proyecto.raiz());
     if (arriba && arriba.conArnes) {

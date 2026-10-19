@@ -206,7 +206,7 @@ function queHayEncima(raiz) {
   while (arriba !== path.dirname(arriba) && !rutas.mismoSitio(arriba, casa)) {
     if (fs.existsSync(path.join(arriba, '.git')) || fs.existsSync(path.join(arriba, '.rsc.json'))) {
       // Con arnés arriba, esto es parte de una carpeta ya preparada, como un
-      // proyecto de un monorepo (decisión 192): se trabaja desde allí.
+      // proyecto de un monorepo (decisión 194): se trabaja desde allí.
       return { nombre: path.basename(arriba), ruta: arriba, conArnes: fs.existsSync(path.join(arriba, '.rsc.json')) };
     }
     arriba = path.dirname(arriba);

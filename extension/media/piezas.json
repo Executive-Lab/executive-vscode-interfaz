@@ -1,5 +1,5 @@
 {
-  "_": "Qué sale en la pantalla principal sencilla (decisión 138). Nada se borra: lo que está a false está apagado, sigue en el código y probado, y se enciende cambiando la línea. El ajuste executiveLab.barraCompleta enseña la pantalla completa de antes, entera. Los comandos son habilidades (decisión 141): su fila va apagada y salen dentro de Habilidades. Documentos es una pantalla desde la F7 (decisión 151); el plegable de antes, documentosPlegable, va apagado. Proyectos sale solo en un monorepo, con los proyectos que tienen su propio git (decisión 192).",
+  "_": "Qué sale en la pantalla principal sencilla (decisión 138). Nada se borra: lo que está a false está apagado, sigue en el código y probado, y se enciende cambiando la línea. El ajuste executiveLab.barraCompleta enseña la pantalla completa de antes, entera. Los comandos son habilidades (decisión 141): su fila va apagada y salen dentro de Habilidades. Documentos es una pantalla desde la F7 (decisión 151); el plegable de antes, documentosPlegable, va apagado. Proyectos sale solo en un monorepo, con los proyectos que tienen su propio git (decisión 194).",
   "tarjetaUnica": true,
   "documentos": true,
   "documentosPlegable": false,

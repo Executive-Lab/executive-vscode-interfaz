@@ -34,7 +34,7 @@ const limpio = require('./limpio');
 const frontmatter = require('./frontmatter');
 
 const CARPETA = ['02-DOCS', 'wiki', 'ftd'];
-// En un monorepo, los de cada proyecto (decisión 192): `02-DOCS/wiki/proyectos/<proyecto>/ftd/`.
+// En un monorepo, los de cada proyecto (decisión 194): `02-DOCS/wiki/proyectos/<proyecto>/ftd/`.
 const DE_LOS_PROYECTOS = ['02-DOCS', 'wiki', 'proyectos'];
 const TOPE_DE_PROYECTOS = 30;
 // Los que puede nombrar `next:`: los mismos que mira RSC, también los de un
@@ -246,7 +246,7 @@ function enElNext(continuacion) {
 }
 
 // Las carpetas de documentos de trabajo: la de la raíz y, en un monorepo, la de
-// cada proyecto (decisión 192). Solo carpetas de verdad, y con tope.
+// cada proyecto (decisión 194). Solo carpetas de verdad, y con tope.
 const NOMBRE_DE_PROYECTO = /^[\p{L}\p{N}][\p{L}\p{N}_.-]{0,99}$/u;
 function lasCarpetas(raiz) {
   const proyectos = sinEnlaces(raiz, DE_LOS_PROYECTOS);
