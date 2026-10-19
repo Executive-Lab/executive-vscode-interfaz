@@ -132,6 +132,23 @@ function correr(programa, args, opciones = {}) {
 
 // 1. Las herramientas: Node, el arnés, los raíles y la extensión, dentro de la
 // carpeta del alumno. Se sobrescribe sin preguntar: es nuestro, no suyo.
+// Pone una copia de `origen` en `destino` aunque ya hubiera algo de una
+// instalación anterior. `cpSync` con `force` no pisa los enlaces simbólicos que ya
+// estaban (los `bin/npm` y `bin/npx` del Node), y salta con EEXIST: así fallaba
+// reinstalar encima. Se copia al lado, se cambia por lo viejo y se borra lo viejo.
+// `destino` es siempre algo nuestro, dentro de `APP`.
+function reponer(origen, destino) {
+  const nuevo = `${destino}.nuevo-${process.pid}`;
+  const viejo = `${destino}.viejo-${process.pid}`;
+  fs.rmSync(nuevo, { recursive: true, force: true });
+  fs.cpSync(origen, nuevo, { recursive: true, verbatimSymlinks: true });
+  let habia = false;
+  try { fs.lstatSync(destino); habia = true; } catch { /* no estaba */ }
+  if (habia) fs.renameSync(destino, viejo);
+  fs.renameSync(nuevo, destino);
+  if (habia) fs.rmSync(viejo, { recursive: true, force: true });
+}
+
 function copiarLasHerramientas() {
   contar('Dejando las herramientas en su sitio');
   if (SECO) return;
@@ -139,7 +156,7 @@ function copiarLasHerramientas() {
 
   fs.mkdirSync(APP, { recursive: true });
   for (const pieza of fs.readdirSync(CARGA)) {
-    fs.cpSync(path.join(CARGA, pieza), path.join(APP, pieza), { recursive: true, force: true });
+    reponer(path.join(CARGA, pieza), path.join(APP, pieza));
   }
 
   // El Node ya no viaja dentro del paquete: lo descarga `arrancar.sh` a una
@@ -148,7 +165,7 @@ function copiarLasHerramientas() {
   // `node` por su nombre mucho después de que esa carpeta temporal desaparezca.
   const bajado = process.env.EXECUTIVE_LAB_NODE_BAJADO;
   if (bajado && fs.existsSync(bajado)) {
-    fs.cpSync(bajado, path.join(APP, 'runtime'), { recursive: true, force: true });
+    reponer(bajado, path.join(APP, 'runtime'));
     anotar(`Node descargado, copiado desde ${bajado}`);
   }
   // cpSync respeta los permisos, pero el bit de ejecución del Node portable es
@@ -401,7 +418,7 @@ async function main() {
 }
 
 // Se puede cargar sin instalar nada, para probar lo que decide (`humo.js`).
-module.exports = { asistentesDe, EXTENSION_DEL_ASISTENTE };
+module.exports = { asistentesDe, EXTENSION_DEL_ASISTENTE, reponer };
 
 if (require.main === module) {
   main().catch((error) => {

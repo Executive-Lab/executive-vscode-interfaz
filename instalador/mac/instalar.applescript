@@ -91,10 +91,16 @@ Los dos hacen lo mismo aquí. Si en clase te han dicho uno, elige ese. Si no lo 
 		do shell script "/usr/bin/open " & quoted form of recado
 	else
 		set informe to (POSIX path of (path to desktop)) & "Informe para tu tutor.txt"
+		set porQue to recado
+		if porQue is "" then set porQue to "no ha dicho por qué"
+		-- El registro lo escribe instalar.js en la carpeta temporal del usuario
+		-- (os.tmpdir(): $TMPDIR, en /var/folders/…), no en /tmp: se busca en las
+		-- tres, y el informe se escribe siempre, aunque no aparezca ninguna.
+		set elGuion to "{ echo 'Executive Lab: la instalación no ha terminado.'; echo \"Motivo: $1\"; echo; echo '--- Progreso'; cat \"$2\" 2>/dev/null; echo; echo '--- Registro'; hay=no; for f in \"${TMPDIR:-/tmp}/executive-lab-instalacion.log\" \"$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null)executive-lab-instalacion.log\" /tmp/executive-lab-instalacion.log; do if [ -f \"$f\" ]; then cat \"$f\"; hay=si; break; fi; done; [ $hay = si ] || echo '(no se ha encontrado el registro)'; } > \"$3\""
 		try
-			do shell script "cp /tmp/executive-lab-instalacion.log " & quoted form of informe
+			do shell script "/bin/sh -c " & quoted form of elGuion & " informe " & quoted form of porQue & " " & quoted form of progreso & " " & quoted form of informe
 		end try
-		display dialog "No he podido terminar.
+		display dialog "No he podido terminar: " & porQue & "
 
 Te he dejado en el escritorio un informe para tu tutor." with title "Executive Lab" buttons {"Ver el informe", "Cerrar"} default button "Ver el informe" with icon caution
 		if button returned of result is "Ver el informe" then
@@ -115,6 +121,8 @@ on leerLoUltimo(fichero)
 	set AppleScript's text item delimiters to antes
 
 	if (count of trozos) is 1 then return {clase:item 1 of trozos, dato:"", resto:{}}
+	-- Un DETALLE trae solo dos trozos: «items 3 thru -1» de una lista de dos revienta (-1728).
+	if (count of trozos) is 2 then return {clase:item 1 of trozos, dato:item 2 of trozos, resto:{}}
 	return {clase:item 1 of trozos, dato:item 2 of trozos, resto:items 3 thru -1 of trozos}
 end leerLoUltimo
 
