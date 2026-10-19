@@ -100,7 +100,7 @@ function describir(raiz, rel) {
       return false;
     }
   });
-  // Su índice, para «Lo que sabe de…»: relativo a la wiki, que es como lo abre la barra.
+  // Su índice, para «Conocimiento de…»: relativo a la wiki, que es como lo abre la barra.
   const indice = docs && paraLeer.includes(`${docs}/index.md`) ? `proyectos/${nombre}/index.md` : null;
   return { nombre, rel, ruta: path.join(raiz, ...rel.split('/')), docs, paraLeer, indice };
 }
@@ -122,14 +122,6 @@ function cuales(raiz = proyecto.raiz()) {
   return hallados.map((rel) => describir(raiz, rel));
 }
 
-const hayAlguno = (raiz) => cuales(raiz).length > 0;
-
-// ¿Esta ruta, relativa a la raíz y con «/», cae dentro de un proyecto de dentro?
-function deCualEs(rel, lista = cuales()) {
-  const limpia = String(rel || '').split(path.sep).join('/').replace(/^\.\/+/, '');
-  return lista.find((p) => limpia === p.rel || limpia.startsWith(`${p.rel}/`)) || null;
-}
-
 // ── Cómo está cada uno ───────────────────────────────────────────────────
 //
 // Un `git status` por proyecto, todos a la vez, con tope de 5 segundos cada uno.
@@ -138,6 +130,9 @@ function deCualEs(rel, lista = cuales()) {
 // (decisión 189).
 const TOPE_DE_GIT = 5000;
 const SIN_MIRAR = Object.freeze({ sinGuardar: null, sinSubir: 0, rama: null, ramaSinSubir: false });
+// Sin confianza no es que git no conteste: es que no se le pregunta. Se dice distinto,
+// con su salida (183): darle la confianza.
+const SIN_CONFIANZA = Object.freeze({ ...SIN_MIRAR, sinConfianza: true });
 const VALE_DURANTE = 15000;
 const vistos = new Map();
 
@@ -209,7 +204,7 @@ const esDeUnRegistro = (ruta) => /[\\/]\.git[\\/]logs[\\/]/.test(String(ruta || 
 // Es la misma línea que el git del propio editor, que no entra en una carpeta sin
 // confianza. Sin ella, cada uno sale sin mirar: nunca «guardado».
 async function comoEstan(lista = cuales(), { conConfianza = true } = {}) {
-  return Promise.all(lista.map(async (p) => ({ ...p, ...(conConfianza ? await comoEsta(p) : SIN_MIRAR) })));
+  return Promise.all(lista.map(async (p) => ({ ...p, ...(conConfianza ? await comoEsta(p) : SIN_CONFIANZA) })));
 }
 
 // ── Los tres encargos ────────────────────────────────────────────────────
@@ -264,7 +259,17 @@ function subir(p) {
     '',
     'No subas nada de la raíz ni de los demás proyectos, y no fuerces la subida si GitHub tiene algo que aquí no está: dímelo.', // diccionario: interno
     '',
-    'Antes de subir, mira en sus reglas si subir a esa rama publica una web o despliega algo. Si es así, dímelo con esas palabras y espera a que te diga que sí.',
+    'Antes de subir, mira en sus reglas si subir a esa rama pone algo a la vista de otros: una web, una aplicación, un correo. Si es así, dímelo en una frase sencilla, sin palabras técnicas, y espera a que te diga que sí.',
+  ].join('\n');
+}
+
+function mirarloBien(p) {
+  return [
+    queHay(p),
+    '',
+    `No he podido mirar si ${p.rel}/ tiene cambios sin guardar: su git no contesta.`, // diccionario: interno
+    '',
+    'Míralo y dime en una frase qué le pasa y qué hago. No cambies nada sin preguntarme.',
   ].join('\n');
 }
 
@@ -272,6 +277,8 @@ const ACCIONES = {
   trabajar: { etiqueta: (p) => `Trabajar en «${p.nombre}»`, icono: '💬', prompt: trabajarEn },
   guardar: { etiqueta: (p) => `Guardar «${p.nombre}» en git`, icono: '💾', prompt: guardar },
   subir: { etiqueta: (p) => `Subir «${p.nombre}» a GitHub`, icono: '☁️', prompt: subir },
+  // Un aviso sin salida no vale (183): lo que no se pudo mirar, lo mira el asistente.
+  mirar: { etiqueta: () => 'Que lo mire el asistente', icono: '💬', prompt: mirarloBien },
 };
 
 // El botón ya hecho (P6): quien tiene los datos arma la acción.
@@ -283,9 +290,11 @@ function boton(cual, p) {
 // La rama de siempre no se nombra: solo se dice cuando está en otra.
 const RAMAS_PRINCIPALES = ['main', 'master'];
 
-// Lo que se enseña de cada uno: cómo está, dicho, y sus botones.
+// Lo que se enseña de cada uno: cómo está, dicho, y sus botones. Sin confianza no se
+// dice nada de cada uno: el apartado lo dice una vez, con su botón.
 function enPantalla(p) {
-  const estado = p.sinGuardar === null
+  const estado = p.sinConfianza ? ''
+    : p.sinGuardar === null
     ? 'No he podido mirar si hay cambios sin guardar'
     : [
       p.sinGuardar ? 'Cambios sin guardar' : '✓ Todo guardado',
@@ -296,8 +305,10 @@ function enPantalla(p) {
   const guardarlo = p.sinGuardar ? boton('guardar', p) : null;
   const botones = [
     boton('trabajar', p),
-    // Su documentación, que en Conocimiento no está entre los temas de la raíz.
-    ...(p.indice ? [{ etiqueta: `Lo que sabe de «${p.nombre}»`, icono: '📚', accion: { tipo: 'leerArticulo', ruta: p.indice } }] : []),
+    ...(p.sinGuardar === null && !p.sinConfianza ? [boton('mirar', p)] : []),
+    // Su documentación, que en Conocimiento no está entre los temas de la raíz. Con el
+    // nombre del diccionario («Conocimiento de <nombre>»), no con una perífrasis (98).
+    ...(p.indice ? [{ etiqueta: `Conocimiento de «${p.nombre}»`, icono: '📚', accion: { tipo: 'leerArticulo', ruta: p.indice } }] : []),
     ...(guardarlo ? [guardarlo] : []),
     ...(p.sinSubir || p.ramaSinSubir ? [boton('subir', p)] : []),
   ];
@@ -306,6 +317,7 @@ function enPantalla(p) {
     estado,
     rama: p.rama,
     sinGuardar: p.sinGuardar === null ? null : p.sinGuardar > 0,
+    sinConfianza: Boolean(p.sinConfianza),
     // El de guardar, aparte: la línea de las copias lo lleva también.
     guardar: guardarlo,
     botones,
@@ -313,6 +325,5 @@ function enPantalla(p) {
 }
 
 module.exports = {
-  cuales, hayAlguno, deCualEs, tieneSuGit, comoEsta, comoEstan, olvidar, leerElEstado, enPantalla, boton,
-  trabajarEn, guardar, subir, TOPE, DOCUMENTACION, nombreQueVale, LOS_REGISTROS, esDeUnRegistro,
+  cuales, tieneSuGit, comoEsta, comoEstan, olvidar, leerElEstado, enPantalla, nombreQueVale, LOS_REGISTROS, esDeUnRegistro, TOPE,
 };

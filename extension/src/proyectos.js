@@ -132,29 +132,37 @@ function leerUnMonton(carpeta, delante, deProyecto) {
 // español. En un monorepo de verdad salieron treinta valores distintos —`shipped`,
 // `pass`, `approved-autopilot`, `aprobado-en-autopiloto`, `verified_for_publication`,
 // `research_complete_pending_scope_discussion`…—, y la pantalla los enseñaba tal
-// cual, en inglés (decisión 195). Se reducen a las palabras del diccionario por lo
-// que dicen, y en este orden: lo primero que casa gana («approved-shipped» está
-// terminado; «pass-implemented-with-explicit-risk», comprobado). Lo que no se
-// entiende no se enseña: mejor nada que una palabra que nadie sabe leer.
-const COMO_ESTA = [
-  [/supersed|sustitu/, 'sustituido'],
-  [/retract|cancel|abandon|deprecat|retirad|descartad/, 'retirado'],
-  [/fail|fallid/, 'salió mal'],
-  [/block|bloque/, 'parado'],
-  [/defer|aplaz/, 'aplazado'],
-  [/pending|pendiente|draft|borrador|propos|gathering|research/, 'en borrador'],
-  [/review|revisi/, 'en revisión'],
-  [/pass|verified|comprobad/, 'salió bien'],
-  [/ready|listo/, 'acordado'],
-  [/done|ship|complete|hecho|terminad|closed|cerrad|merged/, 'terminado'],
-  [/progress|active|curso|marcha|implement/, 'en marcha'],
-  [/approv|aprob|accept|acord|ratif|clarif|authoriz|stable/, 'acordado'],
-];
+// cual, en inglés (decisión 195). Se reducen a las palabras del diccionario.
+//
+// Por palabras enteras, no por trozos: con trozos, «implemented» salía «en marcha»
+// e «inactive» también (revisión del vigía del diccionario). Lo que va detrás de
+// «after», «with», «for» o «tras» cuenta la historia, no cómo está, y no se mira:
+// «approved-after-review» está acordado, «passed-with-fixes» comprobado. Entre las
+// que quedan gana la de más arriba en `EN_ORDEN`. Lo que no se entiende no se
+// enseña: mejor nada que una palabra que nadie sabe leer.
+const PALABRAS = {
+  sustituido: ['superseded', 'sustituido', 'sustituida', 'replaced', 'reemplazado', 'reemplazada'],
+  retirado: ['retracted', 'cancelled', 'canceled', 'abandoned', 'deprecated', 'rejected', 'withdrawn', 'retirado', 'retirada', 'descartado', 'descartada', 'cancelado', 'cancelada', 'rechazado', 'rechazada'],
+  'salió mal': ['failed', 'fail', 'failing', 'fallido', 'fallida', 'suspendido'],
+  parado: ['blocked', 'bloqueado', 'bloqueada', 'stuck', 'parado', 'parada'],
+  aplazado: ['deferred', 'postponed', 'paused', 'hold', 'aplazado', 'aplazada', 'pausado', 'pausada'],
+  'en revisión': ['review', 'reviewing', 'revision', 'revisando', 'clarified', 'clarificado', 'clarificada'],
+  'en borrador': ['draft', 'borrador', 'proposed', 'propuesto', 'propuesta', 'pending', 'pendiente', 'gathering', 'research', 'wip', 'idea'],
+  comprobado: ['pass', 'passed', 'verified', 'comprobado', 'comprobada', 'verificado', 'verificada'],
+  terminado: ['done', 'shipped', 'complete', 'completed', 'finished', 'implemented', 'delivered', 'merged', 'closed', 'published', 'hecho', 'hecha', 'terminado', 'terminada', 'cerrado', 'cerrada', 'publicado', 'publicada', 'completado', 'completada'],
+  acordado: ['approved', 'approve', 'accepted', 'agreed', 'ratified', 'authorized', 'authorised', 'stable', 'ready', 'reviewed', 'aprobado', 'aprobada', 'aceptado', 'aceptada', 'acordado', 'acordada', 'listo', 'lista', 'revisado', 'revisada'],
+  'en marcha': ['progress', 'active', 'ongoing', 'started', 'doing', 'implementing', 'curso', 'marcha', 'activo', 'activa', 'empezado', 'empezada'],
+};
+const EN_ORDEN = ['sustituido', 'retirado', 'salió mal', 'parado', 'aplazado', 'en revisión', 'en borrador', 'comprobado', 'terminado', 'acordado', 'en marcha'];
+const DE_CADA_PALABRA = new Map(Object.entries(PALABRAS).flatMap(([dicho, palabras]) => palabras.map((p) => [p, dicho])));
+const LA_HISTORIA = new Set(['after', 'with', 'for', 'tras', 'con', 'por', 'desde']);
+
 function comoEsta(status) {
   if (typeof status !== 'string' || !status.trim()) return '';
-  const dicho = status.trim().toLowerCase();
-  const casa = COMO_ESTA.find(([patron]) => patron.test(dicho));
-  return casa ? casa[1] : '';
+  const palabras = status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(Boolean);
+  const corte = palabras.findIndex((p) => LA_HISTORIA.has(p));
+  const dichas = new Set((corte === -1 ? palabras : palabras.slice(0, corte)).map((p) => DE_CADA_PALABRA.get(p)).filter(Boolean));
+  return EN_ORDEN.find((d) => dichas.has(d)) || '';
 }
 
 const conCosas = (leer) => MONTONES.map((m) => ({ ...m, cosas: leer(m.id) })).filter((m) => m.cosas.length);

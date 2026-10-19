@@ -2134,7 +2134,7 @@ function lineaDeLasCopias() {
       ${deDentro.filter((p) => p.boton).map((p) => boton({ ...p.boton, pequeno: true })).join('')}
       ${boton({ etiqueta: 'Ver las copias guardadas', icono: '🕑', pequeno: true, accion: { tipo: 'verCopias' } })}
       ${c.subir ? boton({ etiqueta: 'Subir a GitHub', icono: '☁️', pequeno: true, accion: { tipo: 'verCopiaFuera' } }) : ''}
-      ${deDentro.length ? `<p class="pista">${texto('Cada proyecto tiene sus propias copias. «Guardar en git» guarda lo demás.')}</p>` : ''}`,
+      ${deDentro.length ? `<p class="pista">${texto('Cada proyecto se guarda aparte, con su botón. «Guardar en git» guarda el resto de la carpeta.')}</p>` : ''}`,
   });
 }
 
@@ -2148,9 +2148,12 @@ function grupoProyectosDeDentro() {
     id: 'grupo:proyectos-de-dentro',
     etiqueta: 'Proyectos',
     cuantos: sinGuardar ? plural(sinGuardar, '1 sin guardar', '{n} sin guardar') : '',
-    dentro: lista.map((p) => `
+    // Sin confianza no se mira cómo está ninguno, y se dice una vez, con su salida (183).
+    dentro: (lista.some((p) => p.sinConfianza) ? `
+      <p class="pista">${texto('El editor no confía en esta carpeta, y no miro cómo está cada proyecto.')}</p>
+      ${boton({ etiqueta: 'Confiar en esta carpeta', icono: '🔓', pequeno: true, accion: { tipo: 'confiarEnLaCarpeta' } })}` : '') + lista.map((p) => `
       <h3>${texto(p.nombre)}</h3>
-      <p class="pista">${texto(p.estado)}</p>
+      ${p.estado ? `<p class="pista">${texto(p.estado)}</p>` : ''}
       ${(p.botones || []).map((b) => boton({ ...b, pequeno: true })).join('')}`).join(''),
   });
 }

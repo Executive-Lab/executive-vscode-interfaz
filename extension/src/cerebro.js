@@ -302,7 +302,7 @@ function todosLosDocumentos() {
 // su propio índice (decisión 195). No está «sin ordenar» para el índice de la raíz,
 // y «Que los ordene» le pedía al asistente meterla en temas: desmontarla. En uno de
 // verdad eran 380 de 402. Se reconoce por su índice o por ser un proyecto de dentro;
-// sigue saliendo en el buscador y en Proyectos («Lo que sabe de…»).
+// sigue saliendo en el buscador y en Proyectos («Conocimiento de…»).
 function laDocumentacionDeLosProyectos() {
   const deDentro = new Set(require('./subproyectos').cuales().map((p) => p.nombre));
   const vistos = new Map();

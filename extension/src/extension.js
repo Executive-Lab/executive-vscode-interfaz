@@ -1661,6 +1661,8 @@ ${cabecera}
       ponerLaCara: () => this.ponerLaCara(),
       elegirCarpeta: () => this.elegirCarpeta(),
       abrirLaDeArriba: () => this.abrirLaDeArriba(),
+      // La pantalla del editor para darle la confianza; al darla se repinta (decisión 195).
+      confiarEnLaCarpeta: () => vscode.commands.executeCommand('workbench.trust.manage'),
       // La salida de una carpeta que no se prepara: una nueva, dentro de la
       // personal (B1).
       crearCarpeta: () => arrancar.crearUnaCarpetaDentro(os.homedir(), this.salida),
@@ -4827,6 +4829,14 @@ function activate(contexto) {
   );
 
   vigilarElArnes(contexto, panel);
+  // Al darle la confianza a la carpeta, lo que sin ella no se miraba —cómo está cada
+  // proyecto de un monorepo— se mira ya, sin recargar (decisión 195).
+  if (vscode.workspace.onDidGrantWorkspaceTrust) {
+    contexto.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
+      subproyectos.olvidar();
+      panel.repintarLoQueHaya().catch((error) => salida.appendLine(`[confianza] ${error.message}`)); // diccionario: interno
+    }));
+  }
 
   // Decisión 190: si cambia la primera carpeta, el vigía mira la nueva y se
   // olvida lo que se sabía de la anterior (la brújula y la continuación). Sin
