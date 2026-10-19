@@ -9442,6 +9442,45 @@ confianza, cada uno sale «No he podido mirar si hay cambios sin guardar» y no 
 - *Seguridad, baja*: un `.md` que es un enlace dentro de `sdd/` se listaba y se abría (también en la raíz, desde antes).
   Ahora solo ficheros de verdad.
 
+**La auditoría contra el monorepo de verdad** (Jose: *«revisa, audita y hazlo bien»*). Se cargaron los módulos de la barra
+apuntando a `mono-repo-executive-lab`, solo leyendo, y se vio lo que vería la persona. Salieron ocho proyectos, mirarlos tarda
+0,6 s y no salía nada fuera de sitio, pero había cuatro cosas mal:
+- **«Que los ordene» habría desmontado la documentación de los proyectos.** Conocimiento contaba 402 documentos «sin
+  ordenar», 380 de ellos de `proyectos/<proyecto>/`, y su botón le pide al asistente meterlos en temas. Además decía «Hay 8»
+  (el número de los que enseña, no de los que hay). Ahora la documentación de un proyecto (con su índice, o de un proyecto
+  de dentro) no está sin ordenar, el número es el de verdad, el encargo dice que la deje donde está, y se abre desde Proyectos
+  con «Conocimiento de «x»», el nombre que el diccionario da a la wiki por dentro.
+- **En qué estamos mezclaba 87 documentos** con los tres de la raíz. Ahora va lo de la raíz y, debajo, un desplegable por
+  proyecto.
+- **Los estados salían en crudo y en inglés**: treinta valores (`shipped`, `pass`, `ready_for_ship`, `retracted`…). Pasa
+  desde antes con lo de la raíz. Ahora `proyectos.comoEsta` los dice con once palabras del diccionario, leyendo palabras
+  enteras: lo que va detrás de «after», «with» o «for» cuenta la historia y no se mira, una negación («not-approved», «sin
+  empezar») no se afirma, y lo que no se entiende no sale.
+- **El encargo de subir no leía la tabla que dice qué subida despliega**, en `03-PROYECTOS/README.md`. Ahora los encargos leen
+  primero lo común (`02-DOCS/wiki/proyectos/README.md` y el README de la carpeta que guarda los proyectos).
+
+Y «Seguir donde lo dejé» dice de qué proyecto es el documento («…de «El informe», en «panel-fundae»»).
+
+**Lo que trajeron las dos revisiones del proyecto**:
+- *El vigía del diccionario*:
+  - un proyecto que no se pudo mirar se quedaba sin salida (183). Ahora lleva «Que lo mire el asistente». Sin confianza, el
+    apartado lo dice una vez con «Confiar en esta carpeta», que abre la pantalla del editor, y al darla se repinta.
+  - «Lo que sabe de «x»» era la perífrasis que prohíbe la 98, y la prueba de las perífrasis lo cazó. Ahora es «Conocimiento
+    de «x»».
+  - «comprobado» (ya en el diccionario) en vez de «salió bien».
+  - el encargo de subir decía «despliega», y ya no lo dice.
+  - «Esta carpeta está dentro de «x»», sin llamar proyecto a lo de arriba.
+  - Proyectos entra en la lista de apartados.
+- *El guardián de las pruebas*:
+  - lo que la extensión manda a En qué estamos y a Conocimiento no lo comprobaba nadie. Ahora sí, de punta a punta.
+  - `dondeVive` abría un fichero de fuera si el montón (`specs/`) era un enlace a otra carpeta, también en la raíz y desde
+    antes. Ahora el montón tiene que ser una carpeta de verdad y el sitio real tiene que caer dentro, como en
+    `cerebro.dentroDeLaWiki`.
+  - faltaban pruebas de las negaciones, de cada palabra de los estados, de la documentación con índice y sin clon, y del
+    orden de la línea de las copias.
+  - con un `.git` fichero (worktree o submódulo) los registros viven fuera del proyecto y el vigía no los ve. Ahí lo visto
+    caduca a los 15 segundos. Está dicho en el código, no arreglado.
+
 **Lo que no cambia**: el guardado solo sigue sin correr en un historial que no creó la barra (P4), y un monorepo clonado lo es.
 
 **Fuera**: guardar o subir un proyecto desde la barra sin el asistente; zonas de la brújula por proyecto o por área; vigilar

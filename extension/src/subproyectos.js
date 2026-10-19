@@ -195,6 +195,8 @@ const olvidar = () => vistos.clear();
 // cada copia, cada cambio de rama y cada subida, y nunca con un `status`. El índice
 // no: lo toca cualquier `git status`, también el del propio editor, y la barra se
 // pondría a repintar sin parar (decisión 188).
+// Con un `.git` fichero (un worktree o un submódulo) los registros viven fuera del
+// proyecto y no se ven: ahí lo visto caduca a los 15 segundos, como sin vigía.
 const LOS_REGISTROS = ['*/.git/logs/**', '*/*/.git/logs/**'];
 const esDeUnRegistro = (ruta) => /[\\/]\.git[\\/]logs[\\/]/.test(String(ruta || ''));
 

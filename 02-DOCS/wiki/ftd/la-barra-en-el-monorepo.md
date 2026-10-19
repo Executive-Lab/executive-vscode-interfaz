@@ -99,6 +99,9 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 - [x] Diccionario, decisión 195 y `humo.js` con un monorepo de mentira.
 - [x] Batería entera y mutaciones de lo importante.
 - [x] Revisiones adversarias (seguridad y corrección) y sus arreglos.
+- [x] Auditada contra `mono-repo-executive-lab` de verdad, solo leyendo, y arreglado lo que salió: Conocimiento, En qué
+      estamos, los estados y lo que leen los encargos.
+- [x] El vigía del diccionario y el guardián de las pruebas, y sus arreglos.
 
 ## Evidence
 
@@ -110,7 +113,12 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
   la barra entera con `refrescar`. Se ajustaron tres que fijaban la forma de antes: `dentroDeOtro`, la tabla de piezas y
   `lasCopias`.
 - **Batería**: ver la PR (humo, `--con-arnes`, mapeos-codex, contrato, empresas-distintas, diccionario).
-- **Mutaciones**: 24, todas cazadas. Entre otras: sueltas sin mirar el git propio, un `.git` enlazado que cuenta, entrar en
+- **Contra el monorepo de verdad** (19-10-2026, solo leyendo): 8 proyectos en 9 ms, cómo está cada uno en 0,6 s, nada fuera de
+  sitio, «sin ordenar» de 402 a 23, En qué estamos con 3 de la raíz y un desplegable por proyecto, todos los estados
+  traducidos (los 18 sin nada no tienen `status`), y el encargo de `executive-certificados` leyendo la tabla que dice que
+  subir a `main` despliega.
+- **Mutaciones**: 37, todas cazadas (una sobrevivió por una guarda doble; se quitó la que sobraba y se comprobó que la que
+  queda cae sola). Entre otras: sueltas sin mirar el git propio, un `.git` enlazado que cuenta, entrar en
   `node_modules`, sin tope, lo no mirado como «guardado», lo visto que no caduca, subir sin esperar el sí, el encargo sin sus
   reglas, las copias que callan los proyectos, abrir lo de un proyecto enlazado, el `next:` sin proyectos, parte de cualquier
   git de arriba, abrir sin ser el botón principal, el git de los proyectos sin confianza, el vigía que no olvida o no mira,
@@ -118,6 +126,6 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 
 ## Next
 
-Revisar la PR y las cuatro filas nuevas del diccionario. Después, probarla abierta sobre `mono-repo-executive-lab` de verdad:
+Revisar la PR y las filas nuevas del diccionario (decisión 195). Después, probarla abierta sobre `mono-repo-executive-lab` de verdad:
 qué proyectos salen, si «Trabajar en «…»» se entiende, y si los encargos de guardar y subir respetan las reglas de
 `executive-certificados` (subir a `main` despliega).

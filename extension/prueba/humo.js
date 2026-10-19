@@ -28144,6 +28144,21 @@ exec git "$@"
       assert.deepEqual(dentro, [], 'sin confianza se mira dentro de un proyecto');
       assert.deepEqual(estado.proyectosDeDentro.map((p) => [p.estado, p.sinConfianza]), [['', true], ['', true]]);
       assert.match(require('./panel-falso').montarPanel().mandar({ ...estado, barraCompleta: false }), /no miro cómo está cada proyecto[\s\S]*Confiar en esta carpeta/);
+      // «Confiar en esta carpeta» abre la pantalla del editor, y al darla se mira sin recargar.
+      const ejecutadosAntes = vscode.registrado.ejecutados.length;
+      await proveedor.manejar({ tipo: 'confiarEnLaCarpeta' });
+      assert.ok(vscode.registrado.ejecutados.slice(ejecutadosAntes).some((e) => e.id === 'workbench.trust.manage'), 'no abre la pantalla de la confianza');
+      assert.ok(vscode.registrado.alConfiar.length > 0, 'la barra no se entera de que se le da la confianza');
+      vscode.guion.confianza = true;
+      const repintadas = [];
+      const repintar = proveedor.repintarLoQueHaya;
+      proveedor.repintarLoQueHaya = async () => { repintadas.push(1); };
+      try {
+        await Promise.all(vscode.registrado.alConfiar.map((f) => f()));
+      } finally {
+        proveedor.repintarLoQueHaya = repintar;
+      }
+      assert.equal(repintadas.length > 0, true, 'al darle la confianza no se repinta');
       assert.notEqual(estado.copias && estado.copias.sinGuardar, false, 'sin mirar los proyectos dice «Todo guardado»');
       vscode.guion.confianza = true;
       estado = await otraVez();
@@ -28246,6 +28261,13 @@ exec git "$@"
       assert.ok(!conEnlaces.some((f) => f.endsWith('enlace.md')), `sale un enlace: ${conEnlaces}`);
       assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/specs/enlace.md'), null);
       assert.equal(proyectosM.dondeVive('specs/enlace.md'), null);
+      // Un montón entero enlazado a otra carpeta: ni se lista ni se abre (revisión del guardián).
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs'), path.join(raiz, '02-DOCS', 'wiki', 'proyectos', 'panel-fundae', 'sdd', 'plans'));
+      fs.rmSync(path.join(raiz, '02-DOCS', 'wiki', 'sdd', 'plans'), { recursive: true, force: true });
+      fs.symlinkSync(path.join(fuera, 'sdd', 'specs'), path.join(raiz, '02-DOCS', 'wiki', 'sdd', 'plans'));
+      assert.equal(proyectosM.dondeVive('proyectos/panel-fundae/sdd/plans/ajena.md'), null, 'se abre lo de un montón enlazado de un proyecto');
+      assert.equal(proyectosM.dondeVive('plans/ajena.md'), null, 'se abre lo de un montón enlazado de la raíz');
+      assert.ok(!JSON.stringify([proyectosM.queHay(), proyectosM.deLosProyectos()]).includes('ajena'), 'se lista lo de un montón enlazado');
       // Un proyecto con espacios en el nombre, como en Proyectos.
       escribir('02-DOCS/wiki/proyectos/mi proyecto/sdd/specs/con-espacio.md', '---\ntitle: Con espacio\n---\n');
       escribir('02-DOCS/wiki/proyectos/mi proyecto/ftd/a-medias.md', doc('A medias', 'Terminar lo del espacio'));
@@ -28259,10 +28281,13 @@ exec git "$@"
       // Conocimiento: la documentación de un proyecto no está «sin ordenar», y «Que los ordene» la deja quieta.
       const cerebroM = cargar('cerebro');
       escribir('02-DOCS/wiki/proyectos/sin-indice-ni-clon/nota.md', '# Una nota\n');
+      // Con su índice y sin clon en este ordenador («Clona solo los que necesites»): sigue siendo suya.
+      escribir('02-DOCS/wiki/proyectos/sin-clonar/index.md', '# Sin clonar\n');
+      escribir('02-DOCS/wiki/proyectos/sin-clonar/ftd/algo.md', '# Algo\n');
       // «mi proyecto» no tiene índice: cuenta por ser un proyecto de dentro.
       fs.mkdirSync(path.join(raiz, '03-PROYECTOS', 'mi proyecto', '.git'), { recursive: true });
       const sueltos = cerebroM.sinOrdenar().map((d) => d.ruta);
-      assert.ok(!sueltos.some((r) => /^proyectos\/(panel-fundae|mi proyecto)\//.test(r)), `la documentación de un proyecto sale sin ordenar: ${sueltos}`);
+      assert.ok(!sueltos.some((r) => /^proyectos\/(panel-fundae|mi proyecto|sin-clonar)\//.test(r)), `la documentación de un proyecto sale sin ordenar: ${sueltos}`);
       assert.ok(sueltos.includes('proyectos/sin-indice-ni-clon/nota.md'), 'sin índice ni proyecto de dentro, sí está sin ordenar');
       const cerebroHtml = require('./panel-falso').montarPanel().mandar({ tipo: 'cerebro', temas: [], sinOrdenar: sueltos.slice(0, 1).map((ruta) => ({ ruta, titulo: 'Una nota' })), cuantosSinOrdenar: 402 });
       assert.match(cerebroHtml, /Hay 402 documentos escritos que aún no están en su tema/, 'el número es el de los que se enseñan');
@@ -28270,6 +28295,51 @@ exec git "$@"
       return 'el del proyecto se ofrece y se abre; el enlazado, no';
     } finally {
       vscode.guion.raiz = antes;
+    }
+  });
+
+  await comprobar('lo que la extensión manda de los proyectos llega a la pantalla: En qué estamos, Conocimiento y las copias (decisión 195)', async () => {
+    const proveedor = vscode.registrado.proveedor;
+    const raiz = montarMonorepo();
+    const antes = { raiz: vscode.guion.raiz, enviar: proveedor.enviar };
+    const enviados = [];
+    proveedor.enviar = (m) => enviados.push(m);
+    const escribir = (rel, c) => { const f = path.join(raiz, ...rel.split('/')); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, c); };
+    try {
+      vscode.guion.raiz = raiz;
+      // La raíz sin nada de SDD, y un proyecto con: En qué estamos tiene que salir.
+      fs.rmSync(path.join(raiz, '02-DOCS', 'wiki', 'sdd'), { recursive: true, force: true });
+      escribir('02-DOCS/wiki/proyectos/panel-fundae/sdd/specs/los-registros.md', '---\ntitle: Los cinco registros\nstatus: shipped\n---\n');
+      const proyectosM = cargar('proyectos');
+      assert.equal(proyectosM.hayAlgo(), true, 'con SDD solo en un proyecto, En qué estamos no sale');
+      enviados.length = 0;
+      await proveedor.verProyectos();
+      const enQue = enviados.find((m) => m.tipo === 'proyectos');
+      assert.deepEqual(enQue.montones, []);
+      assert.deepEqual(enQue.deLosProyectos.map((p) => [p.nombre, p.montones[0].cosas[0].estado]), [['panel-fundae', 'terminado']], 'la pantalla no recibe lo de los proyectos');
+      assert.match(require('./panel-falso').montarPanel().mandar(enQue), /Los cinco registros[\s\S]*terminado/);
+      // Conocimiento: cuántos hay de verdad, no los ocho que se enseñan.
+      for (let i = 0; i < 12; i += 1) escribir(`02-DOCS/wiki/sueltos/nota-${i}.md`, `# Nota ${i}\n`);
+      enviados.length = 0;
+      await proveedor.verCerebro();
+      const cerebroM = enviados.find((m) => m.tipo === 'cerebro');
+      assert.equal(cerebroM.sinOrdenar.length, 8);
+      assert.equal(cerebroM.cuantosSinOrdenar, cargar('cerebro').sinOrdenar().length);
+      assert.ok(cerebroM.cuantosSinOrdenar >= 12, `dice ${cerebroM.cuantosSinOrdenar}`);
+      // La línea de las copias: un proyecto sin guardar y otro sin mirar es «sin guardar», no «sin mirar».
+      MONO_G(raiz, 'add', '-A');
+      MONO_G(raiz, 'commit', '-q', '-m', 'Lo de la prueba');
+      const copias = await proveedor.lasCopias([
+        { nombre: 'a', sinGuardar: true, guardar: { etiqueta: 'Guardar «a» en git', accion: { tipo: 'pedir', prompt: 'x' } } },
+        { nombre: 'b', sinGuardar: null, guardar: null },
+      ]);
+      assert.equal(copias.sinGuardar, true);
+      assert.deepEqual(copias.proyectosSinGuardar.map((p) => p.nombre), ['a']);
+      assert.equal((await proveedor.lasCopias([{ nombre: 'b', sinGuardar: null, guardar: null }])).sinGuardar, null, 'con uno sin mirar dice «Todo guardado»');
+      return 'En qué estamos, Conocimiento y las copias, de la extensión a la pantalla';
+    } finally {
+      vscode.guion.raiz = antes.raiz;
+      proveedor.enviar = antes.enviar;
     }
   });
 
@@ -28291,11 +28361,31 @@ exec git "$@"
     };
     const mal = Object.entries(esperado).filter(([v, d]) => comoEsta(v) !== d).map(([v, d]) => `${v}: «${comoEsta(v)}» y no «${d}»`);
     assert.deepEqual(mal, []);
-    for (const nada of ['', '   ', 'xyz', '42', 'inactive', 'unpassed', 'redone', null, undefined, 7]) assert.equal(comoEsta(nada), '', `${nada} sale en crudo o mal dicho`);
+    for (const nada of ['', '   ', 'xyz', '42', 'inactive', 'unpassed', 'redone', 'incomplete', 'unapproved', 'disapproved', 'not-approved', 'not_started', 'no aprobado', 'sin empezar', 'todavía no revisado', null, undefined, 7]) {
+      assert.equal(comoEsta(nada), '', `«${nada}» sale en crudo, o afirma lo que niega`);
+    }
+    // Cada palabra que se entiende, una a una, escrita aquí aparte: quitar una de la tabla
+    // de `proyectos.js` tiene que notarse (revisión del guardián de las pruebas).
+    const cadaUna = {
+      sustituido: 'superseded sustituido sustituida replaced reemplazado reemplazada',
+      retirado: 'retracted cancelled canceled abandoned deprecated rejected withdrawn retirado retirada descartado descartada cancelado cancelada rechazado rechazada',
+      'salió mal': 'failed fail failing fallido fallida suspendido',
+      parado: 'blocked bloqueado bloqueada stuck parado parada',
+      aplazado: 'deferred postponed paused hold aplazado aplazada pausado pausada',
+      'en revisión': 'review reviewing revision revisando clarified clarificado clarificada',
+      'en borrador': 'draft borrador proposed propuesto propuesta pending pendiente gathering research wip idea',
+      comprobado: 'pass passed verified comprobado comprobada verificado verificada',
+      terminado: 'done shipped complete completed finished implemented delivered merged closed published hecho hecha terminado terminada cerrado cerrada publicado publicada completado completada',
+      acordado: 'approved approve accepted agreed ratified authorized authorised stable ready reviewed aprobado aprobada aceptado aceptada acordado acordada listo lista revisado revisada',
+      'en marcha': 'progress active ongoing started doing implementing curso marcha activo activa empezado empezada',
+    };
+    const malDichas = Object.entries(cadaUna).flatMap(([dicho, palabras]) => palabras.split(' ').filter((w) => comoEsta(w) !== dicho).map((w) => `${w} → «${comoEsta(w)}», no «${dicho}»`));
+    assert.deepEqual(malDichas, []);
+    for (const [v, d] of Object.entries({ 'en curso': 'en marcha', Bloqueado: 'parado', 'pendiente de revisión': 'en revisión', 'Revisión pendiente': 'en revisión', 'Aprobada con cambios': 'acordado' })) assert.equal(comoEsta(v), d, v);
     // Todo lo que puede salir está en el diccionario.
     const dicc = fs.readFileSync(path.join(RAIZ, '..', 'docs', 'diccionario.md'), 'utf8');
     for (const d of new Set(Object.values(esperado))) assert.ok(dicc.includes(d), `«${d}» no está en el diccionario`);
-    return `${Object.keys(esperado).length} valores, ${new Set(Object.values(esperado)).size} palabras`;
+    return `${Object.keys(esperado).length} valores de verdad, ${Object.values(cadaUna).join(' ').split(' ').length} palabras, negaciones`;
   });
 
   await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 195)', async () => {

@@ -22,6 +22,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const proyecto = require('./proyecto');
 const frontmatter = require('./frontmatter');
+const rutas = require('./rutas');
 
 const SDD = ['02-DOCS', 'wiki', 'sdd'];
 
@@ -156,11 +157,15 @@ const PALABRAS = {
 const EN_ORDEN = ['sustituido', 'retirado', 'salió mal', 'parado', 'aplazado', 'en revisión', 'en borrador', 'comprobado', 'terminado', 'acordado', 'en marcha'];
 const DE_CADA_PALABRA = new Map(Object.entries(PALABRAS).flatMap(([dicho, palabras]) => palabras.map((p) => [p, dicho])));
 const LA_HISTORIA = new Set(['after', 'with', 'for', 'tras', 'con', 'por', 'desde']);
+// Y una negación lo da la vuelta: «not-approved» no está acordado, ni «sin empezar» en
+// marcha. No se intenta decir lo contrario: no se dice nada (revisión del guardián).
+const NIEGA = new Set(['not', 'no', 'non', 'never', 'sin', 'nunca', 'aun', 'todavia']);
 
 function comoEsta(status) {
   if (typeof status !== 'string' || !status.trim()) return '';
   const palabras = status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(Boolean);
   const corte = palabras.findIndex((p) => LA_HISTORIA.has(p));
+  if ((corte === -1 ? palabras : palabras.slice(0, corte)).some((p) => NIEGA.has(p))) return '';
   const dichas = new Set((corte === -1 ? palabras : palabras.slice(0, corte)).map((p) => DE_CADA_PALABRA.get(p)).filter(Boolean));
   return EN_ORDEN.find((d) => dichas.has(d)) || '';
 }
@@ -196,7 +201,15 @@ function dondeVive(fichero) {
   const completa = path.resolve(raiz, deProyecto ? fichero.split('/').slice(3).join('/') : fichero);
   const dentro = path.resolve(raiz) + path.sep;
   if (!completa.startsWith(dentro) || !completa.endsWith('.md')) return null;
-  return esFichero(completa) ? completa : null;
+  // Y el sitio real tiene que seguir dentro: con `specs/` enlazado a otra carpeta, el
+  // listado no la enseñaba pero abrirla sí (revisión del guardián de la 195; pasaba
+  // también con lo de la raíz). La misma guarda que `cerebro.dentroDeLaWiki`.
+  if (!esFichero(completa)) return null;
+  try {
+    return rutas.estaDentro(fs.realpathSync.native(raiz), fs.realpathSync.native(completa)) ? completa : null;
+  } catch {
+    return null;
+  }
 }
 
 module.exports = { queHay, deLosProyectos, hayAlgo, dondeVive, comoEsta, MONTONES };
