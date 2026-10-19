@@ -9391,7 +9391,9 @@ se reescribe.
   that returns `permissionDecision: "deny"` blocks the tool even in `bypassPermissions` mode or with
   `--dangerously-skip-permissions`» (https://code.claude.com/docs/en/hooks-guide). Y «Deny rules block in every mode,
   including `bypassPermissions`» (permission-modes). Los frenos del arnés son enganches de ese tipo, así que **con Claude
-  siguen funcionando y pueden denegar**, y eso es lo que se le dice a la persona. Siguen pidiendo permiso, en cualquier
+  siguen puestos y pueden denegar**. Pero el mismo modo deja a Claude escribir en rutas protegidas («Writes to protected
+  paths are never auto-approved except in `bypassPermissions` mode»), así que sin pedir permiso también podría quitarlos:
+  eso es lo que se le dice a la persona (ver «La revisión»). Siguen pidiendo permiso, en cualquier
   modo, las acciones que ningún modo aprueba (permission-modes, «Actions no mode auto-approves»), como `rm -rf` sobre una
   ruta crítica.
 - **El riesgo que describe la documentación**: «Only use this mode in isolated environments like containers, VMs, or dev
@@ -9420,9 +9422,10 @@ se reescribe.
 y los consejos), un aviso del editor, con «No» el primero y de fábrica. Con Claude:
 
 > ¿Quieres que Claude trabaje sin pedirte permiso para cada cosa? Puede cambiar o borrar ficheros y ejecutar programas
-> sin preguntarte. Con Claude, los frenos de seguridad del arnés siguen funcionando.
+> sin preguntarte. Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos.
 
-Con los dos, «Claude y Codex trabajen»; con Codex solo, «Codex trabaje» y sin la frase de los frenos. Botones:
+Con los dos, «Claude y Codex trabajen» y, detrás, «Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.»; con Codex solo, «Codex trabaje», sin la frase de los
+frenos de Claude y con la de Codex. Botones:
 **No, que me pregunte** · **Sí, sin pedirme permiso**. Con el no se apunta y no vuelve a salir; cerrarlo sin contestar
 vuelve a salir al preparar otra carpeta. No sale si ya está puesto, si la carpeta no es de confianza o si no hay ni Claude ni
 Codex. La respuesta vive en el estado de la barra (`globalState`), que es de este ordenador, no de la carpeta. Solo se
@@ -9453,11 +9456,12 @@ El cuidado de la 143 y la 171 (`src/sin-pedir-permiso.js`):
 
 **3. Cambiarlo después**, en «Qué puede hacer sin preguntarte» (`ajustes.js`, `permisoDeAhora`/`ponerPermiso`): una
 opción más, la última, **Sin pedirme permiso**, con la misma línea de riesgo («No te pregunta nada. Puede cambiar o
-borrar ficheros y ejecutar programas sin preguntarte. Con Claude, los frenos de seguridad del arnés siguen funcionando.
-Ten copias al día.»). El estado se lee de los ajustes (si lo pone a mano, la pantalla lo ve). Aquí el clic de la persona
+borrar ficheros y ejecutar programas sin preguntarte. Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos. Ten copias al día.»). El estado se lee de los ajustes (si lo pone a mano, la pantalla lo ve). Aquí el clic de la persona
 es el sí: sí cambia el modo del editor aunque tuviera otro (para eso es la pantalla) y apunta cómo estaba para
-devolverlo. Elegir cualquiera de las otras (**Que me pregunte al cambiar algo**, etc.) quita lo que puso la barra de los
-tres sitios. Con Codex solo, donde la lista no sale, una tarjeta con el mismo texto y «Ponme así» / «Que me pregunte».
+devolverlo. Esta opción es la de Claude y solo toca lo de Claude (editor y `~/.claude/settings.json`); elegir cualquiera de las
+otras (**Que me pregunte al cambiar algo**, etc.) quita solo lo que puso la barra de Claude. Con Codex solo, donde la
+lista no sale, una tarjeta propia, con el riesgo de Codex y «Ponme así» / «Que me pregunte», que pone y quita solo lo de
+Codex.
 
 ### Lo que no se hizo
 
@@ -9468,6 +9472,30 @@ tres sitios. Con Codex solo, donde la lista no sale, una tarjeta con el mismo te
 - Los ajustes gestionados o de organización pueden mandar sobre estos (`permissions.disableBypassPermissionsMode`: «Prevent
   anyone from entering bypassPermissions mode»): la barra no lo lee ni lo cambia.
 - Una conversación ya abierta no ve el cambio: «se nota en la próxima conversación que abras».
+
+### La revisión
+
+La revisión de seguridad de la PR #99 (19-10-2026) dejó cinco arreglos, ya hechos:
+
+1. **Un clic vale solo para lo que nombra** (consentimiento). «Sin pedirme permiso» en la pantalla pone y quita solo lo
+   de Claude, aunque Codex esté en el PATH; la tarjeta de «solo Codex» pone y quita solo lo de Codex (`ponerSinPedirCodex`,
+   `quitarSinPedir(['codex'])`). La pregunta de la primera carpeta sí puede poner los dos, porque los nombra a los dos.
+   Con Claude y Codex a la vez, el clic de la pantalla de Claude no toca `~/.codex/config.toml` y el de la tarjeta de
+   Codex no toca nada de Claude.
+2. **Los frenos, dichos como son.** En este modo Claude puede escribir en rutas protegidas y, por tanto, quitar los
+   frenos sin pedir permiso. La línea pasa a: «Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos.» **Posible refuerzo, no hecho aquí**:
+   reglas `permissions.deny` de usuario (valen en todos los modos, incluido este) que protejan los ficheros de los frenos.
+3. **Con Codex, el riesgo entero**: «Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.» (la documentación: «Unrestricted access to the internet and any file on
+   your computer»). Sale en la pregunta cuando incluye a Codex y en su tarjeta.
+4. **La frase dice solo lo que quedó puesto.** `laFrase` nombra los asistentes donde algo quedó `puesto` o `yaEstaba`; si
+   uno dio `raro`, `ilegible`, `enlace` o `fallo`, lo dice aparte: «Con Codex no he podido ponerlo: lo he dejado como
+   estaba.»; y si no quedó ninguno, no dice «Hecho».
+5. **«Quitarlo» no quita `skipDangerousModePermissionPrompt`.** Si la persona acepta la pantalla de Claude, es Claude
+   quien escribe esa clave en `~/.claude/settings.json`, por orden de la persona: la barra no la puso y no la quita.
+
+**Las pruebas de la revisión**: tres comprobaciones nuevas en `humo.js` (un clic, solo lo que nombra; la frase y el riesgo,
+enteros; lo escrito en esta decisión), y las de la pregunta y la tarjeta puestas al texto nuevo. Una mutación por
+arreglo, cada una puesta y restaurada desde copia, y todas caen (ver más abajo los números de la batería).
 
 **Las pruebas**: `humo.js` pasa a 552 (561 con `--con-arnes`, donde pasa el montaje de verdad). Seis comprobaciones
 nuevas, con casas de mentira y el `vscode` falso: Claude en el terminal (se crea, se suma, no pisa uno suyo, ilegible y

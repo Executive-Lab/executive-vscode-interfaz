@@ -1069,7 +1069,7 @@ function pantallaComoTrabaja({
       <p class="pista">${texto(sinPedirConCodex.frase)}</p>
       ${sinPedirConCodex.puesto
     ? boton({ etiqueta: 'Que me pregunte', icono: '▸', pequeno: true, accion: { tipo: 'quitarSinPedirAqui' } })
-    : boton({ etiqueta: 'Ponme así', icono: '▸', pequeno: true, accion: { tipo: 'ponerPermiso', cual: 'bypassPermissions' } })}
+    : boton({ etiqueta: 'Ponme así', icono: '▸', pequeno: true, accion: { tipo: 'ponerSinPedirCodex' } })}
     </div>` : ''}`}
 
     <hr class="separador">

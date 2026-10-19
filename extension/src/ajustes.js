@@ -55,6 +55,25 @@ function permisoDeAhora() {
   return puesto === 'manual' ? 'default' : puesto;
 }
 
+async function ponerEnLaPantalla(usa) {
+  const malo = { ok: false, mensaje: 'No he podido guardarlo. Pulsa «Algo va mal» y pásale el código a tu tutor.' };
+  let hechos;
+  try {
+    hechos = await sinPedir.ponerlo({ usa, forzar: true });
+  } catch {
+    return malo;
+  }
+  await sinPedir.apuntarRespuesta(true);
+  const frase = sinPedir.laFrase(hechos, usa);
+  return frase ? { ok: true, mensaje: frase } : malo;
+}
+
+// La tarjeta de «solo Codex»: pone únicamente lo de Codex y no toca nada de Claude.
+async function ponerSinPedirCodex() {
+  if (!sinPedir.queUsa().codex) return { ok: false, mensaje: 'No encuentro Codex en este ordenador.' };
+  return ponerEnLaPantalla({ claude: false, codex: true });
+}
+
 // En los ajustes de usuario del editor, con el sí de quien pulsa. Solo esa clave
 // (y, con «Sin pedirme permiso», lo que la decisión 192 apunta, en los sitios de
 // cada asistente que se use).
@@ -63,27 +82,21 @@ async function ponerPermiso(cual) {
   const malo = { ok: false, mensaje: 'No he podido guardarlo. Pulsa «Algo va mal» y pásale el código a tu tutor.' };
 
   if (cual === sinPedir.MODO) {
-    // Con su clic en esta opción se cambia el modo del editor aunque tuviera otro:
-    // para eso está la pantalla. Se apunta cómo estaba para poder devolverlo.
-    const usa = sinPedir.queUsa();
-    if (!usa.claude && !usa.codex) return { ok: false, mensaje: 'No encuentro ni Claude ni Codex en este ordenador.' };
-    let hechos;
-    try {
-      hechos = await sinPedir.ponerlo({ usa, forzar: true });
-    } catch {
-      return malo;
-    }
-    await sinPedir.apuntarRespuesta(true);
-    const frase = sinPedir.laFrase(hechos, usa);
-    return frase ? { ok: true, mensaje: frase } : malo;
+    // Un clic vale para lo que nombra: esta opción es la de Claude, y solo toca lo de Claude. Con su
+    // clic se cambia el modo del editor aunque tuviera otro: para eso está la pantalla. Se apunta
+    // cómo estaba para poder devolverlo.
+    const usa = { claude: sinPedir.queUsa().claude, codex: false };
+    if (!usa.claude) return { ok: false, mensaje: 'No encuentro Claude en este ordenador.' };
+    return ponerEnLaPantalla(usa);
   }
 
   // Solo con Claude. Con Codex no se inventa un ajuste que nadie lee.
   if (!donde.puedeTenerAjustes()) return { ok: false, mensaje: 'Esto lo lleva tu asistente por su cuenta, no se ajusta desde aquí.' };
 
   try {
-    // Elegir otro es dejar de trabajar sin pedir permiso: se quita lo que puso la barra.
-    await sinPedir.quitarlo();
+    // Elegir otro es dejar de trabajar sin pedir permiso con Claude: se quita lo que puso la barra
+    // de Claude. Lo de Codex no se toca desde aquí.
+    await sinPedir.quitarlo({ solo: ['claude'] });
     await vscode.workspace.getConfiguration().update(CLAVE_PERMISO, cual === 'auto' ? undefined : cual, vscode.ConfigurationTarget.Global);
   } catch {
     return malo;
@@ -93,10 +106,11 @@ async function ponerPermiso(cual) {
 
 // «Que me pregunte», para quien solo usa Codex y no tiene la lista de arriba, y el
 // «Quitarlo» del aviso. Solo lo que puso la barra, y no se vuelve a preguntar.
-async function quitarSinPedir() {
+// `solo`: ['codex'] desde la tarjeta; sin nada, todo lo que puso la barra (el «Quitarlo» del aviso).
+async function quitarSinPedir(solo = null) {
   let hechos;
   try {
-    hechos = await sinPedir.quitarlo();
+    hechos = await sinPedir.quitarlo({ solo: Array.isArray(solo) ? solo : null });
   } catch {
     return { ok: false, mensaje: 'No he podido quitarlo. Pulsa «Algo va mal» y pásale el código a tu tutor.' };
   }
@@ -182,7 +196,7 @@ function comoEstamos() {
     permiso: permisoDeAhora(),
     // Con Codex solo no hay lista de arriba: una tarjeta para «Sin pedirme permiso».
     sinPedirConCodex: !donde.puedeTenerAjustes() && sinPedir.queUsa().codex
-      ? { nombre: 'Sin pedirme permiso', frase: `No te pregunta nada. ${sinPedir.RIESGO} Ten copias al día.`, puesto: sinPedir.codexAhora() }
+      ? { nombre: 'Sin pedirme permiso', frase: `No te pregunta nada. ${sinPedir.RIESGO} ${sinPedir.RIESGO_DE_CODEX} Ten copias al día.`, puesto: sinPedir.codexAhora() }
       : null,
     cadaCuanto: CADA_CUANTO,
     guarda: cadaCuantoGuarda(),
@@ -193,5 +207,5 @@ function comoEstamos() {
 }
 
 module.exports = {
-  CLAVE_PERMISO, permisoDeAhora, comoEstamos, ponerPermiso, quitarSinPedir, ponerCadaCuanto, cadaCuantoGuarda, PERMISOS, CADA_CUANTO, CLAVE_GUARDADO, DE_FABRICA,
+  CLAVE_PERMISO, permisoDeAhora, comoEstamos, ponerPermiso, ponerSinPedirCodex, quitarSinPedir, ponerCadaCuanto, cadaCuantoGuarda, PERMISOS, CADA_CUANTO, CLAVE_GUARDADO, DE_FABRICA,
 };

@@ -55,7 +55,11 @@ const CONSTANCIA = 'executiveLab.sinPedirPermiso.editor';
 
 // El riesgo, dicho igual en la pregunta y en la pantalla.
 const RIESGO = 'Puede cambiar o borrar ficheros y ejecutar programas sin preguntarte.';
-const FRENOS_DE_CLAUDE = 'Con Claude, los frenos de seguridad del arnés siguen funcionando.';
+// En `bypassPermissions` los frenos (enganches `PreToolUse` que deniegan) siguen valiendo, pero
+// el modo también deja a Claude escribir en rutas protegidas (permission-modes): podría quitarlos.
+const FRENOS_DE_CLAUDE = 'Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos.';
+// Con Codex, el riesgo entero (learn.chatgpt.com/docs/permission-modes, «Full access»).
+const RIESGO_DE_CODEX = 'Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.';
 
 const carpetaDeClaude = () => process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const carpetaDeCodex = () => retirados.carpetaDeCodex();
@@ -242,7 +246,10 @@ function ponerEnCodex({ codex = carpetaDeCodex(), ahora = new Date() } = {}) {
     fs.mkdirSync(codex, { recursive: true });
     escribirMarca(codex, { lineas: LINEAS_DE_CODEX, relleno: dicho.relleno, salto: dicho.salto, creoElFichero: config.hecho === 'noHay' });
     if (config.hecho === 'ok') {
+      // Una copia que ya existe (dos pasadas en el mismo segundo) no se pisa: se numera.
+      let n = 1;
       copia = `${fichero}.copia-executive-lab-${sello(ahora)}`;
+      while (fs.existsSync(copia)) { n += 1; copia = `${fichero}.copia-executive-lab-${sello(ahora)}-${n}`; }
       fs.copyFileSync(fichero, copia, fs.constants.COPYFILE_EXCL);
     }
     escribirEntero(fichero, dicho.texto);
@@ -377,12 +384,16 @@ async function ponerlo({ usa, forzar = false, carpetas = {} } = {}) {
 }
 
 // Lo que puso la barra, de los tres sitios. Con «Quitarlo» y al elegir otro modo.
-async function quitarlo({ carpetas = {} } = {}) {
-  return {
-    editor: await quitarDelEditor(),
-    claude: quitarDeClaude({ carpeta: carpetas.claude }),
-    codex: quitarDeCodex({ codex: carpetas.codex }),
-  };
+// `solo`: ['claude'] o ['codex'] quita únicamente lo de ese asistente (un clic vale para lo
+// que nombra); sin nada, los dos.
+async function quitarlo({ carpetas = {}, solo = null } = {}) {
+  const hechos = {};
+  if (!solo || solo.includes('claude')) {
+    hechos.editor = await quitarDelEditor();
+    hechos.claude = quitarDeClaude({ carpeta: carpetas.claude });
+  }
+  if (!solo || solo.includes('codex')) hechos.codex = quitarDeCodex({ codex: carpetas.codex });
+  return hechos;
 }
 
 // Lo que dicen los ajustes de verdad, para la pantalla y para no preguntar de más.
@@ -419,24 +430,38 @@ function laPregunta(usa) {
   const quienes = losNombres(usa);
   const verbo = usa.claude && usa.codex ? 'trabajen' : 'trabaje';
   return {
-    texto: `¿Quieres que ${quienes} ${verbo} sin pedirte permiso para cada cosa? ${RIESGO}${usa.claude ? ` ${FRENOS_DE_CLAUDE}` : ''}`,
+    texto: `¿Quieres que ${quienes} ${verbo} sin pedirte permiso para cada cosa? ${RIESGO}${usa.claude ? ` ${FRENOS_DE_CLAUDE}` : ''}${usa.codex ? ` ${RIESGO_DE_CODEX}` : ''}`,
     si: 'Sí, sin pedirme permiso',
     no: 'No, que me pregunte',
   };
 }
 
-// La frase de lo que se hizo, con lo que no se tocó. null si no se pudo nada.
+// La frase de lo que se hizo: nombra solo los asistentes donde de verdad quedó puesto, y dice
+// aparte cuál no se ha podido. null si no se pudo nada.
 function laFrase(hechos, usa) {
-  const valores = Object.values(hechos);
-  const bien = valores.some((h) => h && ['puesto', 'yaEstaba'].includes(h.hecho));
-  const suyo = valores.some((h) => h && h.hecho === 'tieneLoSuyo');
-  if (!bien && suyo) return 'Ya tenías puesto cómo quieres que pida permiso, y no lo he tocado. Si quieres cambiarlo, está en Cómo quieres que trabaje.';
-  if (!bien) return null;
-  return `Hecho. ${losNombres(usa)} ${usa.claude && usa.codex ? 'trabajarán' : 'trabajará'} sin pedirte permiso. Se nota en la próxima conversación que abras.${suyo ? ' Lo que ya tenías puesto distinto no lo he tocado.' : ''}`;
+  const vale = (h) => h && ['puesto', 'yaEstaba'].includes(h.hecho);
+  const suyo = (h) => h && h.hecho === 'tieneLoSuyo';
+  const grupos = { claude: [hechos.editor, hechos.claude], codex: [hechos.codex] };
+  const puestos = [];
+  const fallidos = [];
+  let loSuyo = false;
+  for (const [id, nombre] of [['claude', 'Claude'], ['codex', 'Codex']]) {
+    if (!usa[id]) continue;
+    const hs = grupos[id].filter(Boolean);
+    if (hs.some(suyo)) loSuyo = true;
+    if (hs.some(vale)) puestos.push(nombre);
+    else if (hs.some((h) => !suyo(h))) fallidos.push(nombre);
+  }
+  const noPude = fallidos.length ? ` Con ${fallidos.join(' y ')} no he podido ponerlo: lo he dejado como estaba.` : '';
+  if (!puestos.length) {
+    if (!loSuyo) return null;
+    return `Ya tenías puesto cómo quieres que pida permiso, y no lo he tocado. Si quieres cambiarlo, está en Cómo quieres que trabaje.${noPude}`;
+  }
+  return `Hecho. ${puestos.join(' y ')} ${puestos.length > 1 ? 'trabajarán' : 'trabajará'} sin pedirte permiso. Se nota en la próxima conversación que abras.${loSuyo ? ' Lo que ya tenías puesto distinto no lo he tocado.' : ''}${noPude}`;
 }
 
 module.exports = {
-  MARCA, MODO, CLAVE_MODO, CLAVE_PERMITIR, LINEAS_DE_CODEX, RESPUESTA, CONSTANCIA, RIESGO, FRENOS_DE_CLAUDE,
+  MARCA, MODO, CLAVE_MODO, CLAVE_PERMITIR, LINEAS_DE_CODEX, RESPUESTA, CONSTANCIA, RIESGO, FRENOS_DE_CLAUDE, RIESGO_DE_CODEX,
   carpetaDeClaude, carpetaDeCodex, saberDondeGuardar,
   ponerEnClaude, quitarDeClaude, claudeAhora,
   ponerEnCodex, quitarDeCodex, codexAhora,

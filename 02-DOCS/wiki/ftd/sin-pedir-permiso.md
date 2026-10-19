@@ -31,6 +31,7 @@ la 182 (nunca): ahora sí, pero solo si la persona lo elige, con «No» por defe
 - [x] Notas en las decisiones 163 y 182
 - [x] Textos en `docs/diccionario.md`
 - [x] Pruebas en `humo.js` y mutaciones
+- [x] Revisión de seguridad (H1 a H5): un clic vale solo para lo que nombra, los frenos dichos como son, el riesgo entero de Codex, la frase solo con lo que quedó puesto, y «Quitarlo» no quita `skipDangerousModePermissionPrompt`
 - [ ] PR revisada y fusionada por Jose
 
 ## Evidence
@@ -40,6 +41,10 @@ la 182 (nunca): ahora sí, pero solo si la persona lo elige, con «No» por defe
   (Codex).
 - Los enganches de Claude (`PreToolUse` que deniega) siguen valiendo en este modo: hooks-guide.
 - Con Codex no está documentado que los frenos del arnés valgan, y no se dice.
+
+## La revisión
+
+Ver la decisión 192, «La revisión». Una mutación por arreglo, y la batería entera pasada una vez al final (números en la decisión). Posible refuerzo, no hecho: reglas `permissions.deny` de usuario para los ficheros de los frenos.
 
 ## Next
 
