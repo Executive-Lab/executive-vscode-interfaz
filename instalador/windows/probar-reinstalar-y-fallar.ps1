@@ -29,7 +29,7 @@ function Instalar {
   return $p.ExitCode
 }
 
-if (-not (Test-Path "$app\runtime\node.exe")) { throw "no hay una primera instalacion en $app: pasa antes probar.ps1" }
+if (-not (Test-Path "$app\runtime\node.exe")) { throw "no hay una primera instalacion en ${app}: pasa antes probar.ps1" }
 if (Test-Path $informe) { Remove-Item $informe -Force }
 
 if ($Que -eq 'reinstalar') {
