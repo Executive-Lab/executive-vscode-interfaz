@@ -88,7 +88,25 @@ Los dos hacen lo mismo aquí. Si en clase te han dicho uno, elige ese. Si no lo 
 
 	if bien then
 		display dialog "Ya está. Te lo abro." with title "Executive Lab" buttons {"Abrir"} default button "Abrir" with icon note
-		do shell script "/usr/bin/open " & quoted form of recado
+		-- «Abrir» nunca enseña un error de sistema (decisión 193): si el acceso
+		-- directo no se abre, se abre el editor; y si tampoco, una frase.
+		try
+			do shell script "/usr/bin/open " & quoted form of recado
+		on error
+			set casa to POSIX path of (path to home folder)
+			set abierto to false
+			repeat with donde in {casa & "Applications/Visual Studio Code.app", "/Applications/Visual Studio Code.app"}
+				if not abierto then
+					try
+						do shell script "/usr/bin/open -a " & quoted form of (contents of donde)
+						set abierto to true
+					end try
+				end if
+			end repeat
+			if not abierto then
+				display dialog "No he podido abrirlo yo: abre «Visual Studio Code» desde la carpeta Aplicaciones." with title "Executive Lab" buttons {"Vale"} default button "Vale" with icon caution
+			end if
+		end try
 	else
 		set informe to (POSIX path of (path to desktop)) & "Informe para tu tutor.txt"
 		set porQue to recado
