@@ -99,6 +99,7 @@ const procesos = require('./procesos');
 const retirados = require('./retirados');
 const sesionDelAsistente = require('./sesion-del-asistente');
 const avisoDeCodex = require('./aviso-de-codex');
+const sinPedir = require('./sin-pedir-permiso');
 const enganchesDeCodex = require('./enganches-de-codex');
 const loDelEditor = require('./lo-del-editor');
 const loNuevoDeClaude = require('./lo-nuevo-de-claude');
@@ -118,6 +119,7 @@ const ultimaConversacion = require('./ultima-conversacion');
 // de los avisos del sistema no se lleva el español que se puso otro día.
 const QUITAR_LO_DE_CLAUDE = { etiqueta: 'Quitarlo', accion: { tipo: 'quitarLoDeClaude' } };
 const QUITAR_EL_AVISO_DE_CODEX = { etiqueta: 'Quitarlo', accion: { tipo: 'quitarElAvisoDeCodex' } };
+const QUITAR_SIN_PEDIR = { etiqueta: 'Quitarlo', etiquetaConVarios: 'Quitar el trabajar sin pedir permiso', accion: { tipo: 'quitarSinPedir' } };
 const quitarSoloEsto = (que) => ({ etiqueta: 'Quitarlo', accion: { tipo: 'quitarLoDeClaude', que } });
 
 // Lo que se dice cuando un texto ha quedado escrito en la caja del asistente:
@@ -667,6 +669,42 @@ ${cabecera}
     this.dejarElAviso(ajustesLocales.laFrase(hecho), quitarSoloEsto(ajustesLocales.loQueSePuso(hecho)));
     if (soltar) this.soltarElAviso();
     return hecho;
+  }
+
+  // Trabajar sin pedir permiso (decisión 192): se le pregunta una vez por ordenador, al
+  // preparar la primera carpeta, porque cambia los ajustes de Claude y de Codex de toda la
+  // persona. «No, que me pregunte» es lo de fábrica y no vuelve a salir; cerrarlo sin
+  // contestar, hasta la próxima vez. Sin nada que preguntar si ya lo tiene puesto.
+  async preguntarSinPedirPermiso() {
+    try {
+      if (vscode.workspace.isTrusted === false || sinPedir.laRespuesta()) return null;
+      const usa = sinPedir.queUsa();
+      if (!usa.claude && !usa.codex) return null;
+      const ya = sinPedir.comoEstamos();
+      if ((!usa.claude || (ya.editor && ya.claude)) && (!usa.codex || ya.codex)) return null;
+      const pregunta = sinPedir.laPregunta(usa);
+      const contesto = await vscode.window.showInformationMessage(pregunta.texto, pregunta.no, pregunta.si);
+      if (contesto !== pregunta.si) {
+        if (contesto === pregunta.no) await sinPedir.apuntarRespuesta(false);
+        return null;
+      }
+      await sinPedir.apuntarRespuesta(true);
+      const hechos = await sinPedir.ponerlo({ usa });
+      this.salida.appendLine(`[sinPedirPermiso] ${Object.entries(hechos).map(([donde, h]) => `${donde}: ${h.hecho}${h.error ? ` (${h.error})` : ''}`).join(' · ')}`); // diccionario: interno
+      const frase = sinPedir.laFrase(hechos, usa);
+      if (frase) this.dejarElAviso(frase, QUITAR_SIN_PEDIR);
+      else avisarConSalida('No he podido dejarlo puesto. Pulsa «Algo va mal» y pásale el código a tu tutor.');
+      return hechos;
+    } catch (error) {
+      this.salida.appendLine(`[sinPedirPermiso] ${error.message}`); // diccionario: interno
+      return null;
+    }
+  }
+
+  // «Quitarlo» del aviso de trabajar sin pedir permiso: solo lo que puso la barra.
+  async quitarSinPedir() {
+    const { ok, mensaje } = await ajustes.quitarSinPedir();
+    return this.enviar({ tipo: 'aviso', texto: ok ? 'Quitado. No lo vuelvo a poner.' : mensaje, ...(ok ? {} : { malo: true }) });
   }
 
   // «Quitarlo» (decisión 157): solo lo que puso la barra, y no vuelve a ponerse.
@@ -1617,6 +1655,8 @@ ${cabecera}
       fijar: () => this.cambiarFijada(fijadas.fijar, mensaje.cual),
       soltar: () => this.cambiarFijada(fijadas.soltar, mensaje.cual),
       ponerPermiso: () => this.cambiarAjuste(ajustes.ponerPermiso, mensaje.cual),
+      quitarSinPedir: () => this.quitarSinPedir(),
+      quitarSinPedirAqui: () => this.cambiarAjuste(ajustes.quitarSinPedir),
       ponerCadaCuanto: () => this.cambiarAjuste(ajustes.ponerCadaCuanto, mensaje.cual),
       elegirAsistente: () => this.elegirAsistente(mensaje.cual),
       ponerElAsistente: () => this.ponerElAsistente(mensaje.cual, mensaje.desde),
@@ -4229,6 +4269,7 @@ ${cabecera}
     // pregunta, una vez y a un clic (decisión 187).
     await this.preguntarLaVistaSencilla(hecho);
     await this.preguntarLosConsejos({ soltar: false }).catch((e) => this.salida.appendLine(`[claude] ${e.message}`)); // diccionario: interno
+    await this.preguntarSinPedirPermiso();
     const guardado = await this.fraseDelGuardadoSolo(hecho);
     // Sale al pintar la principal, aquí abajo.
     this.dejarElAviso(puestos);
@@ -4698,6 +4739,8 @@ function activate(contexto) {
   lasRespuestas.saberDondeGuardar(contexto.workspaceState);
   // Y la carpeta que se eligió desde la barra, que sobrevive a recargar la ventana (decisión 184).
   arrancar.saberDondeRecordarLaEleccion(contexto.globalState);
+  // Y lo que se contestó de trabajar sin pedir permiso, que es de este ordenador (decisión 192).
+  sinPedir.saberDondeGuardar(contexto.globalState);
   buscador.saberDondeEstamos(contexto.extensionPath);
 
   // El relevo de Node, antes de que se abra el chat del asistente: así su

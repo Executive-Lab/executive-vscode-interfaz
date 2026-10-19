@@ -1037,7 +1037,7 @@ function pantallaLaCara({
 // El subapartado de personalización. Son cuatro cosas y cada una cambia el día
 // a día, así que van juntas y no repartidas por la barra.
 function pantallaComoTrabaja({
-  permisos = [], permiso, hayPermisos = true, cadaCuanto = [], guarda,
+  permisos = [], permiso, hayPermisos = true, sinPedirConCodex = null, cadaCuanto = [], guarda,
   objetivo, metas = [], limites = [], aviso: avisoLocal,
 }) {
   const elegir = (opciones, puesto, accion) => opciones.map((o) => `
@@ -1063,7 +1063,14 @@ function pantallaComoTrabaja({
     ${hayPermisos
       ? `${elegir(permisos, permiso, { tipo: 'ponerPermiso' })}
     <p class="detalle">Vale para todas tus carpetas, no solo para esta. Si en una conversación eliges otro a mano, el editor se acuerda de ese.${permisos.some((p) => p.id === permiso) ? '' : ' Ahora tienes puesto otro que no se cambia desde aquí.'}</p>`
-      : nada('Esto lo lleva tu asistente por su cuenta, en sus propios ajustes. Desde aquí no se toca.')}
+      : `${nada('Esto lo lleva tu asistente por su cuenta, en sus propios ajustes. Desde aquí no se toca.')}${sinPedirConCodex ? `
+    <div class="capacidad${sinPedirConCodex.puesto ? ' puesta' : ''}">
+      <p class="nombre">${texto(sinPedirConCodex.nombre)}${sinPedirConCodex.puesto ? ' <span class="cuantos">ahora mismo</span>' : ''}</p>
+      <p class="pista">${texto(sinPedirConCodex.frase)}</p>
+      ${sinPedirConCodex.puesto
+    ? boton({ etiqueta: 'Que me pregunte', icono: '▸', pequeno: true, accion: { tipo: 'quitarSinPedirAqui' } })
+    : boton({ etiqueta: 'Ponme así', icono: '▸', pequeno: true, accion: { tipo: 'ponerPermiso', cual: 'bypassPermissions' } })}
+    </div>` : ''}`}
 
     <hr class="separador">
     <h2>Cada cuánto guarda solo</h2>
