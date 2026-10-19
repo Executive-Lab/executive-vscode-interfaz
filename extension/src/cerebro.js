@@ -298,35 +298,21 @@ function todosLosDocumentos() {
   return encontrados;
 }
 
-// En un monorepo, `proyectos/<proyecto>/` es la documentación de cada proyecto, con
-// su propio índice (decisión 195). No está «sin ordenar» para el índice de la raíz,
-// y «Que los ordene» le pedía al asistente meterla en temas: desmontarla. En uno de
-// verdad eran 380 de 402. Se reconoce por su índice o por ser un proyecto de dentro;
-// sigue saliendo en el buscador y en Proyectos («Conocimiento de…»).
-function laDocumentacionDeLosProyectos() {
-  const deDentro = new Set(require('./subproyectos').cuales().map((p) => p.nombre));
-  const vistos = new Map();
-  return (ruta) => {
-    const m = /^proyectos\/([^/]+)\/./.exec(ruta);
-    if (!m) return false;
-    if (!vistos.has(m[1])) {
-      let conIndice = false;
-      try {
-        conIndice = fs.lstatSync(path.join(proyecto.ruta(...WIKI), 'proyectos', m[1], 'index.md')).isFile();
-      } catch { /* sin índice propio */ }
-      vistos.set(m[1], conIndice || deDentro.has(m[1]));
-    }
-    return vistos.get(m[1]);
-  };
-}
+// En un monorepo, `proyectos/<proyecto>/` es la documentación de cada proyecto
+// (decisión 195), con su propio índice o sin él, y esté o no clonado en este ordenador
+// («Clona solo los que necesites»). No está «sin ordenar» para el índice de la raíz, y
+// «Que los ordene» le pedía al asistente meterla en temas: desmontarla. En uno de verdad
+// eran 380 de 402. Todo lo que cuelga de una carpeta de `proyectos/`, sin excepciones:
+// con excepciones, el encargo decía «déjalo donde está» y la lista no se vaciaba nunca
+// (revisión de la 195). Sigue en el buscador y en Proyectos («Conocimiento de…»).
+const esDeUnProyecto = (ruta) => /^proyectos\/[^/]+\/./.test(ruta);
 
 // Lo que está escrito pero el índice no menciona. Hasta ahora era invisible
 // desde el panel: existía en el disco y no había forma de llegar a ello.
 function sinOrdenar() {
   const indexados = new Set(catalogo().flatMap((t) => t.articulos.map((a) => a.ruta.replace(/^\.\//, ''))));
-  const deUnProyecto = laDocumentacionDeLosProyectos();
   return todosLosDocumentos()
-    .filter((r) => !indexados.has(r) && !deUnProyecto(r))
+    .filter((r) => !indexados.has(r) && !esDeUnProyecto(r))
     .map((ruta) => ({
       ruta,
       titulo: (leer(...WIKI, ruta) || '')

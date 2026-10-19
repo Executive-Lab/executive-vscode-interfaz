@@ -4833,7 +4833,6 @@ function activate(contexto) {
   // proyecto de un monorepo— se mira ya, sin recargar (decisión 195).
   if (vscode.workspace.onDidGrantWorkspaceTrust) {
     contexto.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => {
-      subproyectos.olvidar();
       panel.repintarLoQueHaya().catch((error) => salida.appendLine(`[confianza] ${error.message}`)); // diccionario: interno
     }));
   }

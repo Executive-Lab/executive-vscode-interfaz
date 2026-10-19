@@ -9515,6 +9515,15 @@ Y «Seguir donde lo dejé» dice de qué proyecto es el documento («…de «El 
     orden de la línea de las copias.
   - con un `.git` fichero (worktree o submódulo) los registros viven fuera del proyecto y el vigía no los ve. Ahí lo visto
     caduca a los 15 segundos. Está dicho en el código, no arreglado.
+- *La última revisión adversaria*, solo sobre lo de la auditoría:
+  - `realpath` en `dondeVive` lo probó con la raíz enlazada y con `/private/var`, y está bien.
+  - «without» le daba la vuelta al estado. Ahora niega, como «not» o «sin».
+  - Una negación se llevaba todo el estado: «pass-no-failures» o «aprobado-sin-cambios» no decían nada. Ahora solo se
+    lleva la palabra que niega.
+  - Lo que va detrás de «then» es lo de ahora: «failed-then-passed» está comprobado.
+  - «hold» suelto ya no es aplazado: «done (hold removed)» está terminado.
+  - Lo de una carpeta de `proyectos/` sin índice ni clon salía «sin ordenar», mientras el encargo decía que no se tocara, y
+    la lista no se vaciaba nunca. Ahora todo lo que cuelga de `proyectos/<proyecto>/` es de su proyecto, sin excepciones.
 
 **Lo que no cambia**: el guardado solo sigue sin correr en un historial que no creó la barra (P4), y un monorepo clonado lo es.
 

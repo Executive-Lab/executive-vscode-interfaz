@@ -102,6 +102,7 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 - [x] Auditada contra `mono-repo-executive-lab` de verdad, solo leyendo, y arreglado lo que salió: Conocimiento, En qué
       estamos, los estados y lo que leen los encargos.
 - [x] El vigía del diccionario y el guardián de las pruebas, y sus arreglos.
+- [x] Una última revisión adversaria de lo de la auditoría, y sus arreglos.
 
 ## Evidence
 
@@ -117,8 +118,8 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
   sitio, «sin ordenar» de 402 a 23, En qué estamos con 3 de la raíz y un desplegable por proyecto, todos los estados
   traducidos (los 18 sin nada no tienen `status`), y el encargo de `executive-certificados` leyendo la tabla que dice que
   subir a `main` despliega.
-- **Mutaciones**: 37, todas cazadas (una sobrevivió por una guarda doble; se quitó la que sobraba y se comprobó que la que
-  queda cae sola). Entre otras: sueltas sin mirar el git propio, un `.git` enlazado que cuenta, entrar en
+- **Mutaciones**: 41, todas cazadas. Una sobrevivió por una guarda doble: se quitó la que sobraba y se comprobó que la que
+  queda cae sola. Entre otras: sueltas sin mirar el git propio, un `.git` enlazado que cuenta, entrar en
   `node_modules`, sin tope, lo no mirado como «guardado», lo visto que no caduca, subir sin esperar el sí, el encargo sin sus
   reglas, las copias que callan los proyectos, abrir lo de un proyecto enlazado, el `next:` sin proyectos, parte de cualquier
   git de arriba, abrir sin ser el botón principal, el git de los proyectos sin confianza, el vigía que no olvida o no mira,

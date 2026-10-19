@@ -136,17 +136,23 @@ function leerUnMonton(carpeta, delante, deProyecto) {
 // cual, en inglés (decisión 195). Se reducen a las palabras del diccionario.
 //
 // Por palabras enteras, no por trozos: con trozos, «implemented» salía «en marcha»
-// e «inactive» también (revisión del vigía del diccionario). Lo que va detrás de
-// «after», «with», «for» o «tras» cuenta la historia, no cómo está, y no se mira:
-// «approved-after-review» está acordado, «passed-with-fixes» comprobado. Entre las
-// que quedan gana la de más arriba en `EN_ORDEN`. Lo que no se entiende no se
-// enseña: mejor nada que una palabra que nadie sabe leer.
+// e «inactive» también (revisión del vigía del diccionario). Y en este orden:
+//   · lo que va detrás de «then» o «luego» es lo de ahora: «failed-then-passed» está
+//     comprobado;
+//   · lo que va detrás de «after», «with», «for» o «tras» cuenta la historia y no se
+//     mira: «approved-after-review» está acordado, «passed-with-fixes» comprobado;
+//   · una negación se lleva la palabra que niega, y solo esa: «not-approved» no dice
+//     nada, «aprobado-sin-cambios» está acordado, «pass-no-failures» comprobado
+//     (revisiones de la 195).
+// Entre las que quedan gana la de más arriba en `EN_ORDEN`. Lo que no se entiende no
+// se enseña: mejor nada que una palabra que nadie sabe leer.
 const PALABRAS = {
   sustituido: ['superseded', 'sustituido', 'sustituida', 'replaced', 'reemplazado', 'reemplazada'],
   retirado: ['retracted', 'cancelled', 'canceled', 'abandoned', 'deprecated', 'rejected', 'withdrawn', 'retirado', 'retirada', 'descartado', 'descartada', 'cancelado', 'cancelada', 'rechazado', 'rechazada'],
   'salió mal': ['failed', 'fail', 'failing', 'fallido', 'fallida', 'suspendido'],
   parado: ['blocked', 'bloqueado', 'bloqueada', 'stuck', 'parado', 'parada'],
-  aplazado: ['deferred', 'postponed', 'paused', 'hold', 'aplazado', 'aplazada', 'pausado', 'pausada'],
+  // «hold» suelto no: en «done (hold removed)» no está aplazado.
+  aplazado: ['deferred', 'postponed', 'paused', 'aplazado', 'aplazada', 'pausado', 'pausada'],
   'en revisión': ['review', 'reviewing', 'revision', 'revisando', 'clarified', 'clarificado', 'clarificada'],
   'en borrador': ['draft', 'borrador', 'proposed', 'propuesto', 'propuesta', 'pending', 'pendiente', 'gathering', 'research', 'wip', 'idea'],
   comprobado: ['pass', 'passed', 'verified', 'comprobado', 'comprobada', 'verificado', 'verificada'],
@@ -156,17 +162,24 @@ const PALABRAS = {
 };
 const EN_ORDEN = ['sustituido', 'retirado', 'salió mal', 'parado', 'aplazado', 'en revisión', 'en borrador', 'comprobado', 'terminado', 'acordado', 'en marcha'];
 const DE_CADA_PALABRA = new Map(Object.entries(PALABRAS).flatMap(([dicho, palabras]) => palabras.map((p) => [p, dicho])));
+const LO_DE_AHORA = new Set(['then', 'luego', 'despues', 'now', 'ahora']);
 const LA_HISTORIA = new Set(['after', 'with', 'for', 'tras', 'con', 'por', 'desde']);
-// Y una negación lo da la vuelta: «not-approved» no está acordado, ni «sin empezar» en
-// marcha. No se intenta decir lo contrario: no se dice nada (revisión del guardián).
-const NIEGA = new Set(['not', 'no', 'non', 'never', 'sin', 'nunca', 'aun', 'todavia']);
+const NIEGA = new Set(['not', 'no', 'non', 'never', 'without', 'sin', 'nunca']);
 
 function comoEsta(status) {
   if (typeof status !== 'string' || !status.trim()) return '';
-  const palabras = status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(Boolean);
+  let palabras = status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(Boolean);
+  const ahora = palabras.map((p) => LO_DE_AHORA.has(p)).lastIndexOf(true);
+  if (ahora !== -1) palabras = palabras.slice(ahora + 1);
   const corte = palabras.findIndex((p) => LA_HISTORIA.has(p));
-  if ((corte === -1 ? palabras : palabras.slice(0, corte)).some((p) => NIEGA.has(p))) return '';
-  const dichas = new Set((corte === -1 ? palabras : palabras.slice(0, corte)).map((p) => DE_CADA_PALABRA.get(p)).filter(Boolean));
+  if (corte !== -1) palabras = palabras.slice(0, corte);
+  const quedan = [];
+  for (let i = 0; i < palabras.length; i += 1) {
+    if (!NIEGA.has(palabras[i])) { quedan.push(palabras[i]); continue; }
+    while (i + 1 < palabras.length && NIEGA.has(palabras[i + 1])) i += 1;
+    i += 1; // la negada
+  }
+  const dichas = new Set(quedan.map((p) => DE_CADA_PALABRA.get(p)).filter(Boolean));
   return EN_ORDEN.find((d) => dichas.has(d)) || '';
 }
 

@@ -28310,8 +28310,12 @@ exec git "$@"
       fs.mkdirSync(path.join(raiz, '03-PROYECTOS', 'mi proyecto', '.git'), { recursive: true });
       const sueltos = cerebroM.sinOrdenar().map((d) => d.ruta);
       assert.ok(!sueltos.some((r) => /^proyectos\/(panel-fundae|mi proyecto|sin-clonar)\//.test(r)), `la documentación de un proyecto sale sin ordenar: ${sueltos}`);
-      assert.ok(sueltos.includes('proyectos/sin-indice-ni-clon/nota.md'), 'sin índice ni proyecto de dentro, sí está sin ordenar');
-      const cerebroHtml = require('./panel-falso').montarPanel().mandar({ tipo: 'cerebro', temas: [], sinOrdenar: sueltos.slice(0, 1).map((ruta) => ({ ruta, titulo: 'Una nota' })), cuantosSinOrdenar: 402 });
+      // Todo lo de una carpeta de `proyectos/`, también sin índice ni clon: el encargo de
+      // ordenar dice que lo deje, y con excepciones la lista no se vaciaba nunca.
+      assert.ok(!sueltos.includes('proyectos/sin-indice-ni-clon/nota.md'), 'lo de un proyecto sin índice ni clon sale sin ordenar');
+      escribir('02-DOCS/wiki/proyectos/suelta-arriba.md', '# Suelta\n');
+      assert.ok(cerebroM.sinOrdenar().some((d) => d.ruta === 'proyectos/suelta-arriba.md'), 'una nota suelta en proyectos/, sin carpeta, sí está sin ordenar');
+      const cerebroHtml = require('./panel-falso').montarPanel().mandar({ tipo: 'cerebro', temas: [], sinOrdenar: [{ ruta: 'proyectos/suelta-arriba.md', titulo: 'Una nota' }], cuantosSinOrdenar: 402 });
       assert.match(cerebroHtml, /Hay 402 documentos escritos que aún no están en su tema/, 'el número es el de los que se enseñan');
       assert.match(cerebroHtml, /proyectos\/&lt;proyecto&gt;\/ es la documentación de cada proyecto: déjalo donde está|proyectos\/<proyecto>\/ es la documentación de cada proyecto: déjalo donde está/);
       return 'el del proyecto se ofrece y se abre; el enlazado, no';
@@ -28380,10 +28384,15 @@ exec git "$@"
       // Los que el vigía del diccionario vio mal dichos por trozos (revisión de la 195).
       implemented: 'terminado', 'approved-after-review': 'acordado', reviewed: 'acordado', pending_review: 'en revisión',
       'in review': 'en revisión', Terminado: 'terminado', 'En curso': 'en marcha', 'aprobación pendiente': 'en borrador',
+      // Los de la última revisión: «without», la negación que solo niega una palabra, y lo de ahora.
+      'accepted-without-review': 'acordado', 'closed-without-merge': 'terminado', 'pass-no-failures': 'comprobado',
+      'verified-no-issues': 'comprobado', done_no_regressions: 'terminado', 'aprobado-sin-cambios': 'acordado',
+      'Verificado, sin fallos': 'comprobado', 'failed-then-passed': 'comprobado', 'done (hold removed)': 'terminado',
+      'todavía no revisado': '', 'v2-approved': 'acordado',
     };
     const mal = Object.entries(esperado).filter(([v, d]) => comoEsta(v) !== d).map(([v, d]) => `${v}: «${comoEsta(v)}» y no «${d}»`);
     assert.deepEqual(mal, []);
-    for (const nada of ['', '   ', 'xyz', '42', 'inactive', 'unpassed', 'redone', 'incomplete', 'unapproved', 'disapproved', 'not-approved', 'not_started', 'no aprobado', 'sin empezar', 'todavía no revisado', null, undefined, 7]) {
+    for (const nada of ['', '   ', 'xyz', '42', 'inactive', 'unpassed', 'redone', 'incomplete', 'unapproved', 'disapproved', 'not-approved', 'not_started', 'no aprobado', 'sin empezar', 'todavía no revisado', 'never shipped', 'on hold', null, undefined, 7]) {
       assert.equal(comoEsta(nada), '', `«${nada}» sale en crudo, o afirma lo que niega`);
     }
     // Cada palabra que se entiende, una a una, escrita aquí aparte: quitar una de la tabla
@@ -28393,7 +28402,7 @@ exec git "$@"
       retirado: 'retracted cancelled canceled abandoned deprecated rejected withdrawn retirado retirada descartado descartada cancelado cancelada rechazado rechazada',
       'salió mal': 'failed fail failing fallido fallida suspendido',
       parado: 'blocked bloqueado bloqueada stuck parado parada',
-      aplazado: 'deferred postponed paused hold aplazado aplazada pausado pausada',
+      aplazado: 'deferred postponed paused aplazado aplazada pausado pausada',
       'en revisión': 'review reviewing revision revisando clarified clarificado clarificada',
       'en borrador': 'draft borrador proposed propuesto propuesta pending pendiente gathering research wip idea',
       comprobado: 'pass passed verified comprobado comprobada verificado verificada',
