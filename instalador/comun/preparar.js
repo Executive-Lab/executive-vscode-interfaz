@@ -46,6 +46,10 @@ function argumento(nombre, porDefecto = null) {
 }
 
 const registro = [];
+// Lo que se ha ido poniendo, y por qué se ha parado si se ha parado: es lo que
+// lee el instalador para decírselo a la persona y lo que va al informe.
+const pasos = [];
+let motivo = '';
 const anotar = (linea) => registro.push(`[${new Date().toISOString()}] ${linea}`);
 
 // PATH con nuestro Node delante: los enganches del arnés lo llaman por nombre.
@@ -85,6 +89,7 @@ function correrCmd(programa, args) {
 async function asegurarGit() {
   if (await git.hay()) {
     anotar('git: ya estaba.');
+    pasos.push('git: ya estaba');
     return true;
   }
 
@@ -92,9 +97,11 @@ async function asegurarGit() {
   const hecho = await git.instalar({}, (que) => anotar(`git: ${que}`));
   if (!hecho.ok) {
     anotar(`ERROR: no he podido dejar git puesto (${hecho.mensaje}).`);
+    motivo = motivo || 'no he podido instalar git (hace falta conexión a internet)';
     return false;
   }
   anotar('git: instalado.');
+  pasos.push('git: instalado');
   return true;
 }
 
@@ -102,8 +109,14 @@ async function asegurarGit() {
 // PATH de este proceso todavía no la tiene.
 function code() {
   if (ES_WINDOWS) {
+    // Donde lo deja cada tipo de instalación: por usuario (la nuestra), o para todo
+    // el equipo. Quien ya lo tenía puesto para todo el equipo no tiene el de usuario.
     const local = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-    return primero([path.join(local, 'Programs', 'Microsoft VS Code', 'bin', 'code.cmd')], 'code.cmd');
+    return primero([
+      path.join(local, 'Programs', 'Microsoft VS Code', 'bin', 'code.cmd'),
+      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Microsoft VS Code', 'bin', 'code.cmd'),
+      path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Microsoft VS Code', 'bin', 'code.cmd'),
+    ], 'code.cmd');
   }
   // El instalador de macOS lo pone en ~/Applications, que no pide
   // administrador. Si esa persona ya lo tenía en /Applications, se usa el suyo.
@@ -134,7 +147,12 @@ function vestirElEditor(asistente) {
   if (fs.existsSync(vsix)) bien = correrCmd(cli, ['--install-extension', vsix, '--force']).codigo === 0 && bien;
   else anotar('AVISO: no encuentro executive-lab.vsix junto a este script.');
 
-  if (!bien) anotar('ERROR: no se han podido instalar las extensiones del editor.');
+  if (!bien) {
+    anotar('ERROR: no se han podido instalar las extensiones del editor.');
+    motivo = motivo || (fs.existsSync(cli)
+      ? 'no he podido instalar las extensiones del editor (hace falta conexión a internet)'
+      : 'el editor (Visual Studio Code) no está instalado');
+  } else pasos.push('extensiones del editor: puestas');
   return bien;
 }
 
@@ -190,6 +208,16 @@ async function main() {
   const asistente = argumento('asistente', 'claude');
   anotar(`Executive Lab · ${process.platform} · node ${process.version} · asistente: ${asistente}`);
 
+  // Solo para probar el camino malo en la máquina `el-exe` de GitHub: hace falta la
+  // variable de la prueba Y que esto corra dentro de GitHub Actions, que en el
+  // portátil de nadie es verdad. Así no se puede disparar en un alumno.
+  const forzado = process.env.EXECUTIVE_LAB_PROBAR_FALLO === '1' && process.env.GITHUB_ACTIONS === 'true';
+  if (forzado) {
+    anotar('ERROR: fallo forzado por la prueba (EXECUTIVE_LAB_PROBAR_FALLO).');
+    motivo = 'fallo forzado por la prueba de la máquina de GitHub';
+    return terminar(false, asistente);
+  }
+
   let bien = await asegurarGit();
 
   if (process.argv.includes('--sin-editor')) anotar('Extensiones: omitidas (--sin-editor).');
@@ -198,6 +226,14 @@ async function main() {
   await ajustesDelEditor(asistente);
   controlRemoto(asistente);
 
+  terminar(bien, asistente);
+}
+
+// Escribe el registro y, si algo falló, el motivo y el informe para el tutor; y sale.
+// El instalador lee `motivo.txt` (en Windows-1252, que es lo que sabe leer) para
+// decírselo a la persona: sin esto, un fallo aquí se acababa en un código de salida
+// que Inno no mira, y la persona veía «instalado» sin estarlo.
+function terminar(bien, asistente) {
   anotar(bien
     ? 'Listo. El resto lo hace el panel cuando se abra una carpeta.'
     : 'Ha quedado algo sin poner; mira las líneas de ERROR de arriba.');
@@ -208,10 +244,33 @@ async function main() {
   try {
     fs.writeFileSync(path.join(APP, 'instalacion.log'), texto);
   } catch {
-    fs.writeFileSync(path.join(os.tmpdir(), 'executive-lab-instalacion.log'), texto);
+    try { fs.writeFileSync(path.join(os.tmpdir(), 'executive-lab-instalacion.log'), texto); } catch { /* queda el código */ }
   }
-
+  if (!bien) dejarElInforme(texto, asistente);
   process.exit(bien ? 0 : 1);
+}
+
+function dejarElInforme(textoDelRegistro, asistente) {
+  const porQue = motivo || 'no ha dicho por qué';
+  try { fs.writeFileSync(path.join(APP, 'motivo.txt'), Buffer.from(porQue, 'latin1')); } catch { /* el instalador dirá que no ha dicho por qué */ }
+  const escritorio = argumento('escritorio', path.join(os.homedir(), 'Desktop'));
+  const informe = [
+    'Executive Lab: la instalación no ha terminado.',
+    `Motivo: ${porQue}`,
+    `Asistente elegido: ${asistente}`,
+    '',
+    '--- Progreso',
+    ...(pasos.length ? pasos : ['(no se había puesto nada)']),
+    '',
+    `--- Registro (${path.join(APP, 'instalacion.log')})`,
+    textoDelRegistro,
+  ].join('\r\n');
+  try {
+    fs.mkdirSync(escritorio, { recursive: true });
+    fs.writeFileSync(path.join(escritorio, 'Informe para tu tutor.txt'), `\ufeff${informe}`, 'utf8');
+  } catch (error) {
+    anotar(`AVISO: no he podido dejar el informe en el escritorio (${error.message}).`);
+  }
 }
 
 // Se puede cargar sin instalar nada, para probar sus pasos sueltos en una
@@ -221,9 +280,7 @@ module.exports = { ajustesDelEditor, controlRemoto, asistentesDe, registro };
 if (require.main === module) {
   main().catch((error) => {
     anotar(`ERROR sin recoger: ${error && error.stack ? error.stack : error}`);
-    try {
-      fs.writeFileSync(path.join(os.tmpdir(), 'executive-lab-instalacion.log'), `${registro.join('\n')}\n`);
-    } catch { /* si ni eso se puede, queda el código de salida */ }
-    process.exit(1);
+    motivo = motivo || `ha pasado algo que no esperaba (${error && error.message ? error.message : error})`;
+    terminar(false, argumento('asistente', 'claude'));
   });
 }
