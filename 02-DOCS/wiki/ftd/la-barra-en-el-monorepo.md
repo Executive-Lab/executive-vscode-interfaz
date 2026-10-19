@@ -127,6 +127,7 @@ el git de un proyecto: eso lo hace el asistente cuando la persona pulsa.
 
 ## Next
 
-Revisar la PR y las filas nuevas del diccionario (decisión 195). Después, probarla abierta sobre `mono-repo-executive-lab` de verdad:
+Jose la aprobó el 19-10-2026 («si, publica, revisa y documenta todo»): fusionada en la PR #98 y publicada con la
+0.58.0, junto con la 192, la 193, la 194 y la 196. Después, probarla abierta sobre `mono-repo-executive-lab` de verdad:
 qué proyectos salen, si «Trabajar en «…»» se entiende, y si los encargos de guardar y subir respetan las reglas de
 `executive-certificados` (subir a `main` despliega).

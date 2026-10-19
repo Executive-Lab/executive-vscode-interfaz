@@ -9595,7 +9595,7 @@ y el cuadro son lo que avisa).
 
 ## 195. La barra en un monorepo
 
-**Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código · **Vía rápida** `la-barra-en-el-monorepo`
+**Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código; sale con la 0.58.0 · **Vía rápida** `la-barra-en-el-monorepo`
 
 Jose: *«hay que adaptar la interfaz del arnés a un proyecto monorepo estilo mono-repo-executive-lab»*. Esa forma: la raíz
 lleva el arnés y su propio git; cada proyecto es un clon de su repositorio en `03-PROYECTOS/<proyecto>/`, con su propio git,
