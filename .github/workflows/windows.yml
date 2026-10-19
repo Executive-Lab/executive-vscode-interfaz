@@ -97,6 +97,18 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/casa-falsa/Documents"
           HOME="$RUNNER_TEMP/casa-falsa" node "instalador/mac/escenario/Instalar Executive Lab.app/Contents/Resources/instalar.js" --progreso "$RUNNER_TEMP/progreso.txt" --sin-dock --asistente losDos
+      # Reinstalar como lo hace la app (PATH mínimo, así que arrancar.sh baja el Node)
+      # encima de una instalación vieja cuyo bin/npm apunta a otro sitio: así fallaba
+      # con EEXIST la primera vez que alguien lo probó en su Mac.
+      - name: Reinstalar encima de una instalación vieja, como la app
+        run: |
+          R="instalador/mac/escenario/Instalar Executive Lab.app/Contents/Resources"
+          CASA="$RUNNER_TEMP/casa-falsa"
+          VIEJO="$CASA/Library/Application Support/ExecutiveLab/runtime/bin"
+          mkdir -p "$VIEJO" && ln -sfn /no/existe/npm-cli.js "$VIEJO/npm"
+          env -i HOME="$CASA" USER="$USER" TMPDIR="$RUNNER_TEMP/" PATH=/usr/bin:/bin:/usr/sbin:/sbin /bin/sh "$R/arrancar.sh" --progreso "$RUNNER_TEMP/progreso-2.txt" --sin-dock --asistente losDos
+          tail -1 "$RUNNER_TEMP/progreso-2.txt"
+          awk -F'\t' 'END { exit !($1 == "FIN" && $2 == "ok") }' "$RUNNER_TEMP/progreso-2.txt"
       - name: Comprobarlo
         run: bash instalador/mac/probar.sh --casa "$RUNNER_TEMP/casa-falsa" --sin-firma --asistente losDos
       - name: El informe y el registro de la instalación

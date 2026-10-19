@@ -2951,6 +2951,37 @@ exec git "$@"
     }
   });
 
+  await comprobar('reinstalar en macOS encima de una instalación vieja no choca con sus enlaces', () => {
+    // Al reinstalar, `cpSync` con `force` encima del Node de antes saltaba con
+    // «EEXIST, File exists '…/runtime/bin'»: el `bin/npm` viejo era un enlace a otro
+    // sitio (otra versión de Node). `reponer` copia al lado y cambia una por otra.
+    if (process.platform === 'win32') return 'SALTADA: enlaces simbólicos de macOS';
+    const { reponer } = require(path.join(RAIZ, '..', 'instalador', 'mac', 'instalar.js'));
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'reponer-'));
+    try {
+      const src = path.join(d, 'src');
+      const dst = path.join(d, 'runtime');
+      fs.mkdirSync(path.join(src, 'bin'), { recursive: true });
+      fs.mkdirSync(path.join(src, 'lib', 'npm', 'bin'), { recursive: true });
+      fs.writeFileSync(path.join(src, 'lib', 'npm', 'bin', 'npm-cli.js'), 'nuevo');
+      fs.writeFileSync(path.join(src, 'bin', 'node'), 'node nuevo');
+      fs.symlinkSync('../lib/npm/bin/npm-cli.js', path.join(src, 'bin', 'npm'));
+      // Lo que dejó una instalación de septiembre: npm enlazado a otro sitio.
+      fs.mkdirSync(path.join(dst, 'bin'), { recursive: true });
+      fs.writeFileSync(path.join(dst, 'bin', 'node'), 'node viejo');
+      fs.symlinkSync('/no/existe/npm-cli.js', path.join(dst, 'bin', 'npm'));
+      assert.throws(() => fs.cpSync(src, dst, { recursive: true, force: true }), /EEXIST/, 'cpSync ya no choca: la prueba no reproduce el fallo');
+      reponer(src, dst);
+      assert.equal(fs.readFileSync(path.join(dst, 'bin', 'node'), 'utf8'), 'node nuevo');
+      assert.equal(fs.readlinkSync(path.join(dst, 'bin', 'npm')), '../lib/npm/bin/npm-cli.js');
+      assert.ok(!fs.readdirSync(d).some((n) => /\.(nuevo|viejo)-/.test(n)), 'deja restos al lado');
+      // Y otra vez encima, que es lo que hace quien reinstala.
+      reponer(src, dst);
+      assert.equal(fs.readFileSync(path.join(dst, 'bin', 'node'), 'utf8'), 'node nuevo');
+      return 'el Node viejo con npm enlazado a otro sitio se sustituye, dos veces';
+    } finally { fs.rmSync(d, { recursive: true, force: true }); }
+  });
+
   await comprobar('el diálogo del instalador de macOS lee cada línea de progreso (DETALLE trae dos trozos)', () => {
     // El AppleScript lo ve la persona y no lo corría ninguna prueba: «items 3 thru -1»
     // de un DETALLE reventaba la primera vez que alguien lo abrió de verdad.
