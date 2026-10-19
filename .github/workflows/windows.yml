@@ -198,12 +198,35 @@ jobs:
           powershell -ExecutionPolicy Bypass -File instalador/windows/probar.ps1
           if ($LASTEXITCODE -ne 0) { throw "probar.ps1 ha encontrado algo mal" }
 
+      # Como la primera vez que alguien lo probó en el Mac: instalar OTRA VEZ encima
+      # de una instalación vieja (con ficheros de solo lectura y algo que la nueva no
+      # trae), y volver a comprobarlo todo.
+      - name: Reinstalar encima de una instalación vieja
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File instalador/windows/probar-reinstalar-y-fallar.ps1 reinstalar
+          if ($LASTEXITCODE -ne 0) { throw "reinstalar ha encontrado algo mal" }
+      - name: Comprobarlo otra vez tras reinstalar
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File instalador/windows/probar.ps1
+          if ($LASTEXITCODE -ne 0) { throw "probar.ps1 ha encontrado algo mal tras reinstalar" }
+      # Y el camino malo: con el último paso forzado a fallar, tiene que quedar el
+      # informe para el tutor en el escritorio, con el motivo.
+      - name: Cuando el último paso falla, queda el informe con el motivo
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File instalador/windows/probar-reinstalar-y-fallar.ps1 fallar
+          if ($LASTEXITCODE -ne 0) { throw "el informe de fallo no es el que debe" }
+
       # El registro vive en C:, y el código en D:: la acción de subir necesita una
       # carpeta común, así que se copia antes.
       - name: El registro de la instalación, junto al informe
         if: always()
         shell: pwsh
         run: |
+          $informeTutor = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Informe para tu tutor.txt'
+          if (Test-Path $informeTutor) { Copy-Item $informeTutor instalador/windows/informe-para-el-tutor.txt }
           $registro = Join-Path $env:LOCALAPPDATA 'ExecutiveLab\instalacion.log'
           if (Test-Path $registro) { Copy-Item $registro instalador/windows/instalacion.log }
       - name: El informe y el registro de la instalación
@@ -214,6 +237,8 @@ jobs:
           path: |
             instalador/windows/informe-*.txt
             instalador/windows/instalacion.log
+            instalador/windows/informe-para-el-tutor.txt
+            instalador/windows/inno-*.log
           if-no-files-found: warn
       # Y el .exe mismo, para probarlo a mano en un Windows de verdad (sin firmar:
       # SmartScreen pide «Más información» › «Ejecutar de todas formas»).

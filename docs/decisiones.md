@@ -9378,6 +9378,41 @@ dependen de la causa.
 arranca. `humo.js` crea el acceso sobre una carpeta de mentira (se salta fuera de macOS). Lo que sigue sin comprobarse: que en
 un Mac con macOS 26 de un alumno el botón abra de verdad; hasta que alguien lo pruebe, la causa y la cura son una hipótesis.
 
+
+## 194. El .exe aguanta reinstalar y dice por qué falla
+
+**Fecha**: 2026-10-19. **Origen**: en el Mac salieron tres fallos que ninguna máquina veía (decisiones de las PR #95 y #96)
+porque solo se probaba la primera instalación y el camino bueno. En Windows se miró lo mismo.
+
+**Lo que pasaba, mirado en el código** (el `.exe` solo se prueba de verdad en la máquina `el-exe`):
+1. El último paso (`preparar.js`: git y las dos extensiones) era una entrada de `[Run]`. Inno **no mira cómo termina** un
+   `[Run]`: si `preparar.js` salía con 1, el instalador terminaba con 0 y la persona veía «instalado» sin estarlo. No quedaba
+   ningún informe, y el motivo solo estaba en `instalacion.log`, dentro de la carpeta de la app.
+2. Reinstalar encima no se probaba nunca. `el-exe` instalaba una vez y comprobaba.
+3. El acceso directo y `preparar.js` solo buscaban el editor en `%LOCALAPPDATA%\Programs`; si la persona ya lo tenía puesto
+   para todo el equipo (`Program Files`), el instalador decía «ya lo tiene», no lo instalaba, y las extensiones fallaban.
+4. La página del asistente decía «Los dos hacen lo mismo aquí» con tres opciones, la tercera «Los dos».
+
+**Lo que se ha cambiado**:
+- El editor y `preparar.js` se lanzan desde `[Code]` (`PonerLasPiezas`, en `ssPostInstall`) y se mira el código de salida. Si
+  falla: mensaje con el motivo en una frase («No he podido terminar: …») y un «Informe para tu tutor.txt» en el escritorio
+  (`{userdesktop}`, que sigue a OneDrive) con motivo, progreso y registro. `preparar.js` escribe `motivo.txt` (en Windows-1252,
+  que es lo que sabe leer Inno) y el informe; si ni arrancó, el informe lo deja el propio instalador. En silencio no sale ningún
+  cuadro (`SuppressibleMsgBox`), pero el informe se deja igual.
+- `[Files]` con `overwritereadonly`: un fichero de solo lectura de la vez anterior no para ni pregunta.
+- Editor en tres sitios (`RutaDelEditor`, y `code()` de `preparar.js`).
+- Páginas: «Claude y Codex hacen lo mismo aquí… «Los dos» pone los dos».
+- Fallo forzado para probar: `EXECUTIVE_LAB_PROBAR_FALLO=1` **y** `GITHUB_ACTIONS=true`. Lo segundo no es verdad en ningún
+  portátil, así que no se puede disparar en un alumno.
+
+**Las pruebas**: `probar-reinstalar-y-fallar.ps1`, en `el-exe` tras `probar.ps1`: `reinstalar` siembra una instalación vieja
+(un fichero de más, `preparar.js`, `git.js` y `node.exe` de solo lectura), instala encima y vuelve a pasar `probar.ps1`;
+`fallar` fuerza el fallo y comprueba informe, `motivo.txt` y el registro de Inno (`/LOG`). `humo.js` prueba `preparar.js` fallando.
+
+**Lo que sigue sin comprobarse**: reinstalar con el `node.exe` EN USO (un editor abierto con los enganches corriendo); el
+cuadro de verdad (solo se ve sin `/SILENT`); y que el instalador sigue saliendo con 0 aunque falle el último paso (el informe
+y el cuadro son lo que avisa).
+
 ## 195. La barra en un monorepo
 
 **Fecha:** 19 de octubre de 2026 · **Estado:** hecho en el código · **Vía rápida** `la-barra-en-el-monorepo`
