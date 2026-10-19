@@ -5099,7 +5099,9 @@ exec git "$@"
       assert.equal(ajustes.permisoDeAhora(), 'auto', 'sin nada puesto no es Auto');
       assert.equal(ajustes.comoEstamos().permiso, 'auto');
       assert.ok(ajustes.PERMISOS.some((x) => x.id === 'auto'), 'Auto no sale entre las opciones');
-      assert.ok(!ajustes.PERMISOS.some((x) => x.id === 'bypassPermissions'));
+      // Desde la 192 sí se ofrece, como opción que elige la persona y la última de la lista;
+      // nunca como el de fábrica (lo prueba la 192, más abajo).
+      assert.equal(ajustes.PERMISOS[ajustes.PERMISOS.length - 1].id, 'bypassPermissions');
       // El `plan` que dejó la 181 o antes en la carpeta no cuenta para el editor.
       assert.equal(ajustes.permisoDeAhora(), 'auto', 'se lee el de la carpeta, que el editor ignora');
 
@@ -5119,8 +5121,8 @@ exec git "$@"
       assert.ok(!(clave in vscode.registrado.ajustes.global), 'Auto se escribe como valor');
       assert.equal(ajustes.permisoDeAhora(), 'auto');
 
-      // Saltarse los permisos no se ofrece, ni nada que no sea de la lista.
-      for (const raro of ['bypassPermissions', 'dontAsk', 'manual', '', undefined]) {
+      // Nada que no sea de la lista.
+      for (const raro of ['dontAsk', 'manual', '', undefined]) {
         assert.ok(!(await ajustes.ponerPermiso(raro)).ok, `acepta «${raro}»`);
       }
       assert.ok(!(clave in vscode.registrado.ajustes.global) && !(clave in vscode.registrado.ajustes.workspace), 'una opción rara escribió algo');
@@ -5130,8 +5132,8 @@ exec git "$@"
       assert.equal(ajustes.permisoDeAhora(), 'default');
       ponerEn('global'); ponerEn('workspace', 'acceptEdits');
       assert.equal(ajustes.permisoDeAhora(), 'auto', 'el editor ignora el de carpeta y la barra lo enseña');
-      ponerEn('workspace'); ponerEn('global', 'bypassPermissions');
-      assert.equal(ajustes.permisoDeAhora(), 'bypassPermissions');
+      ponerEn('workspace'); ponerEn('global', 'dontAsk');
+      assert.equal(ajustes.permisoDeAhora(), 'dontAsk');
       assert.ok(!ajustes.PERMISOS.some((x) => x.id === ajustes.comoEstamos().permiso), 'se marca como puesta una opción que no lo es');
       ponerEn('global');
 
@@ -9320,7 +9322,7 @@ exec git "$@"
       ['comoTrabaja, con Auto', { tipo: 'comoTrabaja', ...cargar('ajustes').comoEstamos(), permiso: 'auto', aviso: null },
         /Que trabaje solo, con un revisor <span class="cuantos">ahora mismo[\s\S]*Vale para todas tus carpetas, no solo para esta\./
       ],
-      ['comoTrabaja, con otro puesto a mano', { tipo: 'comoTrabaja', ...cargar('ajustes').comoEstamos(), permiso: 'bypassPermissions', aviso: null },
+      ['comoTrabaja, con otro puesto a mano', { tipo: 'comoTrabaja', ...cargar('ajustes').comoEstamos(), permiso: 'dontAsk', aviso: null },
         /Vale para todas tus carpetas[^<]*Ahora tienes puesto otro que no se cambia desde aquí/],
       ['laCara', { tipo: 'laCara', ...cargar('tema').comoEstamos(), aviso: null }, /Dale material/],
       ['proyectos', { tipo: 'proyectos', montones: cargar('proyectos').queHay() }, /Vender recambios/],
@@ -27918,6 +27920,625 @@ exec git "$@"
     }
     return 'uno a la vez; terminado, el siguiente sí';
   });
+
+  // ------------------------------------------- 192: trabajar sin pedir permiso
+  // Lo que se confirmó en la documentación oficial (leída el 19-10-2026):
+  //  · Claude, editor: `claudeCode.initialPermissionMode` admite `bypassPermissions`, y sin
+  //    `claudeCode.allowDangerouslySkipPermissions` ese valor «starts the conversation in Manual
+  //    instead» (code.claude.com/docs/en/vs-code y /permission-modes, «Switch permission modes»).
+  //  · Claude, terminal: `permissions.defaultMode` en `~/.claude/settings.json` (/permission-modes).
+  //  · Codex: `sandbox_mode = "danger-full-access"` y `approval_policy = "never"`
+  //    (learn.chatgpt.com/docs/sandboxing).
+  // Con la extensión de Claude puesta la clave está registrada: el editor deja escribirla.
+  const rechazaAntes192 = vscode.guion.rechazaAjuste;
+  vscode.guion.rechazaAjuste = () => false;
+  const casa192 = () => fs.mkdtempSync(path.join(os.tmpdir(), 'sin-pedir-'));
+  const memoria192 = () => ({ datos: new Map(), get(k) { return this.datos.get(k); }, async update(k, v) { if (v === undefined) this.datos.delete(k); else this.datos.set(k, v); } });
+
+  await comprobar('192: Claude en el terminal: defaultMode en sus ajustes de usuario, sin pisar lo suyo, y «Quitarlo» lo deja como estaba', async () => {
+    const sp = cargar('sin-pedir-permiso');
+    const casa = casa192;
+    const leer = (c) => JSON.parse(fs.readFileSync(path.join(c, 'settings.json'), 'utf8'));
+    const MARCA = sp.MARCA;
+
+    // Sin fichero: se crea con solo eso, y quitarlo lo borra.
+    let c = casa();
+    assert.equal(sp.ponerEnClaude({ carpeta: c }).hecho, 'puesto');
+    assert.deepEqual(leer(c), { permissions: { defaultMode: 'bypassPermissions' } });
+    assert.ok(fs.existsSync(path.join(c, MARCA)), 'sin constancia');
+    assert.equal(sp.claudeAhora({ carpeta: c }), true);
+    assert.equal(sp.quitarDeClaude({ carpeta: c }).hecho, 'quitado');
+    assert.ok(!fs.existsSync(path.join(c, 'settings.json')) && !fs.existsSync(path.join(c, MARCA)), 'no queda lo que creamos');
+
+    // Con lo suyo dentro (otras claves y otras reglas de permisos): se suma y se devuelve igual.
+    c = casa();
+    const SUYO = { env: { A: '1' }, permissions: { allow: ['Bash(ls *)'], deny: ['Read(.env)'] }, hooks: { Stop: [] } };
+    fs.writeFileSync(path.join(c, 'settings.json'), `${JSON.stringify(SUYO, null, 2)}\n`);
+    assert.equal(sp.ponerEnClaude({ carpeta: c }).hecho, 'puesto');
+    assert.deepEqual(leer(c), { ...SUYO, permissions: { ...SUYO.permissions, defaultMode: 'bypassPermissions' } });
+    assert.equal(sp.quitarDeClaude({ carpeta: c }).hecho, 'quitado');
+    assert.deepEqual(leer(c), SUYO);
+    assert.ok(!fs.existsSync(path.join(c, MARCA)));
+
+    // Si ya tenía uno suyo distinto, no se toca ni queda constancia; si ya era ese, tampoco es nuestro.
+    for (const suyo of ['plan', 'default', 'acceptEdits', 'auto']) {
+      c = casa();
+      const texto = `${JSON.stringify({ permissions: { defaultMode: suyo } }, null, 2)}\n`;
+      fs.writeFileSync(path.join(c, 'settings.json'), texto);
+      assert.equal(sp.ponerEnClaude({ carpeta: c }).hecho, 'tieneLoSuyo', suyo);
+      assert.equal(fs.readFileSync(path.join(c, 'settings.json'), 'utf8'), texto, `${suyo}: se tocó`);
+      assert.ok(!fs.existsSync(path.join(c, MARCA)), `${suyo}: constancia sin haber puesto nada`);
+    }
+    c = casa();
+    fs.writeFileSync(path.join(c, 'settings.json'), JSON.stringify({ permissions: { defaultMode: 'bypassPermissions' } }));
+    assert.equal(sp.ponerEnClaude({ carpeta: c }).hecho, 'yaEstaba');
+    assert.equal(sp.quitarDeClaude({ carpeta: c }).hecho, 'noEraNuestro', 'quita lo que era suyo');
+    assert.equal(sp.claudeAhora({ carpeta: c }), true);
+
+    // Lo que no se entiende, no se toca.
+    for (const raro of ['{ esto no es json', '[1,2]', JSON.stringify({ permissions: 'x' })]) {
+      c = casa();
+      fs.writeFileSync(path.join(c, 'settings.json'), raro);
+      assert.notEqual(sp.ponerEnClaude({ carpeta: c }).hecho, 'puesto', raro);
+      assert.equal(fs.readFileSync(path.join(c, 'settings.json'), 'utf8'), raro);
+      assert.ok(!fs.existsSync(path.join(c, MARCA)));
+    }
+    // Un enlace no se sigue.
+    c = casa();
+    const fuera = path.join(casa(), 'real.json');
+    fs.writeFileSync(fuera, '{}\n');
+    fs.symlinkSync(fuera, path.join(c, 'settings.json'));
+    assert.equal(sp.ponerEnClaude({ carpeta: c }).hecho, 'enlace');
+    assert.equal(fs.readFileSync(fuera, 'utf8'), '{}\n');
+
+    // «Quitarlo» solo si sigue como lo dejamos: si después lo cambió, es suyo.
+    c = casa();
+    sp.ponerEnClaude({ carpeta: c });
+    const cambiado = { permissions: { defaultMode: 'plan' } };
+    fs.writeFileSync(path.join(c, 'settings.json'), JSON.stringify(cambiado));
+    assert.equal(sp.quitarDeClaude({ carpeta: c }).hecho, 'yaNoEstaba');
+    assert.deepEqual(leer(c), cambiado, 'se llevó lo que cambió');
+    return 'se crea o se suma, nunca pisa uno suyo; ilegible y enlace, intactos; «Quitarlo» devuelve el fichero tal cual';
+  });
+
+  await comprobar('192: Codex: approval_policy y sandbox_mode arriba del config.toml, sin pisar nada, y «Quitarlo» deja el fichero igual byte a byte', async () => {
+    const sp = cargar('sin-pedir-permiso');
+    const casa = casa192;
+    const retiradosM = cargar('retirados');
+    const config = (c) => path.join(c, 'config.toml');
+    const lineasPuestas = ['approval_policy = "never"', 'sandbox_mode = "danger-full-access"'];
+    assert.deepEqual(sp.LINEAS_DE_CODEX, lineasPuestas, 'no son las claves que documenta Codex');
+
+    const casos = {
+      'con claves arriba y tablas': 'model = "gpt-5.5"\n# nota mía\n\n[tui]\nx = 1\n\n[projects."/a"]\ntrust_level = "trusted"\n',
+      'solo tablas': '[tui]\nx = 1\n',
+      'solo comentarios': '# mi config\n',
+      'con CRLF': 'model = "gpt-5.5"\r\n[tui]\r\nx = 1\r\n',
+      'sin salto al final': 'model = "gpt-5.5"',
+    };
+    for (const [nombre, texto] of Object.entries(casos)) {
+      const c = casa();
+      fs.writeFileSync(config(c), texto);
+      const hecho = sp.ponerEnCodex({ codex: c });
+      assert.equal(hecho.hecho, 'puesto', nombre);
+      const puesto = fs.readFileSync(config(c), 'utf8');
+      const leido = retiradosM.leerElToml(puesto);
+      assert.ok(leido && leido.clavesDeArriba.has('approval_policy') && leido.clavesDeArriba.has('sandbox_mode'), `${nombre}: no quedan arriba`);
+      for (const l of lineasPuestas) assert.ok(puesto.includes(l), `${nombre}: falta ${l}`);
+      assert.ok(hecho.copia && fs.readFileSync(hecho.copia, 'utf8') === texto, `${nombre}: sin copia de lo suyo`);
+      assert.equal(sp.codexAhora({ codex: c }), true);
+      assert.equal(sp.quitarDeCodex({ codex: c }).hecho, 'quitado', nombre);
+      assert.equal(fs.readFileSync(config(c), 'utf8'), texto, `${nombre}: no queda como estaba`);
+      assert.ok(!fs.existsSync(path.join(c, sp.MARCA)), `${nombre}: queda constancia`);
+      assert.equal(sp.codexAhora({ codex: c }), false);
+    }
+    // Con tablas, las dos líneas caen antes de la primera tabla, nunca dentro.
+    const conTablas = casa();
+    fs.writeFileSync(config(conTablas), 'model = "x"\n[tui]\nx = 1\n');
+    sp.ponerEnCodex({ codex: conTablas });
+    assert.equal(fs.readFileSync(config(conTablas), 'utf8'), 'model = "x"\napproval_policy = "never"\nsandbox_mode = "danger-full-access"\n[tui]\nx = 1\n');
+
+    // Sin config.toml: se crea con solo las dos líneas; quitarlo lo borra.
+    let c = casa();
+    assert.equal(sp.ponerEnCodex({ codex: c }).hecho, 'puesto');
+    assert.equal(fs.readFileSync(config(c), 'utf8'), `${lineasPuestas.join('\n')}\n`);
+    assert.equal(sp.quitarDeCodex({ codex: c }).hecho, 'quitado');
+    assert.ok(!fs.existsSync(config(c)), 'queda un config.toml que creamos');
+
+    // Lo suyo no se pisa: cualquiera de las claves, `default_permissions`, o un perfil.
+    for (const suyo of ['approval_policy = "on-request"\n', 'sandbox_mode = "workspace-write"\n', 'approval_policy = "never"\n', 'default_permissions = ":workspace"\n', 'profile = "mio"\n[profiles.mio]\nx = 1\n']) {
+      c = casa();
+      fs.writeFileSync(config(c), suyo);
+      assert.equal(sp.ponerEnCodex({ codex: c }).hecho, 'tieneLoSuyo', suyo);
+      assert.equal(fs.readFileSync(config(c), 'utf8'), suyo, `se tocó: ${suyo}`);
+      assert.ok(!fs.existsSync(path.join(c, sp.MARCA)));
+    }
+    // Una clave con ese nombre dentro de una tabla no es de arriba: no frena, y se pone arriba.
+    c = casa();
+    fs.writeFileSync(config(c), '[profiles.otro]\napproval_policy = "never"\n');
+    assert.equal(sp.ponerEnCodex({ codex: c }).hecho, 'puesto');
+    assert.equal(sp.quitarDeCodex({ codex: c }).hecho, 'quitado');
+    assert.equal(fs.readFileSync(config(c), 'utf8'), '[profiles.otro]\napproval_policy = "never"\n');
+
+    // Lo que no se entiende, y un enlace: no se toca.
+    c = casa();
+    fs.writeFileSync(config(c), 'a = """\nvarias\n"""\n');
+    assert.equal(sp.ponerEnCodex({ codex: c }).hecho, 'raro');
+    assert.equal(fs.readFileSync(config(c), 'utf8'), 'a = """\nvarias\n"""\n');
+    c = casa();
+    const real = path.join(casa(), 'real.toml');
+    fs.writeFileSync(real, 'model = "x"\n');
+    fs.symlinkSync(real, config(c));
+    assert.equal(sp.ponerEnCodex({ codex: c }).hecho, 'enlace');
+    assert.equal(fs.readFileSync(real, 'utf8'), 'model = "x"\n');
+
+    // «Quitarlo» solo si sigue como lo dejamos: una línea cambiada es suya.
+    c = casa();
+    fs.writeFileSync(config(c), 'model = "x"\n');
+    sp.ponerEnCodex({ codex: c });
+    const suyoAhora = fs.readFileSync(config(c), 'utf8').replace('"never"', '"on-request"');
+    fs.writeFileSync(config(c), suyoAhora);
+    assert.equal(sp.quitarDeCodex({ codex: c }).hecho, 'cambiado');
+    assert.equal(fs.readFileSync(config(c), 'utf8'), suyoAhora, 'se tocó una línea cambiada');
+    // Y sin constancia, no se quita nada aunque las líneas sean iguales.
+    c = casa();
+    fs.writeFileSync(config(c), `${lineasPuestas.join('\n')}\n`);
+    assert.equal(sp.quitarDeCodex({ codex: c }).hecho, 'noEraNuestro');
+    assert.equal(fs.readFileSync(config(c), 'utf8'), `${lineasPuestas.join('\n')}\n`);
+    return 'las dos claves arriba, con copia; lo suyo, lo raro y los enlaces, intactos; «Quitarlo» devuelve el fichero byte a byte';
+  });
+
+  await comprobar('192: el editor: las dos claves en los ajustes de usuario, nunca los de la carpeta; lo suyo no se pisa; «Quitarlo» lo devuelve', async () => {
+    const sp = cargar('sin-pedir-permiso');
+    const g = vscode.registrado.ajustes.global;
+    const w = vscode.registrado.ajustes.workspace;
+    const memoria = memoria192();
+    const guardadas = { g: { ...g }, w: { ...w } };
+    const limpiar = () => { for (const k of [sp.CLAVE_MODO, sp.CLAVE_PERMITIR]) { delete g[k]; delete w[k]; } memoria.datos.clear(); };
+    sp.saberDondeGuardar(memoria);
+    try {
+      assert.equal(sp.CLAVE_MODO, 'claudeCode.initialPermissionMode');
+      assert.equal(sp.CLAVE_PERMITIR, 'claudeCode.allowDangerouslySkipPermissions');
+      limpiar();
+      assert.equal((await sp.ponerEnElEditor()).hecho, 'puesto');
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions');
+      assert.equal(g[sp.CLAVE_PERMITIR], true, 'sin esta, Claude arranca en Manual');
+      assert.ok(!(sp.CLAVE_MODO in w) && !(sp.CLAVE_PERMITIR in w), 'se escribió por carpeta');
+      assert.equal(sp.editorAhora(), true);
+      assert.equal((await sp.ponerEnElEditor()).hecho, 'yaEstaba');
+      assert.equal((await sp.quitarDelEditor()).hecho, 'quitado');
+      assert.ok(!(sp.CLAVE_MODO in g) && !(sp.CLAVE_PERMITIR in g), 'quedó algo');
+
+      // Lo suyo, distinto: no se toca ni una de las dos.
+      for (const [clave, valor] of [[sp.CLAVE_MODO, 'plan'], [sp.CLAVE_PERMITIR, false]]) {
+        limpiar();
+        g[clave] = valor;
+        const antes = JSON.stringify(g);
+        const r = await sp.ponerEnElEditor();
+        assert.equal(r.hecho, 'tieneLoSuyo', clave);
+        assert.equal(JSON.stringify(g), antes, `${clave}: se escribió algo`);
+        assert.equal((await sp.quitarDelEditor()).hecho, 'noEraNuestro');
+        assert.equal(g[clave], valor, `${clave}: quitó lo suyo`);
+      }
+
+      // Con el clic de la persona en la pantalla se cambia, y se devuelve a como estaba.
+      limpiar();
+      g[sp.CLAVE_MODO] = 'plan';
+      g[sp.CLAVE_PERMITIR] = false;
+      assert.equal((await sp.ponerEnElEditor({ forzar: true })).hecho, 'puesto');
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions');
+      assert.equal(g[sp.CLAVE_PERMITIR], true);
+      assert.equal((await sp.quitarDelEditor()).hecho, 'quitado');
+      assert.equal(g[sp.CLAVE_MODO], 'plan', 'no devuelve el suyo');
+      assert.equal(g[sp.CLAVE_PERMITIR], false, 'no devuelve el suyo');
+
+      // Si después lo cambió, es suyo.
+      limpiar();
+      await sp.ponerEnElEditor();
+      g[sp.CLAVE_MODO] = 'acceptEdits';
+      assert.equal((await sp.quitarDelEditor()).hecho, 'quitado');
+      assert.equal(g[sp.CLAVE_MODO], 'acceptEdits', 'se llevó lo que cambió');
+      assert.ok(!(sp.CLAVE_PERMITIR in g), 'lo nuestro sigue');
+
+      // Si el editor no deja escribir una, la otra se devuelve: nada a medias.
+      limpiar();
+      const rechazaba = vscode.guion.rechazaAjuste;
+      vscode.guion.rechazaAjuste = (c) => c === sp.CLAVE_PERMITIR;
+      const r = await sp.ponerEnElEditor();
+      vscode.guion.rechazaAjuste = rechazaba;
+      assert.equal(r.hecho, 'fallo');
+      assert.ok(!(sp.CLAVE_MODO in g) && !(sp.CLAVE_PERMITIR in g), 'quedó a medias');
+    } finally {
+      limpiar();
+      Object.assign(g, guardadas.g);
+      Object.assign(w, guardadas.w);
+      sp.saberDondeGuardar(null);
+    }
+    return 'usuario, las dos claves; lo suyo no se pisa; con su clic se cambia y se devuelve; sin dejar nada a medias';
+  });
+
+  await comprobar('192: la pregunta sale una vez por ordenador, con «No, que me pregunte» de fábrica, y con el no no se escribe nada', async () => {
+    const sp = cargar('sin-pedir-permiso');
+    const proveedor = vscode.registrado.proveedor;
+    const asistentesM = cargar('asistentes');
+    const g = vscode.registrado.ajustes.global;
+    const memoria = memoria192();
+    const r = fs.mkdtempSync(path.join(os.tmpdir(), 'sin-pedir-pregunta-'));
+    fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'] }));
+    const claudeAjustes = path.join(CLAUDE_DE_MENTIRA, 'settings.json');
+    const codexConfig = path.join(CODEX_DE_MENTIRA, 'config.toml');
+    const limpiar = () => {
+      for (const f of [claudeAjustes, codexConfig, path.join(CLAUDE_DE_MENTIRA, sp.MARCA), path.join(CODEX_DE_MENTIRA, sp.MARCA)]) fs.rmSync(f, { force: true });
+      for (const k of [sp.CLAVE_MODO, sp.CLAVE_PERMITIR]) delete g[k];
+      memoria.datos.clear();
+    };
+    const hayAlgo = () => [claudeAjustes, codexConfig].some((f) => fs.existsSync(f)) || sp.CLAVE_MODO in g || sp.CLAVE_PERMITIR in g;
+    const antes = {
+      raiz: vscode.guion.raiz, confianza: vscode.guion.confianza, eleccion: vscode.guion.eleccion, instaladas: vscode.guion.extensionesInstaladas,
+      hay: asistentesM.terminal.hayEnElPath, sesion: asistentesM.terminal.haySesion, vista: proveedor.vista, donde: proveedor.donde, aviso: proveedor.avisoPendiente,
+      global: { ...g },
+    };
+    const preguntas = () => vscode.registrado.mensajes.filter((m) => m.startsWith('INFO ¿Quieres que '));
+    const PREGUNTA_CLAUDE = '¿Quieres que Claude trabaje sin pedirte permiso para cada cosa? Puede cambiar o borrar ficheros y ejecutar programas sin preguntarte. Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos.';
+    const SI = 'Sí, sin pedirme permiso';
+    const NO = 'No, que me pregunte';
+    sp.saberDondeGuardar(memoria);
+    try {
+      limpiar();
+      vscode.guion.raiz = r;
+      vscode.guion.confianza = true;
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      asistentesM.terminal.hayEnElPath = () => false;
+      asistentesM.terminal.haySesion = () => false;
+      proveedor.vista = null;
+
+      // El texto exacto, y «No» es el primero: el de fábrica.
+      let botones = null;
+      const mensajeAntes = vscode.window.showInformationMessage;
+      vscode.window.showInformationMessage = async (m, ...b) => { botones = b; return mensajeAntes(m, ...b); };
+      vscode.guion.eleccion = undefined;
+      vscode.registrado.mensajes.length = 0;
+      assert.equal(await proveedor.preguntarSinPedirPermiso(), null);
+      vscode.window.showInformationMessage = mensajeAntes;
+      assert.deepEqual(preguntas(), [`INFO ${PREGUNTA_CLAUDE}`]);
+      assert.deepEqual(botones, [NO, SI], 'el de fábrica no es el primero');
+      // Cerrarla sin contestar: no escribe nada, no apunta nada y vuelve a salir.
+      assert.ok(!hayAlgo(), 'cerrarla escribió algo');
+      assert.equal(sp.laRespuesta(), null);
+
+      // Con el no: no escribe nada, se apunta, y no vuelve a salir.
+      vscode.guion.eleccion = NO;
+      vscode.registrado.mensajes.length = 0;
+      await proveedor.preguntarSinPedirPermiso();
+      assert.equal(preguntas().length, 1);
+      assert.ok(!hayAlgo(), 'con el no se escribió algo');
+      assert.equal(sp.laRespuesta(), 'no');
+      vscode.registrado.mensajes.length = 0;
+      vscode.guion.eleccion = SI;
+      assert.equal(await proveedor.preguntarSinPedirPermiso(), null);
+      assert.equal(preguntas().length, 0, 'vuelve a preguntar a quien ya contestó');
+      assert.ok(!hayAlgo(), 'preguntar de nuevo escribió algo');
+
+      // Con el sí, y solo Claude: sus tres sitios y nada de Codex.
+      limpiar();
+      vscode.guion.eleccion = SI;
+      proveedor.avisoPendiente = null;
+      await proveedor.preguntarSinPedirPermiso();
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions');
+      assert.equal(g[sp.CLAVE_PERMITIR], true);
+      assert.deepEqual(JSON.parse(fs.readFileSync(claudeAjustes, 'utf8')), { permissions: { defaultMode: 'bypassPermissions' } });
+      assert.ok(!fs.existsSync(codexConfig), 'tocó Codex sin usarlo');
+      assert.equal(sp.laRespuesta(), 'si');
+      const aviso = proveedor.avisoPendiente;
+      assert.equal(aviso.texto, 'Hecho. Claude trabajará sin pedirte permiso. Se nota en la próxima conversación que abras.');
+      assert.deepEqual(aviso.boton, { etiqueta: 'Quitarlo', accion: { tipo: 'quitarSinPedir' } });
+      // «Quitarlo» deja todo como estaba y no se vuelve a preguntar.
+      const enviados = [];
+      proveedor.vista = { visible: true, webview: { postMessage: (m) => enviados.push(m) } };
+      await proveedor.manejar(aviso.boton.accion);
+      assert.ok(!hayAlgo(), 'queda algo después de quitarlo');
+      assert.ok(enviados.some((m) => m.tipo === 'aviso' && m.texto === 'Quitado. No lo vuelvo a poner.'));
+      assert.equal(sp.laRespuesta(), 'no');
+      proveedor.vista = null;
+
+      // Con Claude y Codex: la pregunta los nombra a los dos, y se ponen en los dos.
+      limpiar();
+      asistentesM.terminal.hayEnElPath = (n) => n === 'codex';
+      vscode.guion.eleccion = undefined;
+      vscode.registrado.mensajes.length = 0;
+      await proveedor.preguntarSinPedirPermiso();
+      assert.deepEqual(preguntas(), ['INFO ¿Quieres que Claude y Codex trabajen sin pedirte permiso para cada cosa? Puede cambiar o borrar ficheros y ejecutar programas sin preguntarte. Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos. Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.']);
+      fs.writeFileSync(codexConfig, 'model = "gpt-5.5"\n[tui]\nx = 1\n');
+      vscode.guion.eleccion = SI;
+      proveedor.avisoPendiente = null;
+      await proveedor.preguntarSinPedirPermiso();
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions');
+      assert.equal(fs.readFileSync(codexConfig, 'utf8'), 'model = "gpt-5.5"\napproval_policy = "never"\nsandbox_mode = "danger-full-access"\n[tui]\nx = 1\n');
+      assert.match(proveedor.avisoPendiente.texto, /^Hecho\. Claude y Codex trabajarán sin pedirte permiso/);
+      await proveedor.manejar({ tipo: 'quitarSinPedir' });
+      assert.equal(fs.readFileSync(codexConfig, 'utf8'), 'model = "gpt-5.5"\n[tui]\nx = 1\n');
+      assert.ok(!(sp.CLAVE_MODO in g) && !fs.existsSync(claudeAjustes));
+
+      // Solo Codex: la pregunta habla solo de Codex y no toca nada de Claude.
+      limpiar();
+      vscode.guion.extensionesInstaladas = [];
+      fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['codex'] }));
+      vscode.guion.eleccion = undefined;
+      vscode.registrado.mensajes.length = 0;
+      await proveedor.preguntarSinPedirPermiso();
+      assert.deepEqual(preguntas(), ['INFO ¿Quieres que Codex trabaje sin pedirte permiso para cada cosa? Puede cambiar o borrar ficheros y ejecutar programas sin preguntarte. Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.']);
+      vscode.guion.eleccion = SI;
+      await proveedor.preguntarSinPedirPermiso();
+      assert.equal(sp.codexAhora(), true);
+      assert.ok(!(sp.CLAVE_MODO in g) && !fs.existsSync(claudeAjustes), 'tocó lo de Claude sin usarlo');
+      limpiar();
+
+      // Con lo suyo puesto distinto: se dice y no se toca.
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'] }));
+      asistentesM.terminal.hayEnElPath = () => false;
+      g[sp.CLAVE_MODO] = 'plan';
+      fs.mkdirSync(CLAUDE_DE_MENTIRA, { recursive: true });
+      fs.writeFileSync(claudeAjustes, '{"permissions":{"defaultMode":"acceptEdits"}}');
+      vscode.guion.eleccion = SI;
+      proveedor.avisoPendiente = null;
+      await proveedor.preguntarSinPedirPermiso();
+      assert.equal(g[sp.CLAVE_MODO], 'plan', 'pisó el suyo');
+      assert.ok(!(sp.CLAVE_PERMITIR in g), 'puso medio');
+      assert.equal(fs.readFileSync(claudeAjustes, 'utf8'), '{"permissions":{"defaultMode":"acceptEdits"}}');
+      assert.match(proveedor.avisoPendiente.texto, /^Ya tenías puesto cómo quieres que pida permiso, y no lo he tocado\./);
+      limpiar();
+
+      // Sin confianza, o sin ninguno de los dos: no pregunta.
+      vscode.guion.confianza = false;
+      vscode.registrado.mensajes.length = 0;
+      await proveedor.preguntarSinPedirPermiso();
+      vscode.guion.confianza = true;
+      vscode.guion.extensionesInstaladas = [];
+      fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: [] }));
+      await proveedor.preguntarSinPedirPermiso();
+      assert.equal(preguntas().length, 0, 'pregunta sin confianza o sin asistente');
+    } finally {
+      limpiar();
+      Object.assign(g, antes.global);
+      vscode.guion.raiz = antes.raiz;
+      vscode.guion.confianza = antes.confianza;
+      vscode.guion.eleccion = antes.eleccion;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      asistentesM.terminal.hayEnElPath = antes.hay;
+      asistentesM.terminal.haySesion = antes.sesion;
+      proveedor.vista = antes.vista;
+      proveedor.donde = antes.donde;
+      proveedor.avisoPendiente = antes.aviso;
+      sp.saberDondeGuardar(null);
+    }
+    return 'una vez; «No» primero; sin contestar no apunta; con el no, nada escrito; con el sí, las claves de cada asistente que se usa; lo suyo, intacto';
+  });
+
+  await comprobar('192: se pregunta al montar de cero, y nunca se da por aceptada la pantalla de Claude ni se toca la carpeta', async () => {
+    const fuente = fs.readFileSync(path.join(RAIZ, 'src', 'extension.js'), 'utf8');
+    const montar = fuente.slice(fuente.indexOf('const reciénMontado'));
+    const alPoner = montar.indexOf('if (!reciénMontado)');
+    const alFinal = montar.indexOf('await this.preguntarSinPedirPermiso()');
+    assert.ok(alPoner > 0 && alFinal > alPoner, 'no se pregunta al montar de cero');
+    // Está en el camino de montar (tras el `return` de poner al día), no en el de abrir.
+    assert.ok(montar.slice(alPoner, alFinal).includes('return undefined;'), 'se pregunta también al poner al día');
+    assert.equal((fuente.match(/preguntarSinPedirPermiso\(\)/g) || []).length, 2, 'se pregunta en más sitios de los pensados (la definición y el montaje)');
+    const codigo = fs.readFileSync(path.join(RAIZ, 'src', 'sin-pedir-permiso.js'), 'utf8').replace(/\/\/.*$/gm, '');
+    assert.ok(!/skipDangerousModePermissionPrompt/.test(codigo), 'la barra da por aceptada la pantalla de Claude');
+    assert.ok(!/proyecto\.|raiz\(/.test(codigo), 'toca la carpeta');
+    return 'al montar de cero; no al poner al día; nunca da por aceptada la pantalla de Claude';
+  });
+
+  await comprobar('192: «Qué puede hacer sin preguntarte»: «Sin pedirme permiso» con su riesgo, el estado sale de los ajustes y «Que me pregunte…» la quita', async () => {
+    const sp = cargar('sin-pedir-permiso');
+    const ajustesM = cargar('ajustes');
+    const asistentesM = cargar('asistentes');
+    const dondeM = cargar('donde');
+    const g = vscode.registrado.ajustes.global;
+    const memoria = memoria192();
+    const claudeAjustes = path.join(CLAUDE_DE_MENTIRA, 'settings.json');
+    const codexConfig = path.join(CODEX_DE_MENTIRA, 'config.toml');
+    const r = fs.mkdtempSync(path.join(os.tmpdir(), 'sin-pedir-pantalla-'));
+    fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'] }));
+    const limpiar = () => {
+      for (const f of [claudeAjustes, codexConfig, path.join(CLAUDE_DE_MENTIRA, sp.MARCA), path.join(CODEX_DE_MENTIRA, sp.MARCA)]) fs.rmSync(f, { force: true });
+      for (const k of [sp.CLAVE_MODO, sp.CLAVE_PERMITIR]) delete g[k];
+      memoria.datos.clear();
+    };
+    const antes = {
+      raiz: vscode.guion.raiz, instaladas: vscode.guion.extensionesInstaladas, hay: asistentesM.terminal.hayEnElPath, sesion: asistentesM.terminal.haySesion,
+      global: { ...g }, puede: dondeM.puedeTenerAjustes,
+    };
+    sp.saberDondeGuardar(memoria);
+    try {
+      limpiar();
+      vscode.guion.raiz = r;
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      asistentesM.terminal.hayEnElPath = () => false;
+      asistentesM.terminal.haySesion = () => false;
+      const opcion = ajustesM.PERMISOS.find((p) => p.id === 'bypassPermissions');
+      assert.equal(opcion.nombre, 'Sin pedirme permiso');
+      assert.ok(opcion.frase.includes('Puede cambiar o borrar ficheros y ejecutar programas sin preguntarte.'), 'sin la línea de riesgo');
+      assert.ok(opcion.frase.includes('Los frenos de seguridad del arnés siguen puestos, pero sin pedirte permiso Claude también podría quitarlos.'), 'la línea de los frenos no es la verdad');
+      assert.ok(!opcion.frase.includes('Codex'), 'la opción de Claude habla de Codex');
+      assert.equal(ajustesM.comoEstamos().permiso, 'auto', 'no es el de fábrica');
+
+      // Con el clic: las claves de Claude, y el estado sale de los ajustes.
+      const r1 = await ajustesM.ponerPermiso('bypassPermissions');
+      assert.ok(r1.ok, r1.mensaje);
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions');
+      assert.equal(g[sp.CLAVE_PERMITIR], true);
+      assert.equal(ajustesM.comoEstamos().permiso, 'bypassPermissions');
+      assert.equal(JSON.parse(fs.readFileSync(claudeAjustes, 'utf8')).permissions.defaultMode, 'bypassPermissions');
+      const pintada = montarPanel().mandar({ tipo: 'comoTrabaja', ...ajustesM.comoEstamos(), aviso: null });
+      assert.match(pintada, /Sin pedirme permiso <span class="cuantos">ahora mismo<\/span>/);
+      assert.match(pintada, /Puede cambiar o borrar ficheros y ejecutar programas sin preguntarte\./);
+
+      // Si lo cambia a mano en los ajustes, la pantalla lo ve.
+      g[sp.CLAVE_MODO] = 'plan';
+      assert.equal(ajustesM.comoEstamos().permiso, 'plan');
+      g[sp.CLAVE_MODO] = 'bypassPermissions';
+
+      // «Que me pregunte…» (y cualquier otra) la quita de los tres sitios.
+      const r2 = await ajustesM.ponerPermiso('default');
+      assert.ok(r2.ok, r2.mensaje);
+      assert.equal(g[sp.CLAVE_MODO], 'default');
+      assert.ok(!(sp.CLAVE_PERMITIR in g), 'se queda el permiso de saltarse todo');
+      assert.ok(!fs.existsSync(claudeAjustes), 'sigue el modo en los ajustes de Claude');
+      assert.ok(!fs.existsSync(path.join(CLAUDE_DE_MENTIRA, sp.MARCA)));
+
+      // Lo que era suyo en el terminal de Claude no se lleva al elegir otra.
+      fs.mkdirSync(CLAUDE_DE_MENTIRA, { recursive: true });
+      fs.writeFileSync(claudeAjustes, '{"permissions":{"defaultMode":"bypassPermissions"}}');
+      assert.ok((await ajustesM.ponerPermiso('plan')).ok);
+      assert.equal(JSON.parse(fs.readFileSync(claudeAjustes, 'utf8')).permissions.defaultMode, 'bypassPermissions', 'se llevó lo suyo');
+      limpiar();
+
+      // Con un valor suyo en el editor, el clic en esta opción sí lo cambia (para eso está), y no se lleva lo suyo al quitarlo.
+      g[sp.CLAVE_MODO] = 'acceptEdits';
+      assert.ok((await ajustesM.ponerPermiso('bypassPermissions')).ok);
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions');
+      assert.ok((await ajustesM.quitarSinPedir()).ok);
+      assert.equal(g[sp.CLAVE_MODO], 'acceptEdits', 'no devuelve lo suyo');
+      limpiar();
+
+      // Solo Codex: sin la lista, una tarjeta con la misma línea de riesgo, y su botón.
+      vscode.guion.extensionesInstaladas = [];
+      fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['codex'] }));
+      asistentesM.terminal.hayEnElPath = (n) => n === 'codex';
+      dondeM.puedeTenerAjustes = () => false;
+      let estado = ajustesM.comoEstamos();
+      assert.equal(estado.hayPermisos, false);
+      assert.ok(estado.sinPedirConCodex && estado.sinPedirConCodex.puesto === false);
+      let pantalla = montarPanel().mandar({ tipo: 'comoTrabaja', ...estado, aviso: null });
+      assert.match(pantalla, /Sin pedirme permiso/);
+      assert.match(pantalla, /ejecutar programas sin preguntarte/);
+      assert.ok(pantalla.includes('Con Codex, además, puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.'), 'la tarjeta de Codex no dice el riesgo entero');
+      assert.match(pantalla, /Ponme así/);
+      assert.ok((await ajustesM.ponerSinPedirCodex()).ok);
+      assert.equal(sp.codexAhora(), true);
+      assert.ok(!(sp.CLAVE_MODO in g) && !fs.existsSync(claudeAjustes), 'tocó lo de Claude sin usarlo');
+      estado = ajustesM.comoEstamos();
+      assert.equal(estado.sinPedirConCodex.puesto, true);
+      pantalla = montarPanel().mandar({ tipo: 'comoTrabaja', ...estado, aviso: null });
+      assert.match(pantalla, /ahora mismo/);
+      assert.match(pantalla, /Que me pregunte/);
+      assert.ok((await ajustesM.quitarSinPedir(['codex'])).ok);
+      assert.equal(sp.codexAhora(), false);
+    } finally {
+      limpiar();
+      Object.assign(g, antes.global);
+      dondeM.puedeTenerAjustes = antes.puede;
+      vscode.guion.raiz = antes.raiz;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      asistentesM.terminal.hayEnElPath = antes.hay;
+      asistentesM.terminal.haySesion = antes.sesion;
+      sp.saberDondeGuardar(null);
+    }
+    return 'la opción con su riesgo; el estado sale de los ajustes; elegir otra la quita de los tres sitios sin llevarse lo suyo; con Codex solo, una tarjeta';
+  });
+
+
+  await comprobar('192 (revisión): un clic vale solo para lo que nombra: la pantalla de Claude no toca Codex, y la tarjeta de Codex no toca Claude', async () => {
+    const sp = cargar('sin-pedir-permiso');
+    const ajustesM = cargar('ajustes');
+    const asistentesM = cargar('asistentes');
+    const g = vscode.registrado.ajustes.global;
+    const memoria = memoria192();
+    const claudeAjustes = path.join(CLAUDE_DE_MENTIRA, 'settings.json');
+    const codexConfig = path.join(CODEX_DE_MENTIRA, 'config.toml');
+    const r = fs.mkdtempSync(path.join(os.tmpdir(), 'sin-pedir-clic-'));
+    fs.writeFileSync(path.join(r, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude', 'codex'] }));
+    const limpiar = () => {
+      for (const f of [claudeAjustes, codexConfig, path.join(CLAUDE_DE_MENTIRA, sp.MARCA), path.join(CODEX_DE_MENTIRA, sp.MARCA)]) fs.rmSync(f, { force: true });
+      for (const k of [sp.CLAVE_MODO, sp.CLAVE_PERMITIR]) delete g[k];
+      memoria.datos.clear();
+    };
+    const antes = { raiz: vscode.guion.raiz, instaladas: vscode.guion.extensionesInstaladas, hay: asistentesM.terminal.hayEnElPath, global: { ...g } };
+    const claudeTocado = () => fs.existsSync(claudeAjustes) || sp.CLAVE_MODO in g || sp.CLAVE_PERMITIR in g;
+    sp.saberDondeGuardar(memoria);
+    try {
+      limpiar();
+      vscode.guion.raiz = r;
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      asistentesM.terminal.hayEnElPath = (n) => n === 'codex';
+      assert.deepEqual(sp.queUsa(), { claude: true, codex: true }, 'la prueba necesita los dos');
+
+      // Con los dos instalados, el clic de «Sin pedirme permiso» (Claude) no toca Codex.
+      fs.writeFileSync(codexConfig, 'model = "x"\n');
+      assert.ok((await ajustesM.ponerPermiso('bypassPermissions')).ok);
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions');
+      assert.equal(fs.readFileSync(codexConfig, 'utf8'), 'model = "x"\n', 'el clic de Claude tocó el config.toml de Codex');
+      assert.ok(!fs.existsSync(path.join(CODEX_DE_MENTIRA, sp.MARCA)), 'el clic de Claude dejó constancia en Codex');
+      limpiar();
+
+      // La tarjeta de Codex no toca nada de Claude.
+      assert.ok((await ajustesM.ponerSinPedirCodex()).ok);
+      assert.equal(sp.codexAhora(), true);
+      assert.ok(!claudeTocado(), 'la tarjeta de Codex tocó lo de Claude');
+      limpiar();
+
+      // Puestos los dos (la pregunta los nombra a los dos): elegir otro modo quita lo de Claude y deja lo de Codex.
+      fs.writeFileSync(codexConfig, 'model = "x"\n');
+      await sp.ponerlo({ usa: { claude: true, codex: true } });
+      assert.ok(sp.codexAhora(), 'ponerlo no puso Codex');
+      assert.ok(sp.editorAhora(), `ponerlo no puso el editor: ${JSON.stringify(g)}`);
+      assert.ok((await ajustesM.ponerPermiso('default')).ok);
+      assert.equal(sp.claudeAhora(), false);
+      assert.equal(sp.codexAhora(), true, 'elegir otro modo en Claude quitó lo de Codex');
+      // Y «Que me pregunte» de la tarjeta quita lo de Codex y no toca lo de Claude.
+      await sp.ponerlo({ usa: { claude: true, codex: false }, forzar: true });
+      assert.ok((await ajustesM.quitarSinPedir(['codex'])).ok);
+      assert.equal(sp.codexAhora(), false);
+      assert.equal(g[sp.CLAVE_MODO], 'bypassPermissions', 'la tarjeta de Codex quitó lo de Claude');
+      assert.equal(JSON.parse(fs.readFileSync(claudeAjustes, 'utf8')).permissions.defaultMode, 'bypassPermissions');
+    } finally {
+      limpiar();
+      Object.assign(g, antes.global);
+      vscode.guion.raiz = antes.raiz;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      asistentesM.terminal.hayEnElPath = antes.hay;
+      sp.saberDondeGuardar(null);
+    }
+    return 'la pantalla de Claude, solo Claude; la tarjeta de Codex, solo Codex; quitar, también por asistente';
+  });
+
+  await comprobar('192 (revisión): la frase nombra solo donde quedó puesto y dice aparte el que no se pudo; el riesgo, entero', async () => {
+    const sp = cargar('sin-pedir-permiso');
+    const dos = { claude: true, codex: true };
+    const bien = { editor: { hecho: 'puesto' }, claude: { hecho: 'puesto' } };
+    assert.equal(sp.laFrase({ ...bien, codex: { hecho: 'raro' } }, dos),
+      'Hecho. Claude trabajará sin pedirte permiso. Se nota en la próxima conversación que abras. Con Codex no he podido ponerlo: lo he dejado como estaba.');
+    assert.equal(sp.laFrase({ ...bien, codex: { hecho: 'puesto' } }, dos),
+      'Hecho. Claude y Codex trabajarán sin pedirte permiso. Se nota en la próxima conversación que abras.');
+    for (const malo of ['raro', 'ilegible', 'enlace', 'fallo']) {
+      const frase = sp.laFrase({ ...bien, codex: { hecho: malo } }, dos);
+      assert.match(frase, /Con Codex no he podido/, malo);
+      assert.doesNotMatch(frase, /Claude y Codex/, malo);
+    }
+    // Lo único que se pidió falló: no hay frase de «Hecho».
+    assert.equal(sp.laFrase({ codex: { hecho: 'enlace' } }, { claude: false, codex: true }), null);
+    // El riesgo dicho entero: con Claude los frenos «también podría quitarlos»; con Codex, todo el ordenador y la red.
+    const claude = sp.laPregunta({ claude: true, codex: false }).texto;
+    const codex = sp.laPregunta({ claude: false, codex: true }).texto;
+    assert.ok(claude.includes('pero sin pedirte permiso Claude también podría quitarlos.') && !claude.includes('Codex'));
+    assert.ok(codex.includes('puede tocar cualquier fichero del ordenador y usar internet, y los frenos del arnés no le afectan.') && !codex.includes('Claude'));
+    assert.ok(!/siguen funcionando/.test(claude + codex), 'dice que los frenos «siguen funcionando»');
+    return 'sin nombrar a quien no quedó; el riesgo de Claude y el de Codex, enteros';
+  });
+
+  await comprobar('192 (revisión): la decisión dice que «Quitarlo» no quita lo que escribió Claude al aceptar la persona su pantalla, y apunta el refuerzo con deny', async () => {
+    const dec = fs.readFileSync(path.join(RAIZ, '..', 'docs', 'decisiones.md'), 'utf8');
+    const desde = dec.indexOf('## 192. ');
+    const hasta = dec.indexOf('\n## 193. ');
+    const d192 = dec.slice(desde, hasta > desde ? hasta : undefined);
+    assert.match(d192, /«Quitarlo» no quita `skipDangerousModePermissionPrompt`/, 'no dice que Quitarlo no la quita');
+    assert.match(d192, /reglas `permissions\.deny` de usuario/, 'no apunta el refuerzo con deny');
+    return 'escrito en la 192';
+  });
+
+  vscode.guion.rechazaAjuste = rechazaAntes192;
 
   // --------------------------------------------- el wizard, de verdad
   // Monta un arnés entero: tarda minutos y toca la red, así que no va en la
