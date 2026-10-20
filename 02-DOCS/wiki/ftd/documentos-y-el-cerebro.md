@@ -66,7 +66,8 @@ Decisión 151, en `docs/decisiones.md`.
 - [x] 5. Seis comprobaciones nuevas en `humo.js`, y la de la principal sencilla, al día.
 - [x] 6. Mutaciones a mano: 65, las 65 tumbadas.
 - [x] 7. Diccionario, decisión 151, F7 en el plan y el punto 11 en `lo-que-se-puede-se-hace-solo.md`.
-- [ ] 8. Verlo en VS Code de verdad: el lienzo solo se ha probado con uno de mentira.
+- [x] 8. Verlo en VS Code de verdad: el lienzo solo se ha probado con uno de mentira. · Visto el 20-10-2026: Jose
+      guardó una foto desde VS Code con la 0.58.0, y el PNG lleva el título, el día, los puntos, las líneas y los nombres.
 - [x] 9. La revisión adversaria (PR #39): 6 de seguridad y 6 de corrección, más 17 mutantes vivos, arreglados
   con su prueba. Mutaciones: 119, las 119 tumbadas.
 

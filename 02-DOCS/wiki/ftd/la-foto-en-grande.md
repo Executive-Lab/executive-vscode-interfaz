@@ -77,4 +77,5 @@ y «la versión grande es la foto guardada».
 
 ## Next
 
-Que Jose fusione el PR de `el-pie-y-la-foto` y publique la versión, para que llegue a los alumnos.
+Sale en la 0.59.0 (PR #105 y #106 fusionados). Falta ver guardada desde el editor la foto nueva, con sus colores y su
+leyenda: la que hay guardada desde VS Code es de la 0.58.0.
