@@ -37,6 +37,7 @@ timestamp: 2026-09-24T15:50:00Z
 | Verificación del cierre · todo-cuadra | [sdd/verifications/todo-cuadra-2026-09-28.md](sdd/verifications/todo-cuadra-2026-09-28.md) |
 | Spec · credenciales que no son variables | [sdd/specs/credenciales-que-no-son-variables.md](sdd/specs/credenciales-que-no-son-variables.md) |
 | Plan · credenciales que no son variables | [sdd/plans/credenciales-que-no-son-variables.md](sdd/plans/credenciales-que-no-son-variables.md) |
+| Verificación · la-foto-en-grande (vía rápida) | [sdd/verifications/la-foto-en-grande-2026-10-20.md](sdd/verifications/la-foto-en-grande-2026-10-20.md) |
 | Verificaciones | [sdd/verifications/](sdd/verifications/) |
 
 El registro largo de por qué está construido así vive fuera de la wiki, en `docs/decisiones.md`.

@@ -311,73 +311,105 @@ function recortar({ nodos, enlaces }, tope = TOPE) {
 
 // ── Dónde va cada punto ──────────────────────────────────────────────────
 //
-// Fruchterman y Reingold, en pequeño: todos los puntos se repelen, cada línea
-// tira de sus dos puntas como un muelle, y un poco de gravedad hacia el centro
-// para que lo que no enlaza con nada no se escape de la foto. Se empieza en
-// espiral (la de las pipas del girasol), que reparte sin azar, y cada vuelta se
-// mueve menos que la anterior hasta que se queda quieto. Al final se encaja en
-// el cuadro, con margen.
+// Como la vista de grafo de Obsidian, que usa d3-force, pero sin azar y sin
+// traerse nada (decisión 197). Hasta la 196 era Fruchterman y Reingold, y en
+// una wiki de verdad —423 conceptos, 300 en la foto— salía una mancha: cada
+// grupo suelto repelía a todos los demás desde lejos, salía disparado a un
+// borde, y para que cupiera todo el grupo grande se encogía hasta ser un
+// borrón de puntos unos encima de otros. Ahora:
 //
-// Con el tope de 300 son unas 45.000 parejas por vuelta: bastante menos de un
-// segundo en total.
+// - cada enlace es un muelle que quiere medir lo mismo, y tira menos cuanto más
+//   enlaza el punto, para que lo que cuelga de un índice no se amontone;
+// - todos se apartan de todos, pero solo de cerca: un grupo suelto ya no
+//   empuja al grande desde la otra punta;
+// - un poco de gravedad hacia el centro junta los grupos sueltos y lo que no
+//   enlaza con nada alrededor del grande, en vez de mandarlos a las esquinas;
+// - y ninguno se monta encima de otro: se miden con el tamaño con que se
+//   pintan, con un hueco entre medias.
+//
+// Se empieza en espiral (la de las pipas del girasol), que reparte sin azar, y
+// cada vuelta se mueve menos que la anterior hasta que se queda quieto. Con el
+// tope de 300 son unas 45.000 parejas por vuelta: unos 150 ms en total.
 function disponer({ nodos, enlaces }, { lado = LADO, margen = MARGEN, vueltas = 300 } = {}) {
   const n = nodos.length;
   if (!n) return [];
   if (n === 1) return [{ x: lado / 2, y: lado / 2 }];
 
-  const k = lado / Math.sqrt(n);
+  // Lo que mide cada punto en la foto, y lo que enlaza en ella.
+  const r = nodos.map((nodo) => radio(Number(nodo.grado) || 0, n));
+  const base = radio(0, n);
+  const cuenta = new Array(n).fill(0);
+  for (const [a, b] of enlaces) { cuenta[a] += 1; cuenta[b] += 1; }
+  const largo = base * 3.5;
+  const carga = base * base * 6;
+  const alcance2 = (largo * 6) ** 2;
+  const gravedad = 0.04;
+  const hueco = base * 0.6;
+
   const ORO = Math.PI * (3 - Math.sqrt(5));
   const x = new Float64Array(n);
   const y = new Float64Array(n);
+  const vx = new Float64Array(n);
+  const vy = new Float64Array(n);
   for (let i = 0; i < n; i += 1) {
-    const r = k * 0.6 * Math.sqrt(i + 0.5);
-    x[i] = r * Math.cos(i * ORO);
-    y[i] = r * Math.sin(i * ORO);
+    const d = largo * 0.7 * Math.sqrt(i + 0.5);
+    x[i] = d * Math.cos(i * ORO);
+    y[i] = d * Math.sin(i * ORO);
   }
 
-  const k2 = k * k;
-  const gravedad = 0.04;
-  const dx = new Float64Array(n);
-  const dy = new Float64Array(n);
-  let temperatura = lado / 8;
-  const enfriar = temperatura / (vueltas + 1);
-
+  let calor = 1;
+  const enfriar = 1 - 0.001 ** (1 / vueltas);
   for (let v = 0; v < vueltas; v += 1) {
-    dx.fill(0);
-    dy.fill(0);
+    calor -= calor * enfriar;
+    // Los muelles: cada enlace quiere medir `largo` entre los bordes de sus dos
+    // puntos, y lo que se mueve se reparte según lo que enlaza cada punta.
+    for (const [a, b] of enlaces) {
+      let dx = x[b] + vx[b] - x[a] - vx[a];
+      let dy = y[b] + vy[b] - y[a] - vy[a];
+      const d = Math.sqrt(dx * dx + dy * dy) || 1e-6;
+      const tira = ((d - largo - r[a] - r[b]) / d) * calor / Math.min(cuenta[a], cuenta[b]);
+      dx *= tira;
+      dy *= tira;
+      const deB = cuenta[a] / (cuenta[a] + cuenta[b]);
+      vx[b] -= dx * deB; vy[b] -= dy * deB;
+      vx[a] += dx * (1 - deB); vy[a] += dy * (1 - deB);
+    }
     for (let i = 0; i < n; i += 1) {
       for (let j = i + 1; j < n; j += 1) {
-        let ex = x[i] - x[j];
-        let ey = y[i] - y[j];
-        let d2 = ex * ex + ey * ey;
+        let dx = x[j] - x[i];
+        let dy = y[j] - y[i];
+        let d2 = dx * dx + dy * dy;
         // Dos en el mismo sitio: se separan en una dirección fija, no al azar.
-        if (d2 < 1e-6) { ex = 0.01 * (i - j); ey = 0.01; d2 = ex * ex + ey * ey; }
-        const f = k2 / d2;
-        dx[i] += ex * f; dy[i] += ey * f;
-        dx[j] -= ex * f; dy[j] -= ey * f;
+        if (d2 < 1e-6) { dx = 0.01 * (j - i); dy = 0.01; d2 = dx * dx + dy * dy; }
+        // Se apartan, solo de cerca.
+        if (d2 < alcance2) {
+          const f = (carga * calor) / Math.max(d2, base * base);
+          vx[i] -= dx * f; vy[i] -= dy * f;
+          vx[j] += dx * f; vy[j] += dy * f;
+        }
+        // Y no se pisan: se empujan hasta tocarse con un hueco, el pequeño más.
+        const junto = r[i] + r[j] + hueco;
+        if (d2 < junto * junto) {
+          const empuje = ((junto - Math.sqrt(d2)) / Math.sqrt(d2)) * 0.5;
+          const deI = (r[j] * r[j]) / (r[i] * r[i] + r[j] * r[j]);
+          vx[i] -= dx * empuje * deI; vy[i] -= dy * empuje * deI;
+          vx[j] += dx * empuje * (1 - deI); vy[j] += dy * empuje * (1 - deI);
+        }
       }
-    }
-    for (const [a, b] of enlaces) {
-      const ex = x[a] - x[b];
-      const ey = y[a] - y[b];
-      const f = Math.sqrt(ex * ex + ey * ey) / k;
-      dx[a] -= ex * f; dy[a] -= ey * f;
-      dx[b] += ex * f; dy[b] += ey * f;
     }
     for (let i = 0; i < n; i += 1) {
-      dx[i] -= x[i] * gravedad * k / 10;
-      dy[i] -= y[i] * gravedad * k / 10;
-      const largo = Math.sqrt(dx[i] * dx[i] + dy[i] * dy[i]);
-      if (largo > 0) {
-        const paso = Math.min(largo, temperatura);
-        x[i] += (dx[i] / largo) * paso;
-        y[i] += (dy[i] / largo) * paso;
-      }
+      vx[i] -= x[i] * gravedad * calor;
+      vy[i] -= y[i] * gravedad * calor;
+      vx[i] *= 0.6;
+      vy[i] *= 0.6;
+      x[i] += vx[i];
+      y[i] += vy[i];
     }
-    temperatura -= enfriar;
   }
 
-  // Encajarlo en el cuadro, sin deformarlo, y centrado.
+  // Encajarlo en el cuadro, sin deformarlo, y centrado. Con el hueco de entre
+  // medias no hace falta separar nada después: ni con 300 sueltos, ni con uno
+  // que lo enlaza todo, ni con 40 enlazados todos con todos sale uno pisado.
   let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
   for (let i = 0; i < n; i += 1) {
     minX = Math.min(minX, x[i]); maxX = Math.max(maxX, x[i]);
@@ -387,20 +419,54 @@ function disponer({ nodos, enlaces }, { lado = LADO, margen = MARGEN, vueltas = 
   const ancho = maxX - minX;
   const alto = maxY - minY;
   const escala = Math.max(ancho, alto) > 0 ? util / Math.max(ancho, alto) : 1;
-  const sobraX = (util - ancho * escala) / 2;
-  const sobraY = (util - alto * escala) / 2;
+  const sobraX = margen + (util - ancho * escala) / 2;
+  const sobraY = margen + (util - alto * escala) / 2;
   const redondo = (v) => Math.round(v * 10) / 10;
   return Array.from({ length: n }, (_, i) => ({
-    x: redondo(margen + sobraX + (x[i] - minX) * escala),
-    y: redondo(margen + sobraY + (y[i] - minY) * escala),
+    x: redondo(sobraX + (x[i] - minX) * escala),
+    y: redondo(sobraY + (y[i] - minY) * escala),
   }));
 }
 
 // El tamaño de cada punto: más grande cuanto más enlaza, y más pequeños todos
-// cuantos más hay, para que no se pisen.
+// cuantos más hay, para que quepan sin pisarse. Algo más pequeños que hasta la
+// 196: con 300, los de antes llenaban el cuadro, y ahora se puede acercar.
 function radio(grado, cuantos) {
-  const base = Math.max(5, Math.min(22, 150 / Math.sqrt(Math.max(1, cuantos))));
+  const base = Math.max(4, Math.min(18, 110 / Math.sqrt(Math.max(1, cuantos))));
   return Math.round(base * (1 + 0.3 * Math.sqrt(grado)) * 10) / 10;
+}
+
+// ── El color de cada punto ───────────────────────────────────────────────
+//
+// Como los grupos de Obsidian, pero sin tener que montarlos (decisión 197): el
+// grupo de un concepto es su primera carpeta, que es su tema, y en un monorepo
+// la de su proyecto (`proyectos/<proyecto>`, decisión 195), que si no lo
+// pintaría todo del mismo color. Lo que está suelto en la raíz de la wiki no es
+// de ningún grupo.
+function grupoDe(ruta) {
+  const partes = String(ruta).split('/');
+  if (partes.length < 2) return '';
+  if (partes[0] === 'proyectos' && partes.length > 2) return `${partes[0]}/${partes[1]}`;
+  return partes[0];
+}
+
+// Llevan color los tres grupos con más puntos, y todos los demás van en gris.
+// Tres y no ocho: con cuatro o más, dos de ellos se confunden con la vista de
+// siempre, o para un daltónico, porque en un grafo cualquier grupo puede caer
+// al lado de cualquier otro (comprobado con el validador de la paleta). Con un
+// grupo solo no hay nada que distinguir, y la foto sigue con el de la marca.
+const CON_COLOR = 3;
+function losGrupos(nodos, cuantos = CON_COLOR) {
+  const cuantosHay = new Map();
+  for (const n of nodos) {
+    const g = grupoDe(n.ruta);
+    if (g) cuantosHay.set(g, (cuantosHay.get(g) || 0) + 1);
+  }
+  if (cuantosHay.size < 2) return [];
+  return [...cuantosHay.entries()]
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+    .slice(0, cuantos)
+    .map(([id, puntos]) => ({ id, etiqueta: humanizar(id.split('/').pop()).slice(0, LARGO_DE_UN_NOMBRE), puntos }));
 }
 
 // Los que llevan su nombre escrito al lado: los que más enlazan, en orden.
@@ -440,14 +506,18 @@ function laFoto(wiki, rutas, { tope = TOPE, enTotal = MAXIMO_EN_TOTAL, ficheros 
   const entero = delCerebro(articulos);
   const { nodos, enlaces, total } = recortar(entero, tope);
   const sitio = disponer({ nodos, enlaces });
+  const grupos = losGrupos(nodos);
+  const cual = new Map(grupos.map((g, i) => [g.id, i]));
   return {
     lado: LADO,
     total,
     // Si se leyeron todos los enlaces: con demasiados, la foto lo dice.
     entera: entero.entera !== false,
-    nodos: nodos.map((n, i) => ({ ...n, ...sitio[i], r: radio(n.grado, nodos.length) })),
+    // `grupo`: el número del suyo en `grupos`, o -1 si va en gris. Sin grupos, -1 todos.
+    nodos: nodos.map((n, i) => ({ ...n, ...sitio[i], r: radio(n.grado, nodos.length), grupo: cual.has(grupoDe(n.ruta)) ? cual.get(grupoDe(n.ruta)) : -1 })),
     enlaces,
     rotulos: rotulos(nodos),
+    grupos,
   };
 }
 
@@ -571,6 +641,9 @@ module.exports = {
   disponer,
   radio,
   rotulos,
+  CON_COLOR,
+  grupoDe,
+  losGrupos,
   laFoto,
   nombreDeLaFoto,
   guardar,

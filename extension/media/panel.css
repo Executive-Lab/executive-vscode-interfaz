@@ -56,6 +56,17 @@
      el color del texto — en tema oscuro ese color es un gris y el logotipo
      salía gris apagado. */
   --logo: #0a0a0a;
+  /* Los grupos de la foto del cerebro (decisión 197): los tres con más puntos
+     y el gris del resto. Pasados por el validador de la paleta con todas las
+     parejas, porque en un grafo cualquier grupo cae al lado de cualquier otro:
+     con un cuarto color, dos se confundían con la vista de siempre o para un
+     daltónico. El primero es el rojo de Executive Lab; no es `--acento`, que la
+     marca de una empresa puede cambiar por uno que choque con los otros dos.
+     El oscuro tiene sus propios pasos, validados sobre el fondo del editor. */
+  --grupo-1: #ec4429;
+  --grupo-2: #2a78d6;
+  --grupo-3: #1baf7a;
+  --grupo-resto: #a29d95;
 
   /* Jose, viendo la lista de comandos: «separa un poco los botones y tal y
      hazlos un poco más finos». Eran 40 px de alto pegados de siete en siete, y
@@ -90,6 +101,9 @@ body.vscode-dark, body.vscode-high-contrast {
   --resaltado: rgba(255, 209, 102, .28);
   --bien: #7cc47f;
   --mal: #ef8a85;
+  --grupo-2: #3987e5;
+  --grupo-3: #199e70;
+  --grupo-resto: #77736d;
 }
 
 * { box-sizing: border-box; }
@@ -911,41 +925,120 @@ body.soltando .soltar-aqui { border-color: var(--acento); }
 
 /* La foto del cerebro (decisión 151): un punto por concepto y una línea por
    enlace. Todo con clases y colores con significado, nada en línea: la política
-   de contenido de la barra no deja estilos dentro del dibujo. */
+   de contenido de la barra no deja estilos dentro del dibujo. Los colores de
+   los grupos (decisión 197) están arriba, con los demás. */
 .foto {
   margin: 8px 0 6px;
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
+  overflow: hidden;
 }
-.foto svg { display: block; width: 100%; height: auto; }
+/* Se arrastra para moverse (decisión 197): ni se selecciona el texto ni el
+   gesto se lo queda el navegador. */
+.foto svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.foto svg.moviendo, .foto svg.moviendo .nodo { cursor: grabbing; }
 .foto line {
   stroke: var(--apagado);
-  stroke-opacity: 0.45;
+  stroke-opacity: 0.4;
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
 }
 .foto .nodo { cursor: pointer; outline: none; }
+/* Un borde transparente alrededor de cada punto: se pulsa sin tener que
+   acertar en uno de tres píxeles, que es lo que mide un punto de la foto
+   entera en una barra estrecha. */
+.foto .nodo circle {
+  fill: var(--acento);
+  stroke: transparent;
+  stroke-width: 10px;
+  vector-effect: non-scaling-stroke;
+}
+.foto .nodo circle.g0 { fill: var(--grupo-1); }
+.foto .nodo circle.g1 { fill: var(--grupo-2); }
+.foto .nodo circle.g2 { fill: var(--grupo-3); }
+.foto .nodo circle.gx { fill: var(--grupo-resto); }
+.foto .nodo:hover circle, .foto .nodo.foco circle {
+  stroke: var(--texto-fuerte);
+  stroke-width: 2.5px;
+}
 .foto .nodo:focus-visible circle {
-  fill: var(--acento-relleno);
   stroke: var(--texto-fuerte);
-  stroke-width: 3px;
-  vector-effect: non-scaling-stroke;
+  stroke-width: 3.5px;
 }
-.foto .nodo circle { fill: var(--acento); }
-.foto .nodo:hover circle {
-  fill: var(--acento-relleno);
-  stroke: var(--texto-fuerte);
-  stroke-width: 2px;
-  vector-effect: non-scaling-stroke;
-}
+/* Con uno encendido, él y los suyos; lo demás, apagado. */
+.foto svg.con-foco .nodo:not(.foco):not(.vecino) circle { opacity: .18; }
+.foto svg.con-foco line { stroke-opacity: .06; }
+.foto svg.con-foco line.encendida { stroke: var(--texto); stroke-opacity: .7; stroke-width: 1.5px; }
+/* El tamaño y el borde de los nombres los pone la foto según lo cerca que se
+   mira, para que se lean siempre igual: aquí no, que mandaría sobre ellos. */
 .foto text {
   fill: var(--texto);
   font-family: var(--sans);
-  font-size: 30px;
   paint-order: stroke;
   stroke: var(--superficie);
-  stroke-width: 8px;
   stroke-linejoin: round;
   pointer-events: none;
 }
+.foto text.fuerte { font-weight: 700; fill: var(--texto-fuerte); }
+
+/* Los colores y lo que es cada uno. */
+.foto-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 2px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.foto-leyenda li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.foto-leyenda .muestra { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.foto-leyenda .muestra.g0 { background: var(--grupo-1); }
+.foto-leyenda .muestra.g1 { background: var(--grupo-2); }
+.foto-leyenda .muestra.g2 { background: var(--grupo-3); }
+.foto-leyenda .muestra.gx { background: var(--grupo-resto); }
+.foto-leyenda .puntos { color: var(--apagado); }
+
+/* Acercar, alejar y verla entera: en una fila, más bajos que los botones de
+   siempre, porque se pulsan muchas veces seguidas y no son la tarea. */
+.foto-mandos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.foto-mandos button {
+  flex: 1 1 auto;
+  width: auto;
+  min-height: 30px;
+  margin: 0;
+  padding: 4px 10px;
+  gap: 6px;
+  justify-content: center;
+  font-size: 13px;
+}
+.foto-mandos button .texto { flex: none; }
+.foto-mandos button:hover { transform: none; }
+
+/* La foto en grande, en una pestaña del editor (decisión 197): la página
+   entera para el dibujo, sin que se baje. */
+body.en-grande {
+  height: 100vh;
+  padding: 16px 22px 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+body.en-grande #app { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+body.en-grande .titulo { margin-bottom: 4px; }
+body.en-grande .detalle { margin: 0 0 4px; }
+.foto-arriba { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; }
+body.en-grande .foto-mandos { margin: 0 0 4px; }
+body.en-grande .foto-mandos button { flex: none; }
+body.en-grande .foto { flex: 1; min-height: 0; margin: 10px 0 6px; }
+body.en-grande .foto svg { height: 100%; aspect-ratio: auto; }

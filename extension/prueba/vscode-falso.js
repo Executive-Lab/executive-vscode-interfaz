@@ -17,6 +17,8 @@ const registrado = {
   alCambiarCarpetas: [],
   // Quién escucha cuando el editor pasa a confiar en la carpeta (decisión 195).
   alConfiar: [],
+  // Las pestañas con una página que abre la barra: la foto en grande (decisión 197).
+  pestanas: [],
 };
 
 // Lo que las pruebas pueden cambiar antes de llamar.
@@ -55,11 +57,40 @@ module.exports = {
   StatusBarAlignment: { Left: 1, Right: 2 },
   ProgressLocation: { Notification: 15 },
   ThemeColor: class { constructor(id) { this.id = id; } },
+  ViewColumn: { Active: -1, Beside: -2, One: 1, Two: 2 },
 
   window: {
     createOutputChannel: () => ({
       appendLine: (l) => registrado.mensajes.push(l), clear() {}, show() {}, dispose() {},
     }),
+    // Una pestaña con una página dentro. Apunta lo que se le manda, y deja a la
+    // prueba hablar por la página (`recibir`) y cerrarla (`dispose`).
+    createWebviewPanel: (tipo, titulo, columna, opciones) => {
+      const oyentes = { mensaje: [], cerrar: [] };
+      const pestana = {
+        tipo,
+        title: titulo,
+        columna,
+        opciones,
+        visible: true,
+        reveladas: 0,
+        cerrada: false,
+        enviados: [],
+        webview: {
+          html: '',
+          cspSource: 'vscode-falso:',
+          asWebviewUri: (u) => u,
+          postMessage: async (m) => { pestana.enviados.push(m); return true; },
+          onDidReceiveMessage: (f) => { oyentes.mensaje.push(f); return { dispose() {} }; },
+        },
+        reveal() { pestana.reveladas += 1; },
+        onDidDispose: (f) => { oyentes.cerrar.push(f); return { dispose() {} }; },
+        recibir: (m) => Promise.all(oyentes.mensaje.map((f) => f(m))),
+        dispose() { pestana.cerrada = true; oyentes.cerrar.forEach((f) => f()); },
+      };
+      registrado.pestanas.push(pestana);
+      return pestana;
+    },
     registerWebviewViewProvider: (id, proveedor) => {
       registrado.vistas.push(id);
       registrado.proveedor = proveedor;
