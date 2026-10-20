@@ -32,7 +32,7 @@ la 182 (nunca): ahora sí, pero solo si la persona lo elige, con «No» por defe
 - [x] Textos en `docs/diccionario.md`
 - [x] Pruebas en `humo.js` y mutaciones
 - [x] Revisión de seguridad (H1 a H5): un clic vale solo para lo que nombra, los frenos dichos como son, el riesgo entero de Codex, la frase solo con lo que quedó puesto, y «Quitarlo» no quita `skipDangerousModePermissionPrompt`
-- [ ] PR revisada y fusionada por Jose
+- [x] PR revisada y fusionada por Jose · #99, y salió en la 0.58.0
 
 ## Evidence
 
