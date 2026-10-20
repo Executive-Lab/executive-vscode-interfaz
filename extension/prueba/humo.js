@@ -19161,19 +19161,21 @@ exec git "$@"
       assert.deepEqual(m.nodos.map((n) => n.grupo), [0, 0, 1, 1], 'un punto no es de su grupo');
       assert.equal((html.match(/<circle class="g0"/g) || []).length, 2, 'los de Clientes no van con su color');
       assert.equal((html.match(/<circle class="g1"/g) || []).length, 2, 'los de Facturación no van con su color');
-      assert.match(html, /<ul class="foto-leyenda">[\s\S]*>Clientes<[\s\S]*>2 conceptos<[\s\S]*>Facturacion<[\s\S]*<\/ul>/, 'sin leyenda');
+      assert.match(html, /<ul class="foto-leyenda">[\s\S]*>Clientes <span class="puntos">2 conceptos<[\s\S]*>Facturacion <[\s\S]*<\/ul>/, 'sin leyenda, o el nombre y cuántos en dos columnas');
       assert.doesNotMatch(html, /Lo demás/, 'sin nada fuera de los grupos, sale el gris');
       const mandos = (html.match(/<div class="foto-mandos">[\s\S]*?<\/div>/) || [''])[0];
-      for (const que of ['acercar', 'alejar', 'entera']) assert.match(mandos, new RegExp(`<button type="button" data-foto="${que}">`), `sin el mando ${que}`);
+      for (const que of ['acercar', 'alejar']) assert.match(mandos, new RegExp(`<button type="button" data-foto="${que}">`), `sin el mando ${que}`);
+      // «Verla entera» se quitó al verla en el editor: con la foto entera no hacía nada, y se confundía con «Verla en grande».
+      assert.doesNotMatch(html, /data-foto="entera"|Verla entera/, 'sale «Verla entera», que se quitó');
       assert.doesNotMatch(mandos, /data-accion/, 'moverse por la foto le pide algo a la extensión');
-      for (const sale of ['Acercar', 'Alejar', 'Verla entera', 'Verla en grande']) assert.match(html, new RegExp(`>${sale}<`), `no sale «${sale}»`);
+      for (const sale of ['Acercar', 'Alejar', 'Verla en grande']) assert.match(html, new RegExp(`>${sale}<`), `no sale «${sale}»`);
       assert.deepEqual(accionesDe(html).find((a) => a.tipo === 'verLaFotoEnGrande'), { tipo: 'verLaFotoEnGrande' }, 'no se puede ver en grande');
       assert.match(html, /<g class="rotulos" aria-hidden="true"/, 'los nombres se leen dos veces: en el punto y al lado');
       // Con más de tres grupos, el resto en gris y dicho; sin grupos, el de la marca y sin leyenda.
       const tres = [{ id: 'a', etiqueta: 'Ventas', puntos: 1 }, { id: 'b', etiqueta: 'Compras', puntos: 1 }, { id: 'c', etiqueta: '<b>Malo</b>', puntos: 1 }];
       const conResto = montarPanel().mandar({ ...m, grupos: tres, nodos: m.nodos.map((n, i) => ({ ...n, grupo: i < 3 ? i : -1 })) });
       assert.equal((conResto.match(/<circle class="gx"/g) || []).length, 1, 'lo de fuera de los grupos no va en gris');
-      assert.match(conResto, />Lo demás<\/span><span class="puntos">1 concepto</, 'el gris no dice qué es');
+      assert.match(conResto, />Lo demás <span class="puntos">1 concepto</, 'el gris no dice qué es');
       assert.doesNotMatch(conResto, /<b>Malo/, 'el nombre de un grupo se pinta tal cual');
       const sinGrupos = montarPanel().mandar({ ...m, grupos: [] });
       assert.doesNotMatch(sinGrupos, /<circle class=|foto-leyenda/, 'sin grupos, sale con colores o leyenda');
@@ -19363,7 +19365,8 @@ exec git "$@"
       assert.equal((html.match(/<g class="nodo"/g) || []).length, 4, 'no sale un punto por concepto');
       assert.match(html, /4 conceptos · 1 enlace/);
       assert.match(html, /Arrástrala para moverte, acércate con la rueda del ratón y pulsa un punto para leerlo en la barra\./);
-      for (const que of ['acercar', 'alejar', 'entera']) assert.match(html, new RegExp(`data-foto="${que}"`), `en grande, sin el mando ${que}`);
+      for (const que of ['acercar', 'alejar']) assert.match(html, new RegExp(`data-foto="${que}"`), `en grande, sin el mando ${que}`);
+      assert.doesNotMatch(html, /data-foto="entera"|Verla entera/, 'en grande, sale «Verla entera», que se quitó');
       assert.match(html, /<ul class="foto-leyenda">/, 'en grande, sin la leyenda');
       assert.doesNotMatch(html, /class="migas"|>Volver<|Guardar la foto|Verla en grande|Que los enlace/, 'en grande sale lo de la barra');
       assert.doesNotMatch(html, /\sstyle=|<style|<script|\son[a-z]+=|https?:|data:/i, 'el dibujo se salta la política de contenido');
@@ -19460,15 +19463,16 @@ exec git "$@"
       // Y acercar, hasta catorce veces, no más.
       for (let i = 0; i < 20; i += 1) f.mando('acercar');
       assert.ok(Math.abs(f.viewBox()[2] - 1000 / 14) < 0.05, `acercar no para: ${f.viewBox()[2]}`);
-      f.mando('entera');
+      f.disparar('caja', 'keydown', { key: '0' });
       // La rueda, en la barra, sigue bajando la pantalla; el pellizco (llega con Ctrl) acerca hacia el ratón.
       assert.equal(f.disparar('svg', 'wheel', { deltaY: -100 }).parado, false, 'en la barra, la rueda no deja bajar la pantalla');
       cerca(f.viewBox(), [0, 0, 1000, 1000], 'en la barra, la rueda acerca');
       assert.equal(f.disparar('svg', 'wheel', { deltaY: -50, ctrlKey: true, clientX: 0, clientY: 0 }).parado, true);
       const pellizco = f.viewBox();
       assert.ok(pellizco[0] === 0 && pellizco[1] === 0 && pellizco[2] < 700, `el pellizco no acerca hacia el ratón: ${pellizco.join(' ')}`);
-      f.mando('entera');
-      cerca(f.viewBox(), [0, 0, 1000, 1000], 'verla entera no la deja entera');
+      // Alejada del todo, entera y centrada, aunque se acercara hacia una esquina.
+      for (let i = 0; i < 10; i += 1) f.mando('alejar');
+      cerca(f.viewBox(), [0, 0, 1000, 1000], 'alejar del todo no la deja entera y centrada');
 
       // Arrastrar la mueve; un temblor al pulsar, no. Y lo arrastrado no abre el punto de debajo.
       f.mando('acercar');
@@ -19489,7 +19493,7 @@ exec git "$@"
 
       // Los nombres, del mismo tamaño en la pantalla de cerca y de lejos.
       const letraDeCerca = Number(f.rotulos.atributos['font-size']);
-      f.mando('entera');
+      f.disparar('caja', 'keydown', { key: '0' });
       const letraDeLejos = Number(f.rotulos.atributos['font-size']);
       assert.ok(Math.abs(letraDeLejos / letraDeCerca - 1.6 * 1.6) < 0.01, `la letra crece al acercarse: ${letraDeLejos} y ${letraDeCerca}`);
       assert.ok(Math.abs(letraDeLejos - (12 * 1000) / 300) < 0.05, 'la letra no es la de la barra');

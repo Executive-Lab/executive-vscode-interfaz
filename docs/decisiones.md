@@ -9756,7 +9756,10 @@ Con la wiki del monorepo, 300 puntos y ninguno encima de otro, en unos 150 ms. L
 
 - **arrastrar** la mueve; un temblor de menos de 5 puntos al pulsar no cuenta, y soltar lo arrastrado no abre el punto de
   debajo;
-- **Acercar**, **Alejar** y **Verla entera**, en una fila encima de la foto; con el teclado, `+`, `−` y `0`;
+- **Acercar**, **Alejar** y **Verla entera**, en una fila encima de la foto; con el teclado, `+`, `−` y `0`.
+  *Nota del 20-10: «Verla entera» se quitó al verla Jose en el editor («no funciona, solo funciona el de Verla en
+  grande. Quita el de verla entera y listo»). Con la foto entera no hacía nada y se confundía con «Verla en grande».
+  Alejar hasta el final ya la deja entera y centrada, y el `0` sigue;*
 - el **pellizco** del ratón táctil acerca hacia donde está el ratón. La rueda, en la barra, sigue bajando por la pantalla,
   porque la foto está en medio de ella y quedaría uno atrapado; en grande, la rueda acerca;
 - **al pasar por un punto**, o al llegar con el tabulador, se encienden él, los suyos y sus líneas, el resto se apaga, y
@@ -9830,3 +9833,29 @@ PowerShell, limpios. El asistente de montar (`--con-arnes`) no se ha pasado: no 
 
 **Visto**, fuera del editor: la barra a 300 puntos de ancho y la pestaña a 1.400, en claro y en oscuro, con la wiki del
 monorepo. **Falta verlo en VS Code**: la barra y la pestaña de verdad, el pellizco con un ratón táctil, y en Windows.
+
+## 198. El pie de la barra, sin letras en columna
+
+**Fecha:** 20 de octubre de 2026 · **Estado:** hecho · Visto por Jose en el editor, con la 0.58.0 y la 197 puestas
+
+Jose, con dos capturas del pie de la principal: *«Se ve mal esto, no es responsive»*. Con la barra estrecha, «Barra
+0.58.0» salía partido en dos líneas, y más estrecha, letra a letra, en columna, al lado de «Cambiar de carpeta».
+
+**Por qué.** El pie es una `.fila`, y la regla de la fila es la del botón con su (i): el primer botón ocupa lo que
+quede (`flex: 1`, `min-width: 0`) y su texto se puede partir por cualquier sitio (`overflow-wrap: anywhere`). Con
+«Cambiar de carpeta» al lado, a «Barra 0.58.0» le quedaba un hueco mínimo y se partía letra a letra. El `flex-wrap`
+del pie no servía: un botón que puede medir cero siempre cabe.
+
+**Cómo se arregló** (`panel.css`, `.fila.pie`): cada botón del pie mide lo que su texto, sin partirlo; si no caben los
+dos, el segundo baja a otra línea; y si uno solo no cabe, se corta con puntos suspensivos. Visto en Chrome con la hoja
+de estilo de verdad, a 120, 160, 200, 240 y 300 puntos de ancho: antes, a 200, letra a letra; ahora nunca.
+
+**Lo mismo en la foto del cerebro**, mirando la barra a 200 y 260 de ancho:
+
+- en la leyenda, un nombre largo («Executive vscode interfaz») abría dos columnas, el nombre y «20 conceptos». Ahora van
+  en un solo texto, que baja de línea como una frase, y el número no se parte;
+- con la foto entera salían cinco nombres, que en una barra de 200 tapaban el dibujo. Ahora, uno por cada 60 puntos de
+  ancho, de dos a cinco: cinco a 300, tres a 200. En grande siguen siendo veinte.
+
+**Lo que no se prueba**: el panel de mentira no mide nada, así que ninguna prueba de `humo.js` lo vería volver. Una que
+buscara la regla en el CSS miraría cómo se escribe y no cómo se ve; por eso no se ha escrito.

@@ -3227,7 +3227,9 @@ function dondeVaElNombre(n, lado, hueco = 34) {
 function leyendaDeLaFoto(grupos, nodos) {
   if (!grupos.length) return '';
   const resto = nodos.filter((n) => claseDelGrupo(n.grupo, true) === 'gx').length;
-  const fila = (clase, nombre, cuantos) => `<li><span class="muestra ${clase}" aria-hidden="true"></span><span>${texto(nombre)}</span><span class="puntos">${texto(plural(cuantos, '1 concepto', '{n} conceptos'))}</span></li>`;
+  // El nombre y cuántos, en un solo texto: en una barra estrecha baja de línea
+  // como cualquier frase, y no se abre en dos columnas (decisión 198).
+  const fila = (clase, nombre, cuantos) => `<li><span class="muestra ${clase}" aria-hidden="true"></span><span>${texto(nombre)} <span class="puntos">${texto(plural(cuantos, '1 concepto', '{n} conceptos'))}</span></span></li>`;
   return `<ul class="foto-leyenda">
     ${grupos.slice(0, 3).map((g, i) => fila(`g${i}`, corto(g.etiqueta, 40), numero(g.puntos))).join('')}
     ${resto ? fila('gx', 'Lo demás', resto) : ''}
@@ -3235,12 +3237,14 @@ function leyendaDeLaFoto(grupos, nodos) {
 }
 
 // Los mandos para moverse por la foto. No piden nada a la extensión: se
-// mueven aquí mismo, sin repintar, y por eso no llevan `data-accion`.
+// mueven aquí mismo, sin repintar, y por eso no llevan `data-accion`. «Verla
+// entera» se quitó al verla en el editor (decisión 197): con la foto entera no
+// hacía nada, parecía roto, y se confundía con «Verla en grande». Alejar hasta
+// el final ya la deja entera, y centrada.
 const mandosDeLaFoto = () => `
   <div class="foto-mandos">
     <button type="button" data-foto="acercar"><span class="icono" aria-hidden="true">＋</span><span class="texto">Acercar</span></button>
     <button type="button" data-foto="alejar"><span class="icono" aria-hidden="true">－</span><span class="texto">Alejar</span></button>
-    <button type="button" data-foto="entera"><span class="icono" aria-hidden="true">⤢</span><span class="texto">Verla entera</span></button>
   </div>`;
 
 // El dibujo: las líneas, los puntos y los nombres, en ese orden, para que un
@@ -3339,7 +3343,7 @@ function pantallaFotoEnGrande({ nodos = [], enlaces = [], total = 0, rotulos = [
 //
 // Arrastrar la mueve; los mandos, el pellizco del ratón táctil (llega como la
 // rueda con Ctrl) y, en grande, la rueda, la acercan y la alejan, hacia donde
-// esté el ratón. Todo cambiando el `viewBox` del dibujo: es un atributo y no un
+// esté el ratón. Alejada del todo, se ve entera y centrada; con el teclado, el 0. Todo cambiando el `viewBox` del dibujo: es un atributo y no un
 // estilo, así que la política de contenido no cambia, y no se repinta nada.
 //
 // Al pasar por un punto, o al llegar a él con el tabulador, se encienden él,
@@ -3420,7 +3424,9 @@ function engancharLaFoto() {
     } else {
       // Los que más enlazan, siempre que quepan; y los que se ven grandes de
       // cerca. Cuanto más cerca, más grandes se ven, y más nombres salen.
-      const siempre = enGrande ? NOMBRES_DE_LEJOS_EN_GRANDE : NOMBRES_DE_LEJOS;
+      // En la barra, uno por cada 60 puntos de ancho, de dos a cinco: en una
+      // de 200, cinco nombres tapaban el dibujo (decisión 198).
+      const siempre = enGrande ? NOMBRES_DE_LEJOS_EN_GRANDE : Math.max(2, Math.min(NOMBRES_DE_LEJOS, Math.floor(m.w / 60)));
       let puestosYa = 0;
       for (const i of orden) {
         if (puestosYa >= siempre && numero(f.nodos[i].r) / u < 9) continue;
@@ -3552,7 +3558,6 @@ function engancharLaFoto() {
       const que = b.dataset.foto;
       if (que === 'acercar') acercarHacia(PASO_DE_CERCA);
       else if (que === 'alejar') acercarHacia(1 / PASO_DE_CERCA);
-      else entera();
     });
   });
   // Con el teclado, sobre la foto: + y − acercan y alejan, 0 la deja entera.
