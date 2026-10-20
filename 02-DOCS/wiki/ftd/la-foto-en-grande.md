@@ -52,8 +52,8 @@ y «la versión grande es la foto guardada».
 - **La mancha, reproducida**: la wiki del monorepo (`02-DOCS/wiki`, 423 documentos) por `foto.laFoto` y pintada con
   `panel.js` en Chrome sin ventana sale igual que la captura de Jose: 300 puntos, 903 enlaces, tres grupos en los bordes
   y el grande hecho un borrón.
-- **Con la disposición nueva**: 300 puntos, ninguno encima de otro, en unos 150 ms. Los grupos: Executive certificados
-  (220), Formacion (22), Executive vscode interfaz (20) y Lo demás (38).
+- **Con la disposición nueva**: 300 puntos, ninguno encima de otro, en unos 150 ms. Los grupos: su proyecto más grande
+  (220 conceptos), una de sus áreas (22), la documentación de esta barra (20) y Lo demás (38).
 - **La prueba de la mancha** con el `foto.js` de `main`: «1812 parejas de puntos, una encima de otra». Con el nuevo: 0.
 - **Paleta** (validador de la skill `dataviz`, `--pairs all`): claro `#ec4429,#2a78d6,#1baf7a` sobre `#ffffff`, peor
   pareja ΔE 9.3 daltónico y 24.0 normal; oscuro `#ec4429,#3987e5,#199e70` sobre `#1f1f1f`, 9.9 y 20.9, todos ≥ 3:1. Con
