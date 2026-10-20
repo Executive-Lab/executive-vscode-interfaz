@@ -881,9 +881,14 @@ button.solo-icono .icono { font-size: 15px; }
 .archivo-que { flex: 1; min-width: 0; }
 .archivo-acciones { flex: none; display: flex; gap: 4px; }
 
-/* Abajo y en pequeño: qué barra es y cambiar de proyecto (decisión 138). */
+/* Abajo y en pequeño: qué barra es y cambiar de proyecto (decisión 138).
+   Cada botón con su ancho, y si no caben los dos, el segundo baja (decisión
+   198). Con la regla de la fila, la del botón con su (i), el primero se
+   encogía hasta lo que dejara el otro y en una barra estrecha salía «Barra
+   0.58.0» letra a letra, en columna. */
 .fila.pie { margin-top: 18px; gap: 4px; flex-wrap: wrap; opacity: .85; }
-.fila.pie button { width: auto; }
+.fila.pie button, .fila.pie > button:first-child { flex: 0 1 auto; width: auto; min-width: 0; max-width: 100%; }
+.fila.pie .texto { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Documentos, en una pantalla (F7, decisión 151). En la principal es una fila
    como las plegables, sin caja y con su marca a la izquierda, que en vez de
@@ -1001,13 +1006,13 @@ body.soltando .soltar-aqui { border-color: var(--acento); }
   list-style: none;
   font-size: 13px;
 }
-.foto-leyenda li { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.foto-leyenda .muestra { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.foto-leyenda li { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
+.foto-leyenda .muestra { flex: none; width: 10px; height: 10px; margin-top: 4px; border-radius: 50%; }
 .foto-leyenda .muestra.g0 { background: var(--grupo-1); }
 .foto-leyenda .muestra.g1 { background: var(--grupo-2); }
 .foto-leyenda .muestra.g2 { background: var(--grupo-3); }
 .foto-leyenda .muestra.gx { background: var(--grupo-resto); }
-.foto-leyenda .puntos { color: var(--apagado); }
+.foto-leyenda .puntos { color: var(--apagado); white-space: nowrap; }
 
 /* Acercar, alejar y verla entera: en una fila, más bajos que los botones de
    siempre, porque se pulsan muchas veces seguidas y no son la tarea. */

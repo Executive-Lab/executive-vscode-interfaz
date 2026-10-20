@@ -4,7 +4,7 @@ title: La foto del cerebro, en grande y para moverse por ella
 date: 2026-10-20
 author: Jose Sanchis
 branch: la-foto-en-grande
-status: en curso
+status: hecho
 ---
 
 # La foto del cerebro, en grande y para moverse por ella
@@ -44,8 +44,9 @@ y «la versión grande es la foto guardada».
 - [x] Mutaciones a mano: 26, las 26 tumbadas
 - [x] Batería: `humo.js`, `contrato.js`, `empresas-distintas.js`, diccionario, PowerShell
 - [x] La marca de una empresa pone los colores de los grupos · «la marca trae todos los colores que las reglas piden»
-- [ ] Vista en VS Code de verdad (solo se ha visto en Chrome, con `panel.css` y `panel.js` cargados a mano)
-- [ ] PR revisada y fusionada por Jose
+- [x] Vista en VS Code de verdad · Jose, con el .vsix de la rama: «Verla entera» no hacía nada, y el pie de la barra
+      salía en columna. Arreglado en la rama `el-pie-y-la-foto` (decisiones 197, nota, y 198)
+- [x] PR revisada y fusionada por Jose · #105, con «Squash and merge»
 
 ## Evidence
 
@@ -69,7 +70,11 @@ y «la versión grande es la foto guardada».
 - **Visto en Chrome** con la wiki del monorepo: la barra a 300 de ancho y la pestaña a 1.400, en claro y en oscuro;
   acercando, pasando por un punto y la foto guardada en PNG.
 
+- **En VS Code, Jose** (20-10): *«botón de "verla entera" no funciona, solo funciona el de "Verla en grande". Quita el
+  de verla entera y listo»*, y el pie de la barra en columna (*«no es responsive»*). Quitado el botón, con sus pruebas, y
+  el pie arreglado (decisión 198), visto en Chrome a cinco anchos. Mirando lo mismo a 200 de ancho salieron dos más: la
+  leyenda se abría en dos columnas y cinco nombres tapaban el dibujo. Arreglados (también en la 198).
+
 ## Next
 
-Jose: probarla en VS Code (la barra y «Verla en grande»), con el pellizco del ratón táctil, y revisar la PR. Los textos
-nuevos están en el diccionario, en la fila de la decisión 197: si alguno no le vale, se cambia ahí primero.
+Que Jose fusione el PR de `el-pie-y-la-foto` y publique la versión, para que llegue a los alumnos.
