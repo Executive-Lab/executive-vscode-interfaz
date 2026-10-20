@@ -18452,6 +18452,88 @@ exec git "$@"
     return `${sitio.length} puntos, a ${masCerca.toFixed(0)} como poco`;
   });
 
+  await comprobar('la foto del cerebro de una wiki de verdad no sale en una mancha: lo suelto cerca y nada encima de nada (decisión 197)', () => {
+    // Como la del monorepo de Jose: un grupo grande con dos índices que lo
+    // enlazan todo, y grupos pequeños sin nada que los una al grande. Hasta la
+    // 196 los pequeños salían disparados a los bordes, y para que cupiera todo,
+    // el grande se encogía hasta ser un borrón de puntos unos encima de otros.
+    const foto = cargar('foto');
+    const nodos = [];
+    const enlaces = [];
+    const nuevo = (ruta) => { nodos.push({ ruta, grado: 0 }); return nodos.length - 1; };
+    const unir = (a, b) => { enlaces.push(a < b ? [a, b] : [b, a]); nodos[a].grado += 1; nodos[b].grado += 1; };
+    const indices = [nuevo('grande/Índice.md'), nuevo('grande/Diario.md')];
+    const grande = [...indices];
+    for (let i = 0; i < 160; i += 1) {
+      const n = nuevo(`grande/Concepto ${String(i).padStart(3, '0')}.md`);
+      unir(indices[0], n);
+      if (i % 2 === 0) unir(indices[1], n);
+      if (i > 0 && i % 5 !== 0) unir(n - 1, n);
+      grande.push(n);
+    }
+    for (let g = 0; g < 6; g += 1) {
+      const primero = nodos.length;
+      for (let i = 0; i < 9; i += 1) nuevo(`suelto${g}/Nota ${i}.md`);
+      for (let i = 0; i < 9; i += 1) { unir(primero + i, primero + ((i + 1) % 9)); unir(primero + i, primero + ((i + 3) % 9)); }
+    }
+    for (let i = 0; i < 12; i += 1) nuevo(`Suelta ${i}.md`);
+    const conRadio = nodos.map((n) => ({ ...n, r: foto.radio(n.grado, nodos.length) }));
+    const antes = Date.now();
+    const sitio = foto.disponer({ nodos, enlaces });
+    const tarda = Date.now() - antes;
+    assert.ok(tarda < 15000, `tarda ${tarda} ms`);
+
+    // Nada encima de nada, con el tamaño con que se pinta.
+    let pisados = 0;
+    for (let a = 0; a < sitio.length; a += 1) {
+      for (let b = a + 1; b < sitio.length; b += 1) {
+        if (Math.hypot(sitio[a].x - sitio[b].x, sitio[a].y - sitio[b].y) < conRadio[a].r + conRadio[b].r) pisados += 1;
+      }
+    }
+    assert.equal(pisados, 0, `${pisados} parejas de puntos, una encima de otra`);
+    // El grande ocupa la foto, no un rincón.
+    const tramo = (lista, eje) => Math.max(...lista.map((i) => sitio[i][eje])) - Math.min(...lista.map((i) => sitio[i][eje]));
+    const ocupa = Math.max(tramo(grande, 'x'), tramo(grande, 'y'));
+    assert.ok(ocupa > (foto.LADO - 140) * 0.55, `el grupo grande se encoge en ${ocupa.toFixed(0)} de ${foto.LADO - 140}`);
+    // Y siempre la misma.
+    assert.deepEqual(foto.disponer({ nodos, enlaces }), sitio, 'dos veces lo mismo no da la misma foto');
+    return `${sitio.length} puntos y ${enlaces.length} líneas, ninguno encima de otro, en ${tarda} ms; el grande ocupa ${ocupa.toFixed(0)}`;
+  });
+
+  await comprobar('la foto del cerebro: los tres grupos con más puntos, cada uno con su color, y el resto en gris (decisión 197)', () => {
+    const foto = cargar('foto');
+    // El grupo es la primera carpeta; en un monorepo, la de cada proyecto; y lo de la raíz, de ninguno.
+    assert.equal(foto.grupoDe('ventas/Clientes.md'), 'ventas');
+    assert.equal(foto.grupoDe('ventas/2026/Octubre.md'), 'ventas');
+    assert.equal(foto.grupoDe('proyectos/certificados/sdd/Plan.md'), 'proyectos/certificados');
+    assert.equal(foto.grupoDe('proyectos/Lista.md'), 'proyectos', 'lo suelto en proyectos/ no es de un proyecto');
+    assert.equal(foto.grupoDe('Notas.md'), '');
+    const de = (lista) => lista.map((ruta) => ({ ruta }));
+    // Los que más puntos tienen; con los mismos, por el nombre. Tres como mucho.
+    const cinco = de(['b/1.md', 'b/2.md', 'b/3.md', 'a/1.md', 'a/2.md', 'c/1.md', 'c/2.md', 'd/1.md', 'e/1.md', 'Suelta.md']);
+    assert.deepEqual(foto.losGrupos(cinco).map((g) => [g.id, g.puntos]), [['b', 3], ['a', 2], ['c', 2]]);
+    assert.equal(foto.CON_COLOR, 3);
+    // Con uno solo, ninguno: no hay nada que distinguir. Lo de la raíz no cuenta como grupo.
+    assert.deepEqual(foto.losGrupos(de(['a/1.md', 'a/2.md', 'Suelta.md'])), []);
+    assert.deepEqual(foto.losGrupos([]), []);
+    assert.equal(foto.losGrupos(de(['proyectos/la-barra/x.md', 'otra/y.md'])).find((g) => g.id === 'proyectos/la-barra').etiqueta, 'La barra', 'el nombre del grupo no se lee');
+
+    // En la foto: cada punto, el número de su grupo, o -1.
+    const wiki = fs.mkdtempSync(path.join(os.tmpdir(), 'grupos-'));
+    const rutas = ['ventas/a.md', 'ventas/b.md', 'ventas/c.md', 'compras/a.md', 'compras/b.md', 'rrhh/a.md', 'legal/a.md', 'Suelta.md'];
+    for (const r of rutas) {
+      fs.mkdirSync(path.dirname(path.join(wiki, r)), { recursive: true });
+      fs.writeFileSync(path.join(wiki, r), `# ${r}\n`);
+    }
+    const f = foto.laFoto(wiki, rutas);
+    assert.deepEqual(f.grupos.map((g) => g.id), ['ventas', 'compras', 'legal']);
+    const grupoDeCada = Object.fromEntries(f.nodos.map((n) => [n.ruta, n.grupo]));
+    assert.deepEqual(grupoDeCada, { 'Suelta.md': -1, 'compras/a.md': 1, 'compras/b.md': 1, 'legal/a.md': 2, 'rrhh/a.md': -1, 'ventas/a.md': 0, 'ventas/b.md': 0, 'ventas/c.md': 0 });
+    const solo = foto.laFoto(wiki, ['ventas/a.md', 'ventas/b.md']);
+    assert.deepEqual([solo.grupos, solo.nodos.map((n) => n.grupo)], [[], [-1, -1]], 'con un grupo solo, salen colores');
+    return '3 con color y el resto en gris; en un monorepo, por proyecto';
+  });
+
   await comprobar('la foto del cerebro con cientos de conceptos: no se cuelga, enseña los que más enlazan y dice cuántos hay', () => {
     const foto = cargar('foto');
     const wiki = fs.mkdtempSync(path.join(os.tmpdir(), 'cerebro-grande-'));
@@ -19036,9 +19118,12 @@ exec git "$@"
     vscode.guion.raiz = otra;
     const ultimo = () => enviados[enviados.length - 1];
     // Un lienzo de mentira que apunta lo que se dibuja en él.
-    const dibujado = { puntos: 0, lineas: 0, textos: [], bajado: 0, circulos: [], lienzo: null };
+    const dibujado = { puntos: 0, lineas: 0, textos: [], bajado: 0, circulos: [], lienzo: null, rellenos: [], muestras: [] };
+    // De cada punto, con qué color se rellena; y de la leyenda, los cuadraditos (decisión 197).
     const pincel = {
-      fillRect() {}, beginPath() {}, moveTo() {}, stroke() {}, fill() {}, strokeText() {},
+      fillRect(x, y, ancho, alto) { if (ancho === alto && ancho < 40) dibujado.muestras.push(pincel.fillStyle); },
+      beginPath() {}, moveTo() {}, stroke() {}, strokeText() {},
+      fill() { dibujado.rellenos.push(pincel.fillStyle); },
       translate(x, y) { dibujado.bajado += y; },
       lineTo() { dibujado.lineas += 1; },
       arc(x, y, r) { dibujado.puntos += 1; dibujado.circulos.push({ arriba: y + dibujado.bajado - r, abajo: y + dibujado.bajado + r }); },
@@ -19062,13 +19147,37 @@ exec git "$@"
       assert.match(html, /<p class="titulo">La foto del cerebro<\/p>/, 'el título no es el del botón que la abre');
       assert.equal((html.match(/<g class="nodo"/g) || []).length, 4, 'no sale un punto por concepto');
       assert.equal((html.match(/<line /g) || []).length, 1, 'no sale una línea por enlace');
-      for (const sale of ['4 conceptos · 1 enlace', '<title>Ciclo de facturación</title>', 'Pulsa un punto para leerlo\\.', '>Ferretería Soler</text>', 'Guardar la foto']) {
+      for (const sale of ['4 conceptos · 1 enlace', '<title>Ciclo de facturación</title>', 'Arrástrala para moverte y pulsa un punto para leerlo\\.', '>Ferretería Soler</text>', 'Guardar la foto']) {
         assert.match(html, new RegExp(sale), `no sale «${sale}»`);
       }
       assert.doesNotMatch(html, /Que los enlace|Tiene \d+ conceptos/, 'con enlaces y sin tope, se pide o se dice de más');
       // La política de contenido de la barra: ni estilos en línea, ni guiones, ni nada de fuera.
       assert.doesNotMatch(html, /\sstyle=|<style|<script|\son[a-z]+=|https?:|data:/i, 'el dibujo se salta la política de contenido');
       assert.deepEqual(accionesDe(html).find((a) => a.tipo === 'verDocumentos'), { tipo: 'verDocumentos' }, 'no se vuelve a Documentos');
+
+      // Decisión 197. Cada grupo con su color y su leyenda, y los mandos para
+      // moverse, que se mueven ahí mismo y no le piden nada a la extensión.
+      assert.deepEqual(m.grupos.map((g) => [g.id, g.etiqueta, g.puntos]), [['clientes', 'Clientes', 2], ['facturacion', 'Facturacion', 2]], 'los grupos no son las carpetas');
+      assert.deepEqual(m.nodos.map((n) => n.grupo), [0, 0, 1, 1], 'un punto no es de su grupo');
+      assert.equal((html.match(/<circle class="g0"/g) || []).length, 2, 'los de Clientes no van con su color');
+      assert.equal((html.match(/<circle class="g1"/g) || []).length, 2, 'los de Facturación no van con su color');
+      assert.match(html, /<ul class="foto-leyenda">[\s\S]*>Clientes<[\s\S]*>2 conceptos<[\s\S]*>Facturacion<[\s\S]*<\/ul>/, 'sin leyenda');
+      assert.doesNotMatch(html, /Lo demás/, 'sin nada fuera de los grupos, sale el gris');
+      const mandos = (html.match(/<div class="foto-mandos">[\s\S]*?<\/div>/) || [''])[0];
+      for (const que of ['acercar', 'alejar', 'entera']) assert.match(mandos, new RegExp(`<button type="button" data-foto="${que}">`), `sin el mando ${que}`);
+      assert.doesNotMatch(mandos, /data-accion/, 'moverse por la foto le pide algo a la extensión');
+      for (const sale of ['Acercar', 'Alejar', 'Verla entera', 'Verla en grande']) assert.match(html, new RegExp(`>${sale}<`), `no sale «${sale}»`);
+      assert.deepEqual(accionesDe(html).find((a) => a.tipo === 'verLaFotoEnGrande'), { tipo: 'verLaFotoEnGrande' }, 'no se puede ver en grande');
+      assert.match(html, /<g class="rotulos" aria-hidden="true"/, 'los nombres se leen dos veces: en el punto y al lado');
+      // Con más de tres grupos, el resto en gris y dicho; sin grupos, el de la marca y sin leyenda.
+      const tres = [{ id: 'a', etiqueta: 'Ventas', puntos: 1 }, { id: 'b', etiqueta: 'Compras', puntos: 1 }, { id: 'c', etiqueta: '<b>Malo</b>', puntos: 1 }];
+      const conResto = montarPanel().mandar({ ...m, grupos: tres, nodos: m.nodos.map((n, i) => ({ ...n, grupo: i < 3 ? i : -1 })) });
+      assert.equal((conResto.match(/<circle class="gx"/g) || []).length, 1, 'lo de fuera de los grupos no va en gris');
+      assert.match(conResto, />Lo demás<\/span><span class="puntos">1 concepto</, 'el gris no dice qué es');
+      assert.doesNotMatch(conResto, /<b>Malo/, 'el nombre de un grupo se pinta tal cual');
+      const sinGrupos = montarPanel().mandar({ ...m, grupos: [] });
+      assert.doesNotMatch(sinGrupos, /<circle class=|foto-leyenda/, 'sin grupos, sale con colores o leyenda');
+      assert.doesNotMatch(montarPanel().mandar({ ...m, grupos: undefined }), /<circle class=|foto-leyenda/, 'una foto de antes, sin grupos, no se pinta igual');
 
       // Con el teclado: cada punto se alcanza con el tabulador y se abre con Intro o con espacio.
       assert.equal((html.match(/<g class="nodo" tabindex="0" role="button" aria-label="[^"]+"/g) || []).length, 4, 'los puntos no se alcanzan con el teclado');
@@ -19115,6 +19224,12 @@ exec git "$@"
       assert.ok(dibujado.textos.includes('Conocimiento de tu trabajo'), `la foto no dice de quién es: ${dibujado.textos.join(' | ')}`);
       assert.ok(dibujado.textos.some((t) => /\d{4} · 4 conceptos · 1 enlace$/.test(t)), 'la foto no dice el día ni cuántos hay');
       assert.ok(dibujado.textos.includes('Ciclo de facturación'), 'la foto va sin nombres');
+      // Con el color de cada grupo, y la leyenda arriba (decisión 197).
+      const suColor = Object.fromEntries(m.nodos.map((n, i) => [n.ruta, dibujado.rellenos[i]]));
+      assert.equal(suColor['clientes/ferreteria-soler.md'], suColor['clientes/talleres-ruiz.md'], 'dos del mismo grupo, de dos colores');
+      assert.notEqual(suColor['clientes/ferreteria-soler.md'], suColor['facturacion/ciclo.md'], 'dos grupos, del mismo color');
+      assert.deepEqual(dibujado.muestras, [suColor['clientes/ferreteria-soler.md'], suColor['facturacion/ciclo.md']], 'la leyenda no lleva el color de cada grupo');
+      for (const g of ['Clientes', 'Facturacion']) assert.ok(dibujado.textos.includes(g), `la leyenda de la foto no dice «${g}»`);
       // Los puntos, debajo de lo que dice arriba y dentro de la foto.
       assert.ok(dibujado.circulos.every((c) => c.arriba >= 130), 'un punto pisa lo que dice arriba de la foto');
       assert.ok(dibujado.circulos.every((c) => c.abajo <= dibujado.lienzo.height), 'un punto se sale por abajo de la foto');
@@ -19205,6 +19320,223 @@ exec git "$@"
     } finally {
       proveedor.enviar = antes.enviar;
       vscode.window.showSaveDialog = antes.guardarDialogo;
+      vscode.guion.raiz = empresa;
+      proveedor.donde = { tipo: 'principal' };
+    }
+  });
+
+  await comprobar('la foto en grande: una pestaña sola, que pinta la foto al cargar y abre cada concepto en la barra (decisión 197)', async () => {
+    const proveedor = vscode.registrado.proveedor;
+    const { montarPanelConClics } = require('./panel-con-clics');
+    const otra = montar();
+    const enviados = [];
+    const antes = { enviar: proveedor.enviar, vista: proveedor.vista, repintarGrande: proveedor.repintarLaFotoEnGrande };
+    proveedor.enviar = (m) => enviados.push(m);
+    vscode.guion.raiz = otra;
+    const ultimo = () => enviados[enviados.length - 1];
+    vscode.registrado.pestanas.length = 0;
+    try {
+      await proveedor.manejar({ tipo: 'verLaFotoEnGrande' });
+      assert.equal(vscode.registrado.pestanas.length, 1, 'no abre la pestaña');
+      const [pestana] = vscode.registrado.pestanas;
+      assert.deepEqual([pestana.title, pestana.columna, pestana.opciones.enableScripts], ['La foto del cerebro', vscode.ViewColumn.Active, true]);
+      assert.equal(pestana.opciones.localResourceRoots.length, 1, 'la pestaña lee algo más que lo de la barra');
+      assert.match(pestana.webview.html, /<body class="en-grande">/);
+      assert.match(pestana.webview.html, /Content-Security-Policy[\s\S]*script-src 'nonce-/, 'la pestaña va sin la política de contenido');
+      assert.doesNotMatch(pestana.webview.html, /class="marca/, 'en grande, con el logotipo de arriba');
+      assert.equal(enviados.length, 0, 'abrirla en grande repinta la barra');
+
+      // Al cargar, pide la foto: entera y con sus grupos.
+      await pestana.recibir({ tipo: 'listo' });
+      const pintada = pestana.enviados[pestana.enviados.length - 1];
+      assert.equal(pintada.tipo, 'fotoEnGrande');
+      assert.deepEqual(pintada.nodos.map((n) => n.ruta), ['clientes/ferreteria-soler.md', 'clientes/talleres-ruiz.md', 'facturacion/ciclo.md', 'facturacion/morosos.md']);
+      assert.deepEqual([pintada.enlaces, pintada.grupos.map((g) => g.id), pintada.lado], [[[0, 2]], ['clientes', 'facturacion'], 1000]);
+      // Pulsar otra vez la trae delante, y no abre otra.
+      await proveedor.manejar({ tipo: 'verLaFotoEnGrande' });
+      assert.deepEqual([vscode.registrado.pestanas.length, pestana.reveladas], [1, 1], 'abre otra pestaña');
+
+      // La página: la foto, en la página entera, sin lo de la barra.
+      const p = montarPanelConClics();
+      const html = p.mandar(pintada);
+      assert.match(html, /<p class="titulo">La foto del cerebro<\/p>/);
+      assert.equal((html.match(/<g class="nodo"/g) || []).length, 4, 'no sale un punto por concepto');
+      assert.match(html, /4 conceptos · 1 enlace/);
+      assert.match(html, /Arrástrala para moverte, acércate con la rueda del ratón y pulsa un punto para leerlo en la barra\./);
+      for (const que of ['acercar', 'alejar', 'entera']) assert.match(html, new RegExp(`data-foto="${que}"`), `en grande, sin el mando ${que}`);
+      assert.match(html, /<ul class="foto-leyenda">/, 'en grande, sin la leyenda');
+      assert.doesNotMatch(html, /class="migas"|>Volver<|Guardar la foto|Verla en grande|Que los enlace/, 'en grande sale lo de la barra');
+      assert.doesNotMatch(html, /\sstyle=|<style|<script|\son[a-z]+=|https?:|data:/i, 'el dibujo se salta la política de contenido');
+      assert.match(p.mandar({ ...pintada, total: 412 }), /Tiene 412 conceptos: para que se vea, la foto enseña los 4 con más enlaces\./);
+      assert.match(p.mandar({ ...pintada, nodos: [], enlaces: [] }), /Todavía no hay conceptos que fotografiar\./, 'sin conceptos, en grande, en blanco');
+      p.mandar(pintada);
+      p.pulsar('leerArticulo', (a) => a.ruta === 'facturacion/ciclo.md');
+      // Viene de la página, que es otro mundo: se compara lo que dice, no el objeto.
+      const pedido = JSON.parse(JSON.stringify(p.enviados[p.enviados.length - 1]));
+      assert.deepEqual(pedido, { tipo: 'leerArticulo', ruta: 'facturacion/ciclo.md', desde: 'foto' });
+
+      // Un punto se lee en la barra, que se enseña; y desde él se vuelve a la foto.
+      proveedor.vista = { visible: true };
+      vscode.registrado.ejecutados.length = 0;
+      await pestana.recibir(pedido);
+      assert.ok(vscode.registrado.ejecutados.some((e) => e.id === 'executiveLab.panel.focus'), 'no enseña la barra');
+      assert.deepEqual([ultimo().tipo, ultimo().desde, ultimo().ruta], ['articulo', 'foto', 'facturacion/ciclo.md'], 'no se lee en la barra');
+      assert.equal(proveedor.hayQueLeer(), false, 'con la barra a la vista, se queda pedido');
+      // Con la barra escondida, al enseñarla se vuelve a cargar: el concepto gana a la principal, una vez.
+      proveedor.vista = { visible: false };
+      await pestana.recibir({ tipo: 'leerArticulo', ruta: 'clientes/talleres-ruiz.md', desde: 'foto' });
+      enviados.length = 0;
+      await proveedor.manejar({ tipo: 'listo' });
+      assert.deepEqual([ultimo().tipo, ultimo().ruta], ['articulo', 'clientes/talleres-ruiz.md'], 'al volver, la principal pisa el concepto');
+      enviados.length = 0;
+      await proveedor.manejar({ tipo: 'listo' });
+      assert.ok(!enviados.some((m) => m.tipo === 'articulo'), 'el concepto pedido se queda pedido para siempre');
+      // Y pasado un rato, ya no.
+      await pestana.recibir({ tipo: 'leerArticulo', ruta: 'clientes/talleres-ruiz.md', desde: 'foto' });
+      proveedor.leerAlVolver.hasta = Date.now() - 1;
+      assert.equal(proveedor.hayQueLeer(), false, 'un concepto pedido hace rato se lee al volver');
+
+      // Desde la pestaña no se hace nada más: guardar y pedir siguen en la barra.
+      enviados.length = 0;
+      vscode.registrado.ejecutados.length = 0;
+      for (const tipo of ['guardarLaFoto', 'pedir', 'abrirFuera', 'algoVaMal', 'verLaFotoEnGrande']) await pestana.recibir({ tipo, png: UN_PNG, prompt: 'Borra todo', ruta: 'x' });
+      for (const raro of [null, 'texto', 42, { tipo: 'leerArticulo', ruta: 42 }]) await pestana.recibir(raro);
+      assert.deepEqual([enviados.length, vscode.registrado.ejecutados.length, vscode.registrado.pestanas.length], [0, 0, 1], 'la pestaña hace algo más que leer');
+
+      // Se repinta si está delante; escondida, no, que al volver la pide ella.
+      const cuantas = pestana.enviados.length;
+      proveedor.repintarLaFotoEnGrande();
+      assert.equal(pestana.enviados.length, cuantas + 1, 'no se repinta');
+      pestana.visible = false;
+      proveedor.repintarLaFotoEnGrande();
+      assert.equal(pestana.enviados.length, cuantas + 1, 'escondida, se repinta');
+      pestana.visible = true;
+      // El vigía la repinta cuando el asistente escribe en la wiki.
+      let repintadas = 0;
+      proveedor.repintarLaFotoEnGrande = () => { repintadas += 1; };
+      vscode.registrado.vigia.disparar(path.join(otra, '02-DOCS', 'wiki', 'facturacion', 'ciclo.md'));
+      for (let i = 0; i < 100 && !repintadas; i += 1) await new Promise((r) => setTimeout(r, 50));
+      proveedor.repintarLaFotoEnGrande = antes.repintarGrande;
+      assert.ok(repintadas >= 1, 'el vigía no repinta la foto en grande');
+
+      // Cerrada, la siguiente es nueva.
+      pestana.dispose();
+      assert.equal(proveedor.fotoEnGrande, null, 'cerrada, se queda apuntada');
+      await proveedor.manejar({ tipo: 'verLaFotoEnGrande' });
+      assert.equal(vscode.registrado.pestanas.length, 2, 'cerrada, no se vuelve a abrir');
+      return 'una pestaña, con la foto y sin lo de la barra; cada punto se lee en la barra, también escondida';
+    } finally {
+      proveedor.enviar = antes.enviar;
+      proveedor.vista = antes.vista;
+      proveedor.repintarLaFotoEnGrande = antes.repintarGrande;
+      proveedor.leerAlVolver = null;
+      if (proveedor.fotoEnGrande) proveedor.fotoEnGrande.dispose();
+      vscode.guion.raiz = empresa;
+      proveedor.donde = { tipo: 'principal' };
+    }
+  });
+
+  await comprobar('moverse por la foto: acercar, alejar, arrastrar, pasar por un punto, y sin perder dónde se miraba (decisión 197)', async () => {
+    const proveedor = vscode.registrado.proveedor;
+    const { montarPanelConClics } = require('./panel-con-clics');
+    const enviados = [];
+    const antes = { enviar: proveedor.enviar };
+    proveedor.enviar = (m) => enviados.push(m);
+    vscode.guion.raiz = montar();
+    try {
+      await proveedor.manejar({ tipo: 'verLaFoto', desde: 'documentos' });
+      const m = enviados[enviados.length - 1];
+      const p = montarPanelConClics(undefined, { dibujo: { ancho: 300, alto: 300 } });
+      p.mandar(m);
+      let f = p.foto();
+      const cerca = (caja, esperada, que) => assert.ok(caja.every((v, i) => Math.abs(v - esperada[i]) < 0.05), `${que}: ${caja.join(' ')} y no ${esperada.join(' ')}`);
+      cerca(f.viewBox(), [0, 0, 1000, 1000], 'al llegar no se ve entera');
+      // Los mandos: acercar hacia el centro; alejar, hasta verla entera y no más.
+      f.mando('acercar');
+      cerca(f.viewBox(), [187.5, 187.5, 625, 625], 'acercar no acerca hacia el centro');
+      f.mando('alejar');
+      f.mando('alejar');
+      cerca(f.viewBox(), [0, 0, 1000, 1000], 'alejar pasa de entera');
+      // Y acercar, hasta catorce veces, no más.
+      for (let i = 0; i < 20; i += 1) f.mando('acercar');
+      assert.ok(Math.abs(f.viewBox()[2] - 1000 / 14) < 0.05, `acercar no para: ${f.viewBox()[2]}`);
+      f.mando('entera');
+      // La rueda, en la barra, sigue bajando la pantalla; el pellizco (llega con Ctrl) acerca hacia el ratón.
+      assert.equal(f.disparar('svg', 'wheel', { deltaY: -100 }).parado, false, 'en la barra, la rueda no deja bajar la pantalla');
+      cerca(f.viewBox(), [0, 0, 1000, 1000], 'en la barra, la rueda acerca');
+      assert.equal(f.disparar('svg', 'wheel', { deltaY: -50, ctrlKey: true, clientX: 0, clientY: 0 }).parado, true);
+      const pellizco = f.viewBox();
+      assert.ok(pellizco[0] === 0 && pellizco[1] === 0 && pellizco[2] < 700, `el pellizco no acerca hacia el ratón: ${pellizco.join(' ')}`);
+      f.mando('entera');
+      cerca(f.viewBox(), [0, 0, 1000, 1000], 'verla entera no la deja entera');
+
+      // Arrastrar la mueve; un temblor al pulsar, no. Y lo arrastrado no abre el punto de debajo.
+      f.mando('acercar');
+      f.mando('acercar');
+      const antesDeArrastrar = f.viewBox();
+      f.disparar('svg', 'pointerdown', { clientX: 100, clientY: 100 });
+      f.disparar('svg', 'pointermove', { clientX: 102, clientY: 101 });
+      cerca(f.viewBox(), antesDeArrastrar, 'un temblor la mueve');
+      f.disparar('svg', 'pointermove', { clientX: 160, clientY: 100 });
+      const arrastrada = f.viewBox();
+      assert.ok(arrastrada[0] < antesDeArrastrar[0] - 50 && Math.abs(arrastrada[1] - antesDeArrastrar[1]) < 0.05, `arrastrar a la derecha no la mueve con el ratón: ${arrastrada.join(' ')}`);
+      f.disparar('svg', 'pointerup');
+      const yaEnviados = p.enviados.length;
+      assert.equal(p.pulsarEnLaFoto('facturacion/ciclo.md'), false, 'al soltar lo arrastrado se abre el punto de debajo');
+      assert.equal(p.enviados.length, yaEnviados);
+      assert.equal(p.pulsarEnLaFoto('facturacion/ciclo.md'), true, 'después de arrastrar, ya no se pulsa ningún punto');
+      assert.equal(p.enviados[p.enviados.length - 1].tipo, 'leerArticulo');
+
+      // Los nombres, del mismo tamaño en la pantalla de cerca y de lejos.
+      const letraDeCerca = Number(f.rotulos.atributos['font-size']);
+      f.mando('entera');
+      const letraDeLejos = Number(f.rotulos.atributos['font-size']);
+      assert.ok(Math.abs(letraDeLejos / letraDeCerca - 1.6 * 1.6) < 0.01, `la letra crece al acercarse: ${letraDeLejos} y ${letraDeCerca}`);
+      assert.ok(Math.abs(letraDeLejos - (12 * 1000) / 300) < 0.05, 'la letra no es la de la barra');
+
+      // Pasar por un punto: él, los suyos y su línea encendidos; y solo sus nombres.
+      const ciclo = m.nodos.findIndex((n) => n.ruta === 'facturacion/ciclo.md');
+      const ferreteria = m.nodos.findIndex((n) => n.ruta === 'clientes/ferreteria-soler.md');
+      f.disparar('svg', 'pointerover', { target: f.puntos[ciclo] });
+      assert.ok(f.svg.classList.contains('con-foco') && f.puntos[ciclo].classList.contains('foco'), 'no se enciende');
+      assert.ok(f.puntos[ferreteria].classList.contains('vecino') && f.lineas[0].classList.contains('encendida'), 'no se encienden los suyos');
+      assert.ok(m.nodos.every((n, i) => i === ciclo || i === ferreteria || !f.puntos[i].classList.contains('vecino')), 'se enciende uno que no es de los suyos');
+      assert.match(f.rotulos.innerHTML, /^<text [^>]*class="fuerte">Ciclo de facturación<\/text><text [^>]*>Ferretería Soler<\/text>$/, `no salen solo sus nombres: ${f.rotulos.innerHTML}`);
+      f.disparar('svg', 'pointerout', { target: f.puntos[ciclo], relatedTarget: null });
+      assert.ok(!f.svg.classList.contains('con-foco') && !f.lineas[0].classList.contains('encendida'), 'al salir, se queda encendido');
+
+      // Con el tabulador, a uno que no se ve: la foto va hasta él.
+      for (let i = 0; i < 4; i += 1) f.mando('acercar');
+      const lejano = m.nodos.map((n, i) => i).sort((a, b) => Math.hypot(m.nodos[b].x - 500, m.nodos[b].y - 500) - Math.hypot(m.nodos[a].x - 500, m.nodos[a].y - 500))[0];
+      f.disparar('caja', 'focusin', { target: f.puntos[lejano] });
+      const hastaEl = f.viewBox();
+      cerca([hastaEl[0] + hastaEl[2] / 2, hastaEl[1] + hastaEl[3] / 2], [m.nodos[lejano].x, m.nodos[lejano].y], 'con el tabulador, el punto se queda fuera');
+      assert.ok(f.puntos[lejano].classList.contains('foco'), 'con el tabulador no se enciende');
+      f.disparar('caja', 'focusout');
+      // El teclado: + acerca, 0 la deja entera, y lo demás no se toca.
+      assert.equal(f.disparar('caja', 'keydown', { key: '0' }).parado, true);
+      cerca(f.viewBox(), [0, 0, 1000, 1000], '0 no la deja entera');
+      f.disparar('caja', 'keydown', { key: '+' });
+      cerca(f.viewBox(), [187.5, 187.5, 625, 625], '+ no acerca');
+      assert.equal(f.disparar('caja', 'keydown', { key: 'a' }).parado, false, 'otra tecla hace algo');
+
+      // Repintada la misma foto (el vigía, o al guardarla), se queda donde estaba; llegando de otra pantalla, entera.
+      p.mandar(m);
+      f = p.foto();
+      cerca(f.viewBox(), [187.5, 187.5, 625, 625], 'al repintarse, vuelve a entera');
+      p.mandar({ tipo: 'documentos', esperando: [], sueltos: [], herramientas: [], fotos: [] });
+      p.mandar(m);
+      cerca(p.foto().viewBox(), [0, 0, 1000, 1000], 'al volver de otra pantalla, sigue de cerca');
+
+      // En grande, la rueda acerca sin más, y la foto ocupa lo ancho de la pestaña, centrada.
+      const g = montarPanelConClics(undefined, { dibujo: { ancho: 800, alto: 400 } });
+      g.mandar({ ...m, tipo: 'fotoEnGrande' });
+      cerca(g.foto().viewBox(), [-500, 0, 2000, 1000], 'en grande, entera no se ve entera');
+      assert.equal(g.foto().disparar('svg', 'wheel', { deltaY: -100, clientX: 400, clientY: 200 }).parado, true, 'en grande, la rueda no acerca');
+      assert.ok(g.foto().viewBox()[2] < 2000, 'en grande, la rueda no acerca');
+      return 'acercar, alejar, el pellizco, arrastrar, encender los suyos, el tabulador, y sin perder dónde se miraba';
+    } finally {
+      proveedor.enviar = antes.enviar;
       vscode.guion.raiz = empresa;
       proveedor.donde = { tipo: 'principal' };
     }

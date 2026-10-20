@@ -223,9 +223,18 @@ function leer() {
       // hay logotipo suyo: blanco puro sobre su fondo oscuro, negro sobre el
       // claro. El del texto no vale — es un gris, y el logotipo salía gris.
       '--logo': esOscura ? '#ffffff' : '#0a0a0a',
+      // Los grupos de la foto del cerebro (decisión 197) no siguen al acento:
+      // uno cian chocaría con el azul. Son la paleta validada, con los pasos que
+      // se ven sobre SU fondo, claro u oscuro.
+      ...(esOscura ? GRUPOS_EN_OSCURO : GRUPOS_EN_CLARO),
     },
   };
 }
+
+// Los de `panel.css`, los mismos: pasados por el validador de la paleta con todas
+// las parejas, en claro sobre blanco y en oscuro sobre el fondo del editor.
+const GRUPOS_EN_CLARO = { '--grupo-1': '#ec4429', '--grupo-2': '#2a78d6', '--grupo-3': '#1baf7a', '--grupo-resto': '#a29d95' };
+const GRUPOS_EN_OSCURO = { '--grupo-1': '#ec4429', '--grupo-2': '#3987e5', '--grupo-3': '#199e70', '--grupo-resto': '#77736d' };
 
 // El bloque que se cuela en la página para que mande sobre los valores por
 // defecto de panel.css.

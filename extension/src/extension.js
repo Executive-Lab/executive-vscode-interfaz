@@ -53,6 +53,8 @@ const deshacer = require('./deshacer');
 const salidas = require('./salidas');
 // La foto del cerebro (decisión 151): el dibujo es puro; aquí solo se lee y se guarda.
 const foto = require('./foto');
+// Lo que espera la barra, recién enseñada, a leer el concepto pulsado en la foto en grande.
+const LO_QUE_ESPERA_UN_CONCEPTO = 5000;
 // Donde quedan las fotos (por qué ahí, en `foto.js`).
 const LAS_FOTOS = foto.CARPETA;
 const version = require('./version');
@@ -219,6 +221,8 @@ class Panel {
     // tenía delante con lo de ahora; si no, la brújula de siempre.
     vista.onDidChangeVisibility(() => {
       if (!vista.visible) return;
+      // Se ha abierto para leer un concepto de la foto en grande: lo pinta eso (decisión 197).
+      if (this.hayQueLeer()) return;
       if (this.sucio) { this.sucio = false; this.repintarLoQueHaya().catch(() => {}); } else this.refrescar();
     });
   }
@@ -237,6 +241,9 @@ class Panel {
 
     this.vista.webview.options = { enableScripts: true, localResourceRoots: raices };
     this.vista.webview.html = this.html(this.vista.webview, medios, suya);
+    // La foto en grande lleva los colores de la marca: se rehace con ella, y al
+    // cargar pide la foto otra vez (decisión 197).
+    if (this.fotoEnGrande) this.fotoEnGrande.webview.html = this.html(this.fotoEnGrande.webview, medios, suya, { enGrande: true });
   }
 
   // ── Nuestro logotipo, teñido ─────────────────────────────────────────
@@ -266,7 +273,8 @@ class Panel {
     }
   }
 
-  html(webview, medios, suya) {
+  // `enGrande`: la de la foto en grande (decisión 197), sin el logotipo de arriba.
+  html(webview, medios, suya, { enGrande = false } = {}) {
     const nonce = crypto.randomBytes(16).toString('base64');
     const uri = (fichero) => webview.asWebviewUri(vscode.Uri.joinPath(medios, fichero));
     // Las fuentes y el logotipo viajan dentro de la extensión: la interfaz no
@@ -290,7 +298,9 @@ class Panel {
     const placa = suya && suya.placa ? ' con-placa' : '';
 
     let cabecera;
-    if (suya && suya.logo && suya.logoSinNombre) {
+    if (enGrande) {
+      cabecera = '';
+    } else if (suya && suya.logo && suya.logoSinNombre) {
       // El logotipo es solo el símbolo: una ene de puntos preciosa que no dice
       // de quién es esto. El nombre va al lado, como en su propia web.
       cabecera = `<div class="marca-fila">
@@ -313,7 +323,7 @@ class Panel {
 <link rel="stylesheet" href="${uri('panel.css')}">
 ${marca.estilo(suya)}
 </head>
-<body>
+<body${enGrande ? ' class="en-grande"' : ''}>
 ${cabecera}
 <div id="app" aria-live="polite"></div>
 <script nonce="${nonce}" src="${uri('panel.js')}"></script>
@@ -1542,7 +1552,7 @@ ${cabecera}
 
   async manejar(mensaje) {
     const rutas = {
-      listo: () => this.refrescar(),
+      listo: () => (this.hayQueLeer() ? this.leerLoPedido() : this.refrescar()),
       refrescar: () => this.refrescar(true),
       volver: () => this.refrescar(),
       pedir: () => this.pedir(mensaje.prompt),
@@ -1612,6 +1622,7 @@ ${cabecera}
       abrirPanelCompleto: () => this.abrirPanelCompleto(mensaje.desde),
       verDocumentos: () => this.verDocumentos(),
       verLaFoto: () => this.verLaFoto(mensaje.desde),
+      verLaFotoEnGrande: () => this.verLaFotoEnGrande(),
       guardarLaFoto: () => this.guardarLaFoto(mensaje.png),
       abrirLaFoto: () => this.abrirLaFoto(mensaje.fichero),
       llevarteLaFoto: () => this.llevarteLaFoto(mensaje.fichero),
@@ -2762,19 +2773,83 @@ ${cabecera}
   verLaFoto(desde = 'documentos', aviso = null) {
     const de = desde === 'cerebro' ? 'cerebro' : 'documentos';
     this.donde = { tipo: 'foto', desde: de, aviso };
+    this.enviar({ tipo: 'foto', ...this.laFotoDeAhora(), desde: de, aviso });
+  }
+
+  // Lo que se pinta de la foto, en la barra y en grande.
+  laFotoDeAhora() {
     const wiki = proyecto.ruta('02-DOCS', 'wiki');
     const dibujo = foto.laFoto(wiki, wiki ? cerebro.todosLosDocumentos() : []);
-    this.enviar({
-      tipo: 'foto',
+    return {
       lado: dibujo.lado,
       total: dibujo.total,
       nodos: dibujo.nodos,
       enlaces: dibujo.enlaces,
       rotulos: dibujo.rotulos,
+      grupos: dibujo.grupos,
       entera: dibujo.entera,
-      desde: de,
-      aviso,
-    });
+    };
+  }
+
+  // ── La foto del cerebro, en grande (decisión 197) ──────────────────────
+  //
+  // En una pestaña del editor, con la misma página que la barra: ahí
+  // `panel.js` pinta solo la foto. Una pestaña nada más: pulsar otra vez «Verla
+  // en grande» la trae delante. De lo que se pulsa en ella se atienden dos
+  // cosas: que está lista, y leer un concepto, que se abre en la barra, al lado
+  // de la foto, como se lee siempre. Lo demás no sale de la página.
+  verLaFotoEnGrande() {
+    if (this.fotoEnGrande) {
+      this.fotoEnGrande.reveal();
+      return this.repintarLaFotoEnGrande();
+    }
+    const medios = vscode.Uri.joinPath(this.contexto.extensionUri, 'media');
+    const pestana = vscode.window.createWebviewPanel('executiveLab.foto', 'La foto del cerebro', vscode.ViewColumn.Active,
+      { enableScripts: true, localResourceRoots: [medios] });
+    this.fotoEnGrande = pestana;
+    pestana.webview.html = this.html(pestana.webview, medios, marca.leer(), { enGrande: true });
+    pestana.webview.onDidReceiveMessage((m) => this.desdeLaFotoEnGrande(m));
+    pestana.onDidDispose(() => { if (this.fotoEnGrande === pestana) this.fotoEnGrande = null; });
+    return undefined;
+  }
+
+  async desdeLaFotoEnGrande(mensaje) {
+    try {
+      if (!mensaje || typeof mensaje !== 'object') return undefined;
+      if (mensaje.tipo === 'listo') return this.repintarLaFotoEnGrande();
+      if (mensaje.tipo === 'leerArticulo' && typeof mensaje.ruta === 'string') return await this.leerEnLaBarra(mensaje.ruta);
+    } catch (error) {
+      this.salida.appendLine(`[fotoEnGrande] ${error.message}`); // diccionario: interno
+    }
+    return undefined;
+  }
+
+  // Con la pestaña delante. Escondida, al volver se repinta sola: al cargar, pide la foto.
+  repintarLaFotoEnGrande() {
+    const pestana = this.fotoEnGrande;
+    if (!pestana || pestana.visible === false) return undefined;
+    return pestana.webview.postMessage({ tipo: 'fotoEnGrande', ...this.laFotoDeAhora() });
+  }
+
+  // El concepto se lee en la barra. Si estaba escondida, al enseñarla se vuelve
+  // a cargar y se pintaría la principal encima: se deja pedido unos segundos, y
+  // lo atiende al estar lista en vez de la principal.
+  async leerEnLaBarra(ruta) {
+    const seVeia = Boolean(this.vista && this.vista.visible !== false);
+    this.leerAlVolver = seVeia ? null : { ruta, hasta: Date.now() + LO_QUE_ESPERA_UN_CONCEPTO };
+    await vscode.commands.executeCommand('executiveLab.panel.focus');
+    return this.leerArticulo(ruta, undefined, 'foto');
+  }
+
+  hayQueLeer() {
+    if (this.leerAlVolver && this.leerAlVolver.hasta < Date.now()) this.leerAlVolver = null;
+    return Boolean(this.leerAlVolver);
+  }
+
+  leerLoPedido() {
+    const { ruta } = this.leerAlVolver;
+    this.leerAlVolver = null;
+    return this.leerArticulo(ruta, undefined, 'foto');
   }
 
   // El panel la dibuja y la manda en PNG; aquí se guarda, sin pisar ninguna, y
@@ -4652,6 +4727,8 @@ function vigilarElArnes(contexto, panel) {
       // página entera; lo demás se actualiza por mensaje.
       if (esMarca) panel.pintarPagina();
       panel.repintarLoQueHaya().catch(() => {});
+      // Y la foto en grande, si está delante: el asistente acaba de escribir (decisión 197).
+      try { panel.repintarLaFotoEnGrande(); } catch (error) { panel.salida.appendLine(`[fotoEnGrande] ${error.message}`); } // diccionario: interno
     }, 600);
   };
 

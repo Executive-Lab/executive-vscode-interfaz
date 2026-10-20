@@ -5435,6 +5435,9 @@ Dos: si la carpeta de las fotos era un enlace a otro sitio del disco, la foto se
 
 **Lo que no hace, todavía:**
 
+*Nota (decisión 197): ya se acerca y se arrastra, colorea los tres grupos con más puntos, y se ve en grande en una
+pestaña del editor.*
+
 - no se acerca ni se arrastra;
 - no colorea por tema: un solo color, el de la marca, como Obsidian sin grupos;
 - en la barra, el nombre de los diez que más enlazan; en la foto guardada, de los cuarenta; y solo el que
@@ -9718,3 +9721,112 @@ código de los proyectos como evidencia del plan (es de RSC, y en un monorepo es
 **Por qué.** La prueba reescribe `.rsc.json` varias veces seguidas, y las versiones «2.0.15» y «3.0.22» miden lo mismo. La caché de lecturas de la 188 da un fichero por el mismo si coinciden fecha de cambio, tamaño e inodo. En Windows la fecha avanza a saltos de unos 15 ms, así que con dos escrituras en el mismo salto se servía el `.rsc.json` viejo. El fallo era de la prueba, no del código: en la vida real quien escribe el fichero es otro proceso, con segundos de por medio, y haría falta reescribirlo con el mismo tamaño dentro de esos milisegundos.
 
 **Cómo se arregló.** La prueba olvida la caché (`lecturas.olvidar()`) cada vez que declara un `.rsc.json`, como la 188 ya hacía con el caso «claude»→«codex». Pasada varias veces seguidas con el Mac cargado, sin fallar.
+
+## 197. La foto del cerebro, en grande y para moverse por ella
+
+**Fecha:** 20 de octubre de 2026 · **Estado:** hecho en el código, pendiente de verlo en el editor · **Vía rápida**
+`la-foto-en-grande`
+
+Jose, con una captura de la foto de su monorepo: *«quiero que el mapa del cerebro sea interactivo o algo. Que puedas
+abrirlo en grande, que puedas moverte, no sé, que sea un poco mejor»*, y *«que se vea bien todo»*. Cambia tres cosas que
+la 151 dejó para después: «no se acerca ni se arrastra», «no colorea por tema» y «la versión grande es la foto guardada».
+
+**Lo que se veía.** Con la wiki del monorepo (423 conceptos, 300 en la foto, 903 enlaces) la foto era una mancha roja:
+tres grupos pegados a los bordes y el grande hecho un borrón de puntos unos encima de otros. Reproducido fuera del editor,
+con `foto.js` y `panel.js` de verdad en Chrome: salía igual que en la captura.
+
+**Por qué.** La disposición de Fruchterman y Reingold de la 151 hace que cada punto empuje a todos los demás, estén donde
+estén. Los grupos sin nada que los una al grande recibían el empuje de sus 250 puntos, salían disparados, y al encajar la
+foto en el cuadro el grande se encogía. Y los puntos se medían sin su tamaño: nada impedía que se pisaran.
+
+**La disposición nueva** (`foto.js`, `disponer`), la idea de d3-force, que es lo que usa Obsidian, sin azar y sin traerse
+nada:
+
+- cada enlace es un muelle que quiere medir lo mismo, y tira menos cuanto más enlaza el punto: lo que cuelga de un índice
+  ya no se amontona encima;
+- todos se apartan de todos, pero solo de cerca: un grupo suelto ya no empuja al grande desde la otra punta;
+- un poco de gravedad hacia el centro deja los grupos sueltos alrededor del grande, no en las esquinas;
+- ninguno se monta encima de otro: se miden con el tamaño con que se pintan, con un hueco entre medias. Ni con 300
+  sueltos, ni con uno que lo enlaza todo, ni con 40 enlazados todos con todos sale uno pisado.
+
+Con la wiki del monorepo, 300 puntos y ninguno encima de otro, en unos 150 ms. Los puntos son algo más pequeños que antes
+(`radio`): con 300 llenaban el cuadro, y ahora se puede acercar.
+
+**Moverse por ella** (`panel.js`, `engancharLaFoto`):
+
+- **arrastrar** la mueve; un temblor de menos de 5 puntos al pulsar no cuenta, y soltar lo arrastrado no abre el punto de
+  debajo;
+- **Acercar**, **Alejar** y **Verla entera**, en una fila encima de la foto; con el teclado, `+`, `−` y `0`;
+- el **pellizco** del ratón táctil acerca hacia donde está el ratón. La rueda, en la barra, sigue bajando por la pantalla,
+  porque la foto está en medio de ella y quedaría uno atrapado; en grande, la rueda acerca;
+- **al pasar por un punto**, o al llegar con el tabulador, se encienden él, los suyos y sus líneas, el resto se apaga, y
+  salen solo sus nombres. Con el tabulador, si el punto no se ve, la foto va hasta él;
+- **los nombres** van siempre con la letra de la barra, se acerque lo que se acerque, y cuanto más cerca, más salen: con la
+  foto entera, cinco en la barra y veinte en grande, y al acercarse los de los puntos que se ven grandes;
+- **sin perder dónde se miraba**: si el vigía repinta la foto mientras el asistente escribe, o al guardarla, se queda donde
+  estaba. Llegando desde otra pantalla, se ve entera.
+
+Todo cambiando el `viewBox` del dibujo, que es un atributo y no un estilo: **la política de contenido no cambia**. Los
+mandos no llevan `data-accion`: se mueven ahí mismo, sin pedirle nada a la extensión ni repintar.
+
+**El color de cada grupo.** El grupo de un concepto es su primera carpeta, su tema; en un monorepo, la de su proyecto
+(`proyectos/<proyecto>`, decisión 195), que si no lo pintaría todo de un color. Llevan color los **tres** grupos con más
+puntos y el resto va en gris, con su leyenda: el nombre de cada grupo, cuántos conceptos tiene, y «Lo demás». Tres y no
+ocho, por el validador de la paleta: en un grafo cualquier grupo puede caer al lado de cualquier otro, así que cuentan todas
+las parejas, y con un cuarto color dos se confundían con la vista de siempre o para un daltónico. Los tres pasan en claro y
+en oscuro, cada modo con sus pasos. El primero es el rojo de Executive Lab y no `--acento`, que la marca de una empresa
+puede cambiar por uno que choque con los otros dos. Con un grupo solo, nada que distinguir: la foto sigue con el de la marca
+y sin leyenda. Dos de los colores (el verde y el gris) no llegan a 3:1 sobre el fondo claro; por eso los acompañan la
+leyenda y los nombres, y nunca dicen nada solos.
+
+**La foto guardada** lleva los mismos colores, y la leyenda arriba, debajo del día.
+
+**Verla en grande**, en una pestaña del editor (`extension.js`, `verLaFotoEnGrande`). La 151 dijo que no, porque la barra
+es una sola vista y se reutilizaba el lector de conceptos; las dos razones siguen, y por eso:
+
+- es la **misma página** que la barra, con `panel.js` pintando solo la foto: mismo dibujo, mismos mandos, mismas pruebas;
+- un punto **abre su concepto en la barra**, al lado, con el lector de siempre, y desde él se vuelve a la foto. Si la barra
+  estaba escondida, al enseñarla se vuelve a cargar y se pintaría la principal: el concepto se deja pedido cinco segundos y
+  se lee al estar lista;
+- de lo que se pulsa en la pestaña se atienden dos cosas, que está lista y leer un concepto; **lo demás no sale de ella**.
+  Guardar la foto y «Que los enlace» siguen en la barra, que es donde se trabaja;
+- una pestaña nada más: «Verla en grande» otra vez la trae delante. Se repinta con el vigía si está delante; escondida,
+  al volver la pide ella. Con la marca, se rehace con sus colores;
+- solo lee lo de la barra (`media/`): ni el logotipo de la empresa, que no lleva.
+
+**Lo que no hace, todavía:** arrastrar un punto suelto, buscar dentro de la foto, guardar la foto desde la pestaña, y
+recordar la pestaña al volver a abrir el editor (haría falta registrarla para que el editor la restaure).
+
+**Las pruebas.** `humo.js` pasa de 565 a 569: cuatro comprobaciones nuevas y una cambiada.
+
+- la wiki que salía en mancha (un grupo de 162 con dos índices, seis grupos sueltos y doce sin nada): ninguno encima de
+  otro y el grande ocupando la foto. Con el `foto.js` de antes falla: 1.812 parejas de puntos, una encima de otra;
+- los grupos: la carpeta, el proyecto en un monorepo, los tres con más puntos, y ninguno con un grupo solo;
+- moverse por la foto, con una foto de mentira que se puede medir (`panel-con-clics.js`, `dibujo`): acercar, alejar, la
+  rueda y el pellizco, arrastrar, el clic después de arrastrar, encender los suyos, el tabulador, el teclado, el tamaño de
+  la letra, y quedarse donde se miraba al repintarse;
+- la pestaña grande, con el `vscode` de mentira, que ahora sabe abrir pestañas (`createWebviewPanel`);
+- la pantalla de la foto y la foto guardada (la cambiada) miran ahora también los colores, la leyenda y los mandos.
+
+Y la marca de una empresa pone los colores de los grupos, en sus pasos claros u oscuros según su fondo: la regla de que
+la marca calcula todos los colores que nombra la hoja de estilo vale también para estos.
+
+**Mutaciones a mano: 26, las 26 tumbadas.** Cada una cambia una línea y se corren las pruebas de la foto:
+- 11 en moverse por la foto: la rueda en la barra, el temblor, el clic después de arrastrar, la letra, la vista al
+  repintar y al volver, encender los suyos, los dos topes de acercar y alejar, el tabulador, y los mandos sin `data-accion`;
+- 2 en la foto guardada: los colores y la leyenda;
+- 3 en los grupos: cuántos, el proyecto en un monorepo, y ninguno con uno solo;
+- 2 en la disposición: la repulsión sin alcance y sin gravedad;
+- 8 en la pestaña: que haga más que leer, el concepto pedido al volver, y que se quede pedido para siempre, repintarse
+  escondida, el vigía, dos pestañas, el logotipo y los grupos que no llegan.
+
+Al escribirlas salieron dos cosas. Una pasada final que separaba los puntos pisados no hacía nada: ni con 300 sueltos, ni
+con uno que lo enlaza todo, ni con 40 todos con todos quedaba uno pisado sin ella. Se quitó. Y el tope de alejar estaba en
+dos sitios, así que quitar uno no lo veía nadie: se dejó en uno.
+
+La batería entera, con el arnés del paquete (`npm ci` en `extension/media/harness/`) y los módulos comunes
+(`preparar-paquete.js`) en su sitio: `humo.js` 569 de 569, `contrato.js` 15, `empresas-distintas.js`, el diccionario y
+PowerShell, limpios. El asistente de montar (`--con-arnes`) no se ha pasado: no se ha tocado.
+
+**Visto**, fuera del editor: la barra a 300 puntos de ancho y la pestaña a 1.400, en claro y en oscuro, con la wiki del
+monorepo. **Falta verlo en VS Code**: la barra y la pestaña de verdad, el pellizco con un ratón táctil, y en Windows.

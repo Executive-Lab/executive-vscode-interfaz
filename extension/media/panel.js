@@ -3147,7 +3147,7 @@ function pantallaCerebro({ temas, sinOrdenar = [], cuantosSinOrdenar, esperando,
 // Obsidian para hacerle una foto al cerebro; esto es esa foto, sin instalar
 // nada: un punto por concepto y una línea por enlace, como su vista de grafo.
 // Dónde va cada punto lo calcula la extensión (`foto.js`, puro y probado);
-// aquí solo se pinta.
+// aquí solo se pinta, y aquí se mueve (decisión 197).
 //
 // En SVG dentro de la página y sin un solo estilo en línea: la política de
 // contenido de la barra no deja otra cosa, y así cada punto es un elemento con
@@ -3157,13 +3157,38 @@ function pantallaCerebro({ temas, sinOrdenar = [], cuantosSinOrdenar, esperando,
 let laFotoDeAhora = null;
 // De dónde se llegó a la foto, para volver ahí desde un concepto.
 let fotoDesde = 'documentos';
+// Por dónde se está mirando la foto (decisión 197): el centro, en las unidades
+// del dibujo, y lo cerca (1 es entera). Se queda al repintarse la misma foto
+// —el vigía la repinta cuando el asistente escribe, o al guardarla— y vuelve a
+// entera al llegar desde otra pantalla.
+let vistaDeLaFoto = null;
+let enLaFoto = false;
+// En una pestaña del editor, la foto en grande (decisión 197). Ahí no hay nada
+// más que bajar, así que la rueda del ratón acerca y aleja.
+let enGrande = false;
 // En la barra, que es estrecha, el nombre de los diez que más enlazan; en la
 // foto que se guarda, que es grande, el de los cuarenta.
 const NOMBRES_EN_LA_BARRA = 10;
+// Y moviéndose por ella (decisión 197), con la letra de la barra: en la barra,
+// cinco con la foto entera, que diez la tapaban; en grande, veinte. Al
+// acercarse salen más: los de los puntos que se ven grandes.
+const NOMBRES_DE_LEJOS = 5;
+const NOMBRES_DE_LEJOS_EN_GRANDE = 20;
+// Lo que se acerca cada vez, y hasta dónde.
+const PASO_DE_CERCA = 1.6;
+const MUY_CERCA = 14;
 const corto = (t, cuanto = 28) => (String(t).length > cuanto ? `${String(t).slice(0, cuanto - 1)}…` : String(t));
 const numero = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const redondear = (v) => Math.round(v * 100) / 100;
 const QUE_LOS_ENLACE = 'Repasa los conceptos de la wiki y enlaza entre sí los que tengan que ver, como pide el protocolo de la wiki. No cambies lo que dicen.';
 const conceptosYEnlaces = (nodos, enlaces) => `${plural(nodos, '1 concepto', '{n} conceptos')} · ${plural(enlaces, '1 enlace', '{n} enlaces')}`;
+// El color de un punto (decisión 197): el de su grupo, el gris del resto, o, si
+// la foto no tiene grupos, el de la marca, como hasta la 196.
+const claseDelGrupo = (grupo, hayGrupos) => {
+  if (!hayGrupos) return '';
+  const g = Number(grupo);
+  return Number.isInteger(g) && g >= 0 && g < 3 ? `g${g}` : 'gx';
+};
 // Los nombres que caben sin pisarse, de los que más enlazan a los que menos:
 // uno que se montaría encima de otro ya puesto no se escribe. `letra` es el
 // tamaño de la letra en las unidades del dibujo; el ancho se calcula a ojo.
@@ -3197,12 +3222,66 @@ function dondeVaElNombre(n, lado, hueco = 34) {
   };
 }
 
-function pantallaFoto({ nodos = [], enlaces = [], total = 0, rotulos = [], lado = 1000, entera = true, desde = 'documentos', aviso: avisoLocal }) {
+// La leyenda de los colores: cada grupo con su nombre y cuántos tiene, y el
+// resto en gris. Sin grupos, nada: todo es del mismo color.
+function leyendaDeLaFoto(grupos, nodos) {
+  if (!grupos.length) return '';
+  const resto = nodos.filter((n) => claseDelGrupo(n.grupo, true) === 'gx').length;
+  const fila = (clase, nombre, cuantos) => `<li><span class="muestra ${clase}" aria-hidden="true"></span><span>${texto(nombre)}</span><span class="puntos">${texto(plural(cuantos, '1 concepto', '{n} conceptos'))}</span></li>`;
+  return `<ul class="foto-leyenda">
+    ${grupos.slice(0, 3).map((g, i) => fila(`g${i}`, corto(g.etiqueta, 40), numero(g.puntos))).join('')}
+    ${resto ? fila('gx', 'Lo demás', resto) : ''}
+  </ul>`;
+}
+
+// Los mandos para moverse por la foto. No piden nada a la extensión: se
+// mueven aquí mismo, sin repintar, y por eso no llevan `data-accion`.
+const mandosDeLaFoto = () => `
+  <div class="foto-mandos">
+    <button type="button" data-foto="acercar"><span class="icono" aria-hidden="true">＋</span><span class="texto">Acercar</span></button>
+    <button type="button" data-foto="alejar"><span class="icono" aria-hidden="true">－</span><span class="texto">Alejar</span></button>
+    <button type="button" data-foto="entera"><span class="icono" aria-hidden="true">⤢</span><span class="texto">Verla entera</span></button>
+  </div>`;
+
+// El dibujo: las líneas, los puntos y los nombres, en ese orden, para que un
+// punto tape sus líneas y un nombre se lea encima de todo.
+function dibujoDeLaFoto({ nodos, enlaces, grupos, lado }) {
+  const punto = (i) => nodos[i] || { x: 0, y: 0, r: 0 };
+  const lineas = enlaces.map(([a, b]) => `<line x1="${numero(punto(a).x)}" y1="${numero(punto(a).y)}" x2="${numero(punto(b).x)}" y2="${numero(punto(b).y)}"/>`).join('');
+  const hayGrupos = grupos.length > 0;
+  // Cada punto se alcanza con el tabulador y se abre con Intro, como un botón
+  // (revisión de corrección, 5).
+  const puntos = nodos.map((n) => {
+    const clase = claseDelGrupo(n.grupo, hayGrupos);
+    return `<g class="nodo" tabindex="0" role="button" aria-label="${atributo(n.titulo)}" data-accion="${atributo(JSON.stringify({ tipo: 'leerArticulo', ruta: n.ruta, desde: 'foto' }))}"><circle${clase ? ` class="${clase}"` : ''} cx="${numero(n.x)}" cy="${numero(n.y)}" r="${numero(n.r)}"/><title>${texto(n.titulo)}</title></g>`;
+  }).join('');
+  // Los nombres de antes de saber cuánto mide la pantalla: los recoloca
+  // `engancharLaFoto` en cuanto la pantalla está puesta, del tamaño de la letra.
+  const nombres = nombresQueCaben(laFotoDeAhora, NOMBRES_EN_LA_BARRA, 30, 34)
+    .map(({ nombre, sitio }) => `<text x="${sitio.x}" y="${sitio.y}" text-anchor="${sitio.ancla}">${texto(nombre)}</text>`).join('');
+  const ladoDeVerdad = numero(lado) || 1000;
+  return `<div class="foto" data-foto-lienzo>
+      <svg viewBox="0 0 ${ladoDeVerdad} ${ladoDeVerdad}" role="group" aria-label="${atributo(`La foto del cerebro: ${conceptosYEnlaces(nodos.length, enlaces.length)}`)}">
+        <g class="enlaces">${lineas}</g>
+        <g class="nodos">${puntos}</g>
+        <g class="rotulos" aria-hidden="true" font-size="30" stroke-width="8">${nombres}</g>
+      </svg>
+    </div>`;
+}
+
+// Lo que se guarda de la foto que se va a pintar, y si se llega de otra
+// pantalla, se vuelve a verla entera.
+function prepararLaFoto({ nodos = [], enlaces = [], rotulos = [], grupos = [], lado = 1000 }) {
+  laFotoDeAhora = nodos.length ? { nodos, enlaces, rotulos, grupos: Array.isArray(grupos) ? grupos : [], lado: numero(lado) || 1000 } : null;
+  if (!enLaFoto || !vistaDeLaFoto || !laFotoDeAhora || vistaDeLaFoto.lado !== laFotoDeAhora.lado) vistaDeLaFoto = null;
+}
+
+function pantallaFoto({ nodos = [], enlaces = [], total = 0, rotulos = [], grupos = [], lado = 1000, entera = true, desde = 'documentos', aviso: avisoLocal }) {
   fotoDesde = desde === 'cerebro' ? 'cerebro' : 'documentos';
   const deDonde = fotoDesde === 'cerebro'
     ? { etiqueta: 'Conocimiento', accion: { tipo: 'verCerebro' } }
     : { etiqueta: 'Documentos', accion: { tipo: 'verDocumentos' } };
-  laFotoDeAhora = nodos.length ? { nodos, enlaces, rotulos, lado: numero(lado) || 1000 } : null;
+  prepararLaFoto({ nodos, enlaces, rotulos, grupos, lado });
 
   const cabecera = `
     ${migas([deDonde, { etiqueta: 'La foto del cerebro' }])}
@@ -3217,33 +3296,305 @@ function pantallaFoto({ nodos = [], enlaces = [], total = 0, rotulos = [], lado 
       ${boton({ etiqueta: 'Darle documentos (inbox)', icono: '📎', principal: true, accion: { tipo: 'anadirDocumentos', desde: 'documentos' } })}`;
   }
 
-  const punto = (i) => nodos[i] || { x: 0, y: 0, r: 0 };
-  const lineas = enlaces.map(([a, b]) => `<line x1="${numero(punto(a).x)}" y1="${numero(punto(a).y)}" x2="${numero(punto(b).x)}" y2="${numero(punto(b).y)}"/>`).join('');
-  // Cada punto se alcanza con el tabulador y se abre con Intro, como un botón
-  // (revisión de corrección, 5).
-  const puntos = nodos.map((n) => `<g class="nodo" tabindex="0" role="button" aria-label="${atributo(n.titulo)}" data-accion="${atributo(JSON.stringify({ tipo: 'leerArticulo', ruta: n.ruta, desde: 'foto' }))}"><circle cx="${numero(n.x)}" cy="${numero(n.y)}" r="${numero(n.r)}"/><title>${texto(n.titulo)}</title></g>`).join('');
-  const nombres = nombresQueCaben(laFotoDeAhora, NOMBRES_EN_LA_BARRA, 30, 34)
-    .map(({ nombre, sitio }) => `<text x="${sitio.x}" y="${sitio.y}" text-anchor="${sitio.ancla}">${texto(nombre)}</text>`).join('');
-  const cuenta = conceptosYEnlaces(nodos.length, enlaces.length);
-  const ladoDeVerdad = numero(lado) || 1000;
-
+  const losGrupos = laFotoDeAhora.grupos;
   return `${cabecera}
-    <p class="detalle">${texto(cuenta)}</p>
+    <p class="detalle">${texto(conceptosYEnlaces(nodos.length, enlaces.length))}</p>
     ${total > nodos.length ? `<p class="detalle">${texto(`Tiene ${total} conceptos: para que se vea, la foto enseña los ${nodos.length} con más enlaces.`)}</p>` : ''}
     ${entera === false ? '<p class="detalle">Hay tantos enlaces que no los he leído todos: la foto no está entera.</p>' : ''}
-    <div class="foto">
-      <svg viewBox="0 0 ${ladoDeVerdad} ${ladoDeVerdad}" role="group" aria-label="${atributo(`La foto del cerebro: ${cuenta}`)}">
-        <g class="enlaces">${lineas}</g>
-        <g class="nodos">${puntos}</g>
-        <g class="rotulos">${nombres}</g>
-      </svg>
-    </div>
-    <p class="detalle">Un punto por concepto y una línea por enlace. Pulsa un punto para leerlo.</p>
+    ${leyendaDeLaFoto(losGrupos, nodos)}
+    ${mandosDeLaFoto()}
+    ${dibujoDeLaFoto({ nodos, enlaces, grupos: losGrupos, lado })}
+    <p class="detalle">Un punto por concepto y una línea por enlace. Arrástrala para moverte y pulsa un punto para leerlo.</p>
     ${enlaces.length ? '' : `
       <p class="detalle">Todavía ningún concepto enlaza con otro.</p>
       ${boton({ etiqueta: 'Que los enlace', icono: '🔗', accion: { tipo: 'pedir', prompt: QUE_LOS_ENLACE } })}`}
+    ${boton({ etiqueta: 'Verla en grande', icono: '🔍', accion: { tipo: 'verLaFotoEnGrande' } })}
     ${boton({ etiqueta: 'Guardar la foto', icono: '📸', principal: true, accion: { tipo: 'guardarLaFoto' } })}
   `;
+}
+
+// La foto en grande (decisión 197): en una pestaña del editor, sin nada más
+// que la foto. Un punto abre su concepto en la barra, al lado; guardarla y
+// pedir que la enlace siguen en la barra, que es donde se trabaja.
+function pantallaFotoEnGrande({ nodos = [], enlaces = [], total = 0, rotulos = [], grupos = [], lado = 1000, entera = true }) {
+  prepararLaFoto({ nodos, enlaces, rotulos, grupos, lado });
+  if (!nodos.length) {
+    return `<p class="titulo">La foto del cerebro</p>
+      ${nada('Todavía no hay conceptos que fotografiar. Dale documentos y los irá escribiendo.')}`;
+  }
+  return `<div class="foto-arriba">
+      <div>
+        <p class="titulo">La foto del cerebro</p>
+        <p class="detalle">${texto(conceptosYEnlaces(nodos.length, enlaces.length))}${total > nodos.length ? texto(` · Tiene ${total} conceptos: para que se vea, la foto enseña los ${nodos.length} con más enlaces.`) : ''}</p>
+        ${entera === false ? '<p class="detalle">Hay tantos enlaces que no los he leído todos: la foto no está entera.</p>' : ''}
+      </div>
+      ${mandosDeLaFoto()}
+    </div>
+    ${leyendaDeLaFoto(laFotoDeAhora.grupos, nodos)}
+    ${dibujoDeLaFoto({ nodos, enlaces, grupos: laFotoDeAhora.grupos, lado })}
+    <p class="detalle">Arrástrala para moverte, acércate con la rueda del ratón y pulsa un punto para leerlo en la barra.</p>`;
+}
+
+// ── Moverse por la foto (decisión 197) ──────────────────────────────────
+//
+// Arrastrar la mueve; los mandos, el pellizco del ratón táctil (llega como la
+// rueda con Ctrl) y, en grande, la rueda, la acercan y la alejan, hacia donde
+// esté el ratón. Todo cambiando el `viewBox` del dibujo: es un atributo y no un
+// estilo, así que la política de contenido no cambia, y no se repinta nada.
+//
+// Al pasar por un punto, o al llegar a él con el tabulador, se encienden él,
+// los suyos y sus líneas, y el resto se apaga. Los nombres van siempre del
+// mismo tamaño en la pantalla, se cerque lo que se acerque, y cuanto más cerca,
+// más nombres caben.
+//
+// Solo con un navegador de verdad: en el de mentira de las pruebas no hay
+// dibujo que medir y esto no hace nada.
+function engancharLaFoto() {
+  const caja = app.querySelector('[data-foto-lienzo]');
+  const svg = caja && typeof caja.querySelector === 'function' ? caja.querySelector('svg') : null;
+  const f = laFotoDeAhora;
+  if (!svg || !f || typeof svg.getBoundingClientRect !== 'function') return;
+
+  const puntos = [...svg.querySelectorAll('.nodo')];
+  const lineas = [...svg.querySelectorAll('.enlaces line')];
+  const capaDeNombres = svg.querySelector('.rotulos');
+  const cual = new Map(puntos.map((p, i) => [p, i]));
+  const vecinos = f.nodos.map(() => []);
+  f.enlaces.forEach(([a, b], k) => {
+    if (vecinos[a] && vecinos[b]) { vecinos[a].push([b, k]); vecinos[b].push([a, k]); }
+  });
+  // Los que más enlazan, primero: son los que llevan nombre antes.
+  const orden = f.nodos.map((_, i) => i)
+    .sort((a, b) => numero(f.nodos[b].grado) - numero(f.nodos[a].grado) || (f.nodos[a].ruta < f.nodos[b].ruta ? -1 : 1));
+
+  if (!vistaDeLaFoto) vistaDeLaFoto = { lado: f.lado, cx: f.lado / 2, cy: f.lado / 2, cerca: 1 };
+  enLaFoto = true;
+  const v = vistaDeLaFoto;
+  const medida = () => {
+    const c = svg.getBoundingClientRect();
+    return { w: Math.max(1, c.width), h: Math.max(1, c.height), x: c.left, y: c.top };
+  };
+  // Cuántas unidades del dibujo caben en un punto de la pantalla.
+  const porPunto = (m) => f.lado / Math.min(m.w, m.h) / v.cerca;
+
+  let foco = -1;
+  let esperando = false;
+  const pintarLosNombres = () => {
+    esperando = false;
+    if (!capaDeNombres) return;
+    const m = medida();
+    const u = porPunto(m);
+    const x0 = v.cx - (m.w * u) / 2;
+    const y0 = v.cy - (m.h * u) / 2;
+    const LETRA = enGrande ? 13 : 12;
+    const puestos = [];
+    const salen = [];
+    const poner = (i, siempre) => {
+      const n = f.nodos[i];
+      if (!n) return false;
+      const nombre = corto(n.titulo, siempre ? 60 : 28);
+      // Todo en puntos de la pantalla, que es donde se pisan o no.
+      const sx = (numero(n.x) - x0) / u;
+      const sy = (numero(n.y) - y0) / u;
+      const sr = numero(n.r) / u;
+      if (sx < 0 || sx > m.w || sy < 0 || sy > m.h) return false;
+      const ancho = nombre.length * LETRA * 0.56;
+      const arriba = sy + sr + LETRA + 4 > m.h - 2;
+      const ty = arriba ? sy - sr - 5 : sy + sr + LETRA + 2;
+      let ancla = 'middle';
+      let tx = sx;
+      let izquierda = sx - ancho / 2;
+      if (izquierda < 4) { ancla = 'start'; tx = 4; izquierda = 4; }
+      if (izquierda + ancho > m.w - 4) { ancla = 'end'; tx = m.w - 4; izquierda = tx - ancho; }
+      const sitio = { x0: izquierda - 3, x1: izquierda + ancho + 3, y0: ty - LETRA - 1, y1: ty + 4 };
+      const pisa = puestos.some((o) => sitio.x0 < o.x1 && o.x0 < sitio.x1 && sitio.y0 < o.y1 && o.y0 < sitio.y1);
+      if (pisa && !siempre) return false;
+      puestos.push(sitio);
+      salen.push(`<text x="${redondear(x0 + tx * u)}" y="${redondear(y0 + ty * u)}" text-anchor="${ancla}"${siempre ? ' class="fuerte"' : ''}>${texto(nombre)}</text>`);
+      return true;
+    };
+    if (foco >= 0) {
+      // Con uno encendido, solo su nombre y los de los suyos.
+      poner(foco, true);
+      for (const [j] of [...vecinos[foco]].sort(([a], [b]) => orden.indexOf(a) - orden.indexOf(b))) poner(j, false);
+    } else {
+      // Los que más enlazan, siempre que quepan; y los que se ven grandes de
+      // cerca. Cuanto más cerca, más grandes se ven, y más nombres salen.
+      const siempre = enGrande ? NOMBRES_DE_LEJOS_EN_GRANDE : NOMBRES_DE_LEJOS;
+      let puestosYa = 0;
+      for (const i of orden) {
+        if (puestosYa >= siempre && numero(f.nodos[i].r) / u < 9) continue;
+        if (poner(i, false)) puestosYa += 1;
+        if (salen.length >= 150) break;
+      }
+    }
+    capaDeNombres.setAttribute('font-size', String(redondear(LETRA * u)));
+    capaDeNombres.setAttribute('stroke-width', String(redondear(3.5 * u)));
+    capaDeNombres.innerHTML = salen.join('');
+  };
+  const nombresAlRato = () => {
+    if (esperando) return;
+    esperando = true;
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(pintarLosNombres);
+    else pintarLosNombres();
+  };
+
+  // Lo cerca que se mira lo cambian solo `acercarHacia` y `entera`, que lo dejan
+  // entre 1 y `MUY_CERCA`.
+  const aplicar = () => {
+    // Entera, siempre centrada; de cerca, sin perderla de vista.
+    if (v.cerca <= 1) { v.cx = f.lado / 2; v.cy = f.lado / 2; }
+    v.cx = Math.min(f.lado, Math.max(0, v.cx));
+    v.cy = Math.min(f.lado, Math.max(0, v.cy));
+    const m = medida();
+    const u = porPunto(m);
+    svg.setAttribute('viewBox', `${redondear(v.cx - (m.w * u) / 2)} ${redondear(v.cy - (m.h * u) / 2)} ${redondear(m.w * u)} ${redondear(m.h * u)}`);
+    nombresAlRato();
+  };
+  // Acercar o alejar dejando quieto lo que hay debajo del ratón (o del centro).
+  const acercarHacia = (cuanto, px, py) => {
+    const m = medida();
+    const u = porPunto(m);
+    const x = px === undefined ? m.w / 2 : px;
+    const y = py === undefined ? m.h / 2 : py;
+    const debajoX = v.cx + (x - m.w / 2) * u;
+    const debajoY = v.cy + (y - m.h / 2) * u;
+    v.cerca = Math.min(MUY_CERCA, Math.max(1, v.cerca * cuanto));
+    const u2 = porPunto(m);
+    v.cx = debajoX - (x - m.w / 2) * u2;
+    v.cy = debajoY - (y - m.h / 2) * u2;
+    aplicar();
+  };
+  const entera = () => {
+    v.cerca = 1;
+    aplicar();
+  };
+
+  // ── Encender uno y los suyos
+  const apagar = () => {
+    if (foco < 0) return;
+    svg.classList.remove('con-foco');
+    if (puntos[foco]) puntos[foco].classList.remove('foco');
+    for (const [j, k] of vecinos[foco]) {
+      if (puntos[j]) puntos[j].classList.remove('vecino');
+      if (lineas[k]) lineas[k].classList.remove('encendida');
+    }
+    foco = -1;
+    nombresAlRato();
+  };
+  const encender = (i) => {
+    if (i === foco) return;
+    apagar();
+    if (i < 0 || !puntos[i]) return;
+    foco = i;
+    svg.classList.add('con-foco');
+    puntos[i].classList.add('foco');
+    for (const [j, k] of vecinos[i]) {
+      if (puntos[j]) puntos[j].classList.add('vecino');
+      if (lineas[k]) lineas[k].classList.add('encendida');
+    }
+    nombresAlRato();
+  };
+  const elPunto = (objetivo) => (objetivo && typeof objetivo.closest === 'function' ? objetivo.closest('.nodo') : null);
+
+  // ── Arrastrar
+  let arrastre = null;
+  let seHaArrastrado = false;
+  svg.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    arrastre = { id: e.pointerId, x: e.clientX, y: e.clientY, cx: v.cx, cy: v.cy, moviendo: false };
+    seHaArrastrado = false;
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (!arrastre || e.pointerId !== arrastre.id) return;
+    const dx = e.clientX - arrastre.x;
+    const dy = e.clientY - arrastre.y;
+    if (!arrastre.moviendo) {
+      // Un temblor al pulsar no es arrastrar: el punto se tiene que poder pulsar.
+      if (Math.hypot(dx, dy) < 5) return;
+      arrastre.moviendo = true;
+      try { svg.setPointerCapture(e.pointerId); } catch { /* sin captura, se arrastra igual */ }
+      svg.classList.add('moviendo');
+      apagar();
+    }
+    const u = porPunto(medida());
+    v.cx = arrastre.cx - dx * u;
+    v.cy = arrastre.cy - dy * u;
+    aplicar();
+  });
+  const soltar = (e) => {
+    if (!arrastre || e.pointerId !== arrastre.id) return;
+    seHaArrastrado = arrastre.moviendo;
+    arrastre = null;
+    svg.classList.remove('moviendo');
+  };
+  svg.addEventListener('pointerup', soltar);
+  svg.addEventListener('pointercancel', soltar);
+  // Al soltar lo arrastrado no se abre el punto que haya quedado debajo.
+  svg.addEventListener('click', (e) => {
+    if (!seHaArrastrado) return;
+    seHaArrastrado = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+
+  // ── Acercar y alejar
+  svg.addEventListener('wheel', (e) => {
+    // En la barra, la rueda sigue bajando por la pantalla, que sigue debajo de
+    // la foto; ahí acerca el pellizco, que llega con Ctrl. En grande, acerca siempre.
+    if (!enGrande && !e.ctrlKey) return;
+    e.preventDefault();
+    const m = medida();
+    acercarHacia(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - m.x, e.clientY - m.y);
+  }, { passive: false });
+  app.querySelectorAll('[data-foto]').forEach((b) => {
+    b.addEventListener('click', () => {
+      const que = b.dataset.foto;
+      if (que === 'acercar') acercarHacia(PASO_DE_CERCA);
+      else if (que === 'alejar') acercarHacia(1 / PASO_DE_CERCA);
+      else entera();
+    });
+  });
+  // Con el teclado, sobre la foto: + y − acercan y alejan, 0 la deja entera.
+  caja.addEventListener('keydown', (e) => {
+    if (e.key === '+' || e.key === '=') acercarHacia(PASO_DE_CERCA);
+    else if (e.key === '-') acercarHacia(1 / PASO_DE_CERCA);
+    else if (e.key === '0') entera();
+    else return;
+    e.preventDefault();
+  });
+
+  // ── Pasar por un punto, o llegar a él con el tabulador
+  svg.addEventListener('pointerover', (e) => {
+    if (arrastre && arrastre.moviendo) return;
+    const g = elPunto(e.target);
+    if (g && cual.has(g)) encender(cual.get(g));
+  });
+  svg.addEventListener('pointerout', (e) => {
+    const g = elPunto(e.target);
+    if (g && !(e.relatedTarget && typeof g.contains === 'function' && g.contains(e.relatedTarget))) apagar();
+  });
+  caja.addEventListener('focusin', (e) => {
+    const g = elPunto(e.target);
+    if (!g || !cual.has(g)) return;
+    const i = cual.get(g);
+    // Si se llega con el tabulador a uno que no se ve, la foto va hasta él.
+    const m = medida();
+    const u = porPunto(m);
+    const n = f.nodos[i];
+    if (Math.abs(numero(n.x) - v.cx) > (m.w * u) / 2 || Math.abs(numero(n.y) - v.cy) > (m.h * u) / 2) {
+      v.cx = numero(n.x);
+      v.cy = numero(n.y);
+      aplicar();
+    }
+    encender(i);
+  });
+  caja.addEventListener('focusout', apagar);
+
+  // Si cambia lo que mide (la barra se ensancha, la pestaña se agranda), se
+  // vuelve a encajar sin perder dónde se miraba.
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => aplicar()).observe(svg);
+  aplicar();
 }
 
 // Los colores de la barra, para que la foto se parezca a lo que se ve. Sin
@@ -3263,13 +3614,17 @@ function coloresDeLaFoto() {
     apagado: de('--apagado', '#6b6b6b'),
     acento: de('--acento', '#ec4429'),
     letra: de('--sans', 'sans-serif'),
+    // Los de los grupos (decisión 197), los mismos que en la barra.
+    grupos: [de('--grupo-1', '#ec4429'), de('--grupo-2', '#2a78d6'), de('--grupo-3', '#1baf7a')],
+    resto: de('--grupo-resto', '#a29d95'),
   };
 }
 
 // La foto que se guarda: el mismo dibujo en un lienzo de 1.600 puntos de lado,
-// con de quién es y el día arriba, para que se entienda fuera de aquí. Devuelve
-// el PNG en base64, o null si no hay lienzo: entonces la extensión dice que no
-// ha podido, en vez de guardar nada a medias.
+// con de quién es y el día arriba, y la leyenda de los colores si los hay, para
+// que se entienda fuera de aquí. Devuelve el PNG en base64, o null si no hay
+// lienzo: entonces la extensión dice que no ha podido, en vez de guardar nada a
+// medias. Se guarda entera, se esté mirando de cerca o no.
 function laFotoEnPng(f = laFotoDeAhora) {
   if (!f) return null;
   try {
@@ -3277,11 +3632,17 @@ function laFotoEnPng(f = laFotoDeAhora) {
     const c = lienzo && typeof lienzo.getContext === 'function' ? lienzo.getContext('2d') : null;
     if (!c) return null;
     const LADO = 1600;
-    const ARRIBA = 150;
+    const grupos = Array.isArray(f.grupos) ? f.grupos.slice(0, 3) : [];
+    const ARRIBA = grupos.length ? 200 : 150;
     const e = LADO / f.lado;
     lienzo.width = LADO;
     lienzo.height = LADO + ARRIBA;
     const color = coloresDeLaFoto();
+    const colorDe = (n) => {
+      const clase = claseDelGrupo(n.grupo, grupos.length > 0);
+      if (!clase) return color.acento;
+      return clase === 'gx' ? color.resto : color.grupos[Number(clase.slice(1))];
+    };
 
     c.fillStyle = color.fondo;
     c.fillRect(0, 0, lienzo.width, lienzo.height);
@@ -3293,6 +3654,20 @@ function laFotoEnPng(f = laFotoDeAhora) {
     c.font = `28px ${color.letra}`;
     const hoy = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
     c.fillText(`${hoy} · ${conceptosYEnlaces(f.nodos.length, f.enlaces.length)}`, 64, 122);
+    // La leyenda, en una fila: un cuadradito de cada color y su nombre.
+    if (grupos.length) {
+      const hayResto = f.nodos.some((n) => claseDelGrupo(n.grupo, true) === 'gx');
+      const filas = [...grupos.map((g, i) => [color.grupos[i], corto(g.etiqueta, 30)]), ...(hayResto ? [[color.resto, 'Lo demás']] : [])];
+      let x = 64;
+      c.font = `26px ${color.letra}`;
+      for (const [suyo, nombre] of filas) {
+        c.fillStyle = suyo;
+        c.fillRect(x, 156, 22, 22);
+        c.fillStyle = color.texto;
+        c.fillText(nombre, x + 32, 176);
+        x += 32 + (typeof c.measureText === 'function' ? c.measureText(nombre).width : nombre.length * 14) + 40;
+      }
+    }
 
     c.translate(0, ARRIBA);
     c.strokeStyle = color.apagado;
@@ -3306,8 +3681,8 @@ function laFotoEnPng(f = laFotoDeAhora) {
     }
     c.stroke();
     c.globalAlpha = 1;
-    c.fillStyle = color.acento;
     for (const n of f.nodos) {
+      c.fillStyle = colorDe(n);
       c.beginPath();
       c.arc(numero(n.x) * e, numero(n.y) * e, numero(n.r) * e, 0, Math.PI * 2);
       c.fill();
@@ -3598,6 +3973,8 @@ function pintar(html) {
   conexionQueRecibe = null;
   // Cualquier pantalla que no sea la de esperar para el reloj.
   if (!html.includes('data-cuanto')) pararElReloj();
+  // Al volver a la foto desde otra pantalla, se ve entera (decisión 197).
+  if (!html.includes('data-foto-lienzo')) enLaFoto = false;
   // Repintar tira el scroll al principio. Si se está en la misma pantalla —el
   // vigía repinta sola cuando el arnés escribe— se repone donde estaba.
   const desplazado = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
@@ -3658,6 +4035,7 @@ function pintar(html) {
 
   engancharLasInfos();
   engancharLaBusqueda();
+  engancharLaFoto();
 
   if (mismaPantalla && document.scrollingElement) document.scrollingElement.scrollTop = desplazado;
 }
@@ -3796,6 +4174,11 @@ function atender(data) {
     case 'papeles': return pintar(pantallaPapeles(data));
     case 'documentos': return pintar(pantallaDocumentos(data));
     case 'foto': return pintar(pantallaFoto(data));
+    // La pestaña de la foto en grande (decisión 197): esta misma página, sin la barra.
+    case 'fotoEnGrande':
+      enGrande = true;
+      document.body.classList.add('en-grande');
+      return pintar(pantallaFotoEnGrande(data));
     case 'fijadas': return pintar(pantallaFijadas(data));
     case 'ayuda': return pintar(pantallaAyuda(data));
     case 'estaBarra': return pintar(pantallaEstaBarra(data));
