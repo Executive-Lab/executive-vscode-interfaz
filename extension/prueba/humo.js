@@ -18505,7 +18505,7 @@ exec git "$@"
     // El grupo es la primera carpeta; en un monorepo, la de cada proyecto; y lo de la raíz, de ninguno.
     assert.equal(foto.grupoDe('ventas/Clientes.md'), 'ventas');
     assert.equal(foto.grupoDe('ventas/2026/Octubre.md'), 'ventas');
-    assert.equal(foto.grupoDe('proyectos/certificados/sdd/Plan.md'), 'proyectos/certificados');
+    assert.equal(foto.grupoDe('proyectos/facturas/sdd/Plan.md'), 'proyectos/facturas');
     assert.equal(foto.grupoDe('proyectos/Lista.md'), 'proyectos', 'lo suelto en proyectos/ no es de un proyecto');
     assert.equal(foto.grupoDe('Notas.md'), '');
     const de = (lista) => lista.map((ruta) => ({ ruta }));
