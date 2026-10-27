@@ -20313,6 +20313,54 @@ exec git "$@"
     }
   });
 
+  await comprobar('199: en Ayuda se cambia cómo se ve la ventana, que en vista sencilla no tenía por dónde salir', async () => {
+    // Jose, en vista sencilla: Ajustes está apagado en la sencilla y el botón de
+    // abajo del editor solo sale en el completo. No había salida a la vista.
+    const proveedor = vscode.registrado.proveedor;
+    const { workspace } = vscode.registrado.ajustes;
+    const enviados = [];
+    const antes = { enviar: proveedor.enviar, raiz: vscode.guion.raiz, interruptor: workspace[disfraz.CLAVE_INTERRUPTOR] };
+    proveedor.enviar = (m) => enviados.push(m);
+    const pintar = (m) => require('./panel-falso').montarPanel().mandar(m);
+    const desescapar = (v) => v.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    const botones = (html) => [...html.matchAll(/<button[^>]*data-accion="([^"]*)"[^>]*>([\s\S]*?)<\/button>/g)]
+      .map(([, accion, dentro]) => [dentro.replace(/<span class="icono"[^>]*>[\s\S]*?<\/span>/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(), JSON.parse(desescapar(accion))]);
+    const lleva = (html, etiqueta) => (botones(html).find(([e]) => e === etiqueta) || [])[1];
+    const ayuda = async () => { enviados.length = 0; await proveedor.manejar({ tipo: 'verAyuda' }); return enviados.find((m) => m.tipo === 'ayuda'); };
+    try {
+      assert.ok(vscode.guion.raiz, 'la prueba necesita una carpeta abierta');
+
+      workspace[disfraz.CLAVE_INTERRUPTOR] = true;
+      let m = await ayuda();
+      assert.equal(m.modo, 'sencillo');
+      let html = pintar(m);
+      assert.match(html, /Cómo se ve esta ventana/);
+      assert.deepEqual(lleva(html, 'Ver el editor completo'), { tipo: 'verEditorCompleto' });
+      assert.equal(lleva(html, 'Volver al modo sencillo'), undefined, 'ofrece el modo en el que ya está');
+
+      workspace[disfraz.CLAVE_INTERRUPTOR] = false;
+      m = await ayuda();
+      assert.equal(m.modo, 'avanzado');
+      html = pintar(m);
+      assert.deepEqual(lleva(html, 'Volver al modo sencillo'), { tipo: 'modoSencillo' });
+      assert.equal(lleva(html, 'Ver el editor completo'), undefined, 'ofrece el modo en el que ya está');
+
+      // Sin carpeta no hay ventana que cambiar: el botón solo daría un error.
+      vscode.guion.raiz = null;
+      m = await ayuda();
+      assert.equal(m.modo, null);
+      html = pintar(m);
+      assert.doesNotMatch(html, /Cómo se ve esta ventana/);
+      assert.equal(lleva(html, 'Ver el editor completo'), undefined);
+      return 'en sencilla, Ver el editor completo · en completa, Volver al modo sencillo · sin carpeta, nada';
+    } finally {
+      proveedor.enviar = antes.enviar;
+      vscode.guion.raiz = antes.raiz;
+      if (antes.interruptor === undefined) delete workspace[disfraz.CLAVE_INTERRUPTOR];
+      else workspace[disfraz.CLAVE_INTERRUPTOR] = antes.interruptor;
+    }
+  });
+
   await comprobar('185: «Que Claude solo vea lo que le pegues»: un clic en los ajustes de usuario del editor, que se deshace, para todas las carpetas', async () => {
     const proveedor = vscode.registrado.proveedor;
     const nuevo = cargar('lo-nuevo-de-claude');

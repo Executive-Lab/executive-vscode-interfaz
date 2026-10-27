@@ -3001,6 +3001,9 @@ ${cabecera}
       version: await this.laVersionParaEnsenar(),
       // El control remoto, si Claude está puesto: cuándo no puede funcionar (decisión 185).
       controlRemoto: loNuevoDeClaude.paraAyuda({ conClaude: this.conClaudePuesto() }),
+      // Cómo está esta ventana, para su interruptor (decisión 199). Sin carpeta no
+      // hay ventana que cambiar, y no sale.
+      modo: proyecto.raiz() ? disfraz.modoDeEstaVentana() : null,
     });
   }
 
