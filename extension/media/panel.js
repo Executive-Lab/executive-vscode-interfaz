@@ -1214,7 +1214,7 @@ function pantallaFijadas({ grupos = [], elegidas = [], tope = 5, aviso: avisoLoc
 // repartido: el SOS en un grupo, la revisión de la carpeta en otro, y "¿y ahora
 // qué hago?" en ningún sitio — que es la pregunta más frecuente de todas y no
 // tenía botón.
-function pantallaAyuda({ github, avisos = [], version = null, controlRemoto = null }) {
+function pantallaAyuda({ github, avisos = [], version = null, controlRemoto = null, modo: modoDeLaVentana = null }) {
   return `
     ${migas([{ etiqueta: 'Principal', accion: { tipo: 'volver' } }, { etiqueta: 'Ayuda' }])}
     ${bloqueAviso()}
@@ -1300,6 +1300,16 @@ function pantallaAyuda({ github, avisos = [], version = null, controlRemoto = nu
       accion: { tipo: 'pedir', prompt: 'Explícame de cero cómo funciona esto: qué es esta carpeta, qué haces tú, qué hago yo, y qué gano. Sin palabras técnicas y con ejemplos de mi trabajo.' },
     })}
     ${boton({ etiqueta: 'Si trabajas con datos de clientes', icono: '🔒', accion: { tipo: 'verDatosDeClientes' } })}
+    ${/* El interruptor de la ventana (decisión 199). Vivía solo en Ajustes, que la
+          sencilla deja apagado, y el de abajo del editor sale solo en el completo:
+          en vista sencilla no había por dónde salir. Sin carpeta no sale. */''}
+    ${modoDeLaVentana ? `
+      <hr class="separador">
+      <h2>Cómo se ve esta ventana</h2>
+      ${modoDeLaVentana === 'avanzado'
+        ? boton({ etiqueta: 'Volver al modo sencillo', icono: '◂', accion: { tipo: 'modoSencillo' } })
+        : boton({ etiqueta: 'Ver el editor completo', icono: '▸', accion: { tipo: 'verEditorCompleto' } })}
+      <p class="detalle">Solo cambia esta ventana: las demás siguen igual.</p>` : ''}
     ${/* Qué barra es esta, y si hay otra. Sale aunque la de la principal se
           apartara con «Ahora no»: aquí es donde se viene a buscarla. */''}
     ${version && version.esta ? `

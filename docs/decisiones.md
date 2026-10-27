@@ -9859,3 +9859,23 @@ de estilo de verdad, a 120, 160, 200, 240 y 300 puntos de ancho: antes, a 200, l
 
 **Lo que no se prueba**: el panel de mentira no mide nada, así que ninguna prueba de `humo.js` lo vería volver. Una que
 buscara la regla en el CSS miraría cómo se escribe y no cómo se ve; por eso no se ha escrito.
+
+## 199. El interruptor de la ventana, también en Ayuda
+
+**Fecha:** 27 de octubre de 2026 · **Estado:** hecho · Falta verlo en el editor
+
+Jose, con su ventana en vista sencilla: *«quiero el modo no sencillo, y mete un botón para cambiar aunque sea
+dentro de "Más ayuda"»*. No había por dónde salir. «Ver el editor completo» vivía solo en Ajustes, y Ajustes va
+apagado en la principal sencilla (`piezas.json`, decisión 138). El botón de abajo del editor, «Modo sencillo»,
+sale solo con el editor completo. Y en vista sencilla no hay menús, así que la paleta de comandos tampoco se ve.
+
+**Qué se hizo.** En Ayuda, un apartado «Cómo se ve esta ventana» con el botón que toca: «Ver el editor
+completo» en vista sencilla, «Volver al modo sencillo» con el editor completo. Hace lo mismo que el de
+Ajustes. Debajo, «Solo cambia esta ventana: las demás siguen igual». La extensión le dice a la pantalla cómo
+está la ventana al abrir Ayuda; sin carpeta abierta no hay ventana que cambiar y el apartado no sale.
+
+**Lo que no se ha tocado**: Ajustes sigue apagado en la sencilla. Encenderlo era la otra salida, pero trae
+cinco botones más a la principal, y la sencilla se hizo para quitarlos.
+
+**Probado**: `humo.js`, «199: en Ayuda se cambia cómo se ve la ventana», con dos mutantes tumbados (el botón
+al revés, y el apartado sin carpeta).
