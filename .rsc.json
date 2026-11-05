@@ -5,6 +5,7 @@
   ],
   "skills": [
     "analyze",
+    "asdd",
     "automation-strategy",
     "clarify",
     "connect-tool",
@@ -12,6 +13,7 @@
     "debug",
     "decision-challenge",
     "deprecation",
+    "design",
     "fable-operator",
     "ftd",
     "harness",
@@ -22,7 +24,6 @@
     "parallel",
     "plan",
     "review",
-    "sdd",
     "sdd-init",
     "ship",
     "simplify-code",
@@ -30,8 +31,9 @@
     "specify",
     "suggest",
     "tasks",
-    "ui-engineering",
+    "tidy",
     "unslop",
+    "ux",
     "verify",
     "worktrees"
   ],
@@ -49,7 +51,7 @@
     "guardar",
     "seguir"
   ],
-  "catalogVersion": "3.0.22",
+  "catalogVersion": "4.0.5",
   "tier": null,
   "optOuts": [
     "audit",
