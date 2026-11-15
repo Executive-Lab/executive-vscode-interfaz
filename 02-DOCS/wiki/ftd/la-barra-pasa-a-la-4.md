@@ -65,18 +65,18 @@ contrato.
 
 ## Checklist
 
-- [ ] 1. El paquete y la versión, en todos los sitios, también en este repositorio. — Prueba: «la
+- [x] 1. El paquete y la versión, en todos los sitios, también en este repositorio. — Prueba: «la
   versión del arnés está fijada, y dice lo mismo en todos los sitios».
-- [ ] 2. La copia vieja del freno, retirada al poner los raíles. — Prueba nueva en `humo.js`.
-- [ ] 3. Catálogo y nombres: lo nuevo con nombre en español y lo retirado fuera de lo que se ofrece. —
+- [x] 2. La copia vieja del freno, retirada al poner los raíles. — Prueba nueva en `humo.js`.
+- [x] 3. Catálogo y nombres: lo nuevo con nombre en español y lo retirado fuera de lo que se ofrece. —
   Pruebas «todo lo que RSC puede montar tiene nombre» y «cada capacidad existe en el catálogo».
-- [ ] 4. La regla 7 con `risk`, `spec`, `ingest`, `emoji` y `upgrade`. — Prueba de la regla 7.
-- [ ] 5. Lo nuevo que llega al alumno, decidido y probado (emoji, MemSlop, ingesta, `asdd-gate`).
-- [ ] 6. Contrato con la 4.1.7 de verdad en verde. — `contrato.js`.
+- [x] 4. La regla 7 con `risk`, `spec`, `ingest`, `emoji` y `upgrade`. — Prueba de la regla 7.
+- [x] 5. Lo nuevo que llega al alumno, decidido y probado (emoji, MemSlop, ingesta, `asdd-gate`).
+- [x] 6. Contrato con la 4.1.7 de verdad en verde. — `contrato.js`.
 - [ ] 7. Batería larga con el arnés real (`--con-arnes`), `empresas-distintas.js`,
   `mapeos-codex.js`, Windows en GitHub y la barra en un VS Code de verdad.
 - [ ] 8. Diccionario, constitución (P7), decisión 200, README y el diario.
-- [ ] 9. Revisión adversaria en línea (corrección y seguridad) del diff entero.
+- [x] 9. Revisión adversaria en línea (corrección y seguridad) del diff entero.
 - [ ] 10. El `.vsix` empaquetado y la PR abierta.
 
 ## Evidence
@@ -84,7 +84,27 @@ contrato.
 - Base, 15-11 con la 3.0.22: `humo.js` 569 de 569; `--con-arnes` 578 de 578; `contrato.js`,
   `empresas-distintas.js` y `mapeos-codex.js` en verde.
 - Ensayo con la 4.1.7 sin tocar código: 10 fallos en `humo.js` y 6 en `contrato.js`.
+- **1, 3, 4 y 6.** Con los cambios (commit `2128d90`), 16-11: `humo.js` 573 de 573 (las 569 de antes y 4
+  nuevas), `contrato.js` 15 de 15 con la 4.1.7 de verdad, `empresas-distintas.js` y `mapeos-codex.js` en
+  verde, diccionario en verde. El arnés de este repositorio, con `sync` de la de dentro: `optOuts` intacto.
+- **2.** «200: al poner los raíles, la copia del freno de antes se quita, y nada más»: se va la de la 3.0.22,
+  se queda un fichero que no es una copia del freno y un enlace con ese nombre, y lo de su otro lado no se
+  toca. Cae si se quita la llamada a `retirarLosFrenosDeAntes`.
+- **5.** Comprobado con el paquete: con `non-technical`, el freno de RSC deniega la orden de instalar
+  MemSlop (lo denegó hasta un `heredoc` que solo la citaba). La barra la calla en un Mac: «200: la oferta de
+  MemSlop se calla en un Mac, una vez y sin pisar nada», con la oferta de verdad de RSC callando con esa marca.
+  `asdd-gate`: en la rama principal no actúa (`if (branch === trunk) return null`). La ingesta: «Añadir
+  documentos» copia a `inbox/`. El suelo que no se quita, comparado con el paquete. Las cuatro pruebas nuevas
+  caen quitando su arreglo (tres mutaciones a mano, cada una vista en rojo).
+- **7, en parte.** `--con-arnes` con la 4.1.7: 582 de 582. Y el escenario de los alumnos de octubre, «200:
+  una carpeta que la barra montó con la 3.0.22 se pone al día sola a la 4, sin perder nada»: en verde, y en
+  rojo sin la retirada del freno.
+- **9.** Revisión en línea: la marca de MemSlop se escribe con `wx` (un enlace roto ahí da `EEXIST` y no se
+  escribe a través de él); el borrado solo toca ficheros normales con el nombre exacto, después de una copia
+  que ya rechaza enlaces; nada privado nombrado en este repositorio público. Una cosa que salió: el
+  manifiesto contaba lo que hace la barra al abrirse sin confianza y no decía lo de MemSlop. Añadido.
 
 ## Next
 
-- Punto 1 en curso.
+- Lo que queda de 7: Windows y macOS en GitHub y la barra en un VS Code de verdad.
+- 8: el diario. 10: `./publicar.sh` y la PR.
