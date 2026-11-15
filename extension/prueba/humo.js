@@ -4146,7 +4146,8 @@ exec git "$@"
     const targets = path.join(RAIZ, 'media', 'harness', 'node_modules', '@ericrisco', 'rsc', 'targets');
     if (!fs.existsSync(targets)) return 'SALTADA';
 
-    const suyos = fs.readdirSync(targets).filter((f) => /-guard\.mjs$/.test(f)).map((f) => f.replace(/\.mjs$/, ''));
+    // Y el de la 4 que va dentro de `ship-guard` con su propio interruptor (decisión 200).
+    const suyos = fs.readdirSync(targets).filter((f) => /-guard\.mjs$/.test(f) || f === 'asdd-gate.mjs').map((f) => f.replace(/\.mjs$/, ''));
     assert.deepEqual(suyos.sort(), reglas.GUARDIANES.map((g) => g.id).sort(), 'los que hay en RSC son los que nombramos');
 
     for (const g of reglas.GUARDIANES) {
@@ -5805,6 +5806,133 @@ exec git "$@"
       if (suya) assert.equal(suya, pedida, 'la demo monta el mismo catálogo que todo lo demás');
     }
     return pedida;
+  });
+
+  await comprobar('200: lo que no se deja quitar es el suelo del arnés que viaja dentro', async () => {
+    // Con la 4 el suelo pasó de cinco a nueve (`design`, `ux`, `tidy` y `security-audit`).
+    // Ofrecer «Quitarla» en una que el siguiente `sync` vuelve a poner es un botón que no
+    // hace nada. Se compara con el paquete, no con una lista copiada.
+    const suelo = path.join(RAIZ, 'media', 'harness', 'node_modules', '@ericrisco', 'rsc', 'scripts', 'lib', 'default-skill-floor.js');
+    const { DEFAULT_SKILL_FLOOR } = await import(require('node:url').pathToFileURL(suelo).href);
+    const deshacerM = cargar('deshacer');
+    assert.deepEqual([...deshacerM.SUELO].sort(), [...DEFAULT_SKILL_FLOOR].sort(), 'el suelo de deshacer.js no es el del paquete');
+    for (const id of DEFAULT_SKILL_FLOOR) assert.equal(deshacerM.sePuedeQuitarLaHabilidad(id), false, `se ofrece quitar ${id}, que es del suelo`);
+    assert.equal(deshacerM.sePuedeQuitarLaHabilidad('invoicing'), true, 'una del catálogo sí se puede quitar');
+    return `${DEFAULT_SKILL_FLOOR.length} del suelo, ninguna con «Quitarla»`;
+  });
+
+  await comprobar('200: al poner los raíles, la copia del freno de antes se quita, y nada más', () => {
+    // La copia se llama por su versión y copiar la habilidad no borra nada: al pasar de
+    // la 3 a la 4, `freno-rsc-3.0.22.mjs` se quedaba en la carpeta del alumno sin que
+    // nadie la cargara. Se quita solo eso: ni lo que no es una copia del freno, ni un
+    // enlace con ese nombre.
+    const cp = require('node:child_process');
+    const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'freno-de-antes-'));
+    fs.writeFileSync(path.join(carpeta, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'], skills: [] }));
+    const suya = path.join(carpeta, '.claude', 'skills', 'executive-lab');
+    fs.mkdirSync(suya, { recursive: true });
+    fs.writeFileSync(path.join(suya, 'freno-rsc-3.0.22.mjs'), '// la de antes');
+    fs.writeFileSync(path.join(suya, 'freno-rsc-notas.md'), 'no es una copia del freno');
+    const fuera = path.join(carpeta, 'fuera.mjs');
+    fs.writeFileSync(fuera, '// lo de alguien');
+    let conEnlace = true;
+    try {
+      fs.symlinkSync(fuera, path.join(suya, 'freno-rsc-2.0.15.mjs'));
+    } catch {
+      conEnlace = false; // Windows sin permiso de enlaces: se prueba lo demás
+    }
+    const hecho = cp.spawnSync(process.execPath, [path.join(RAIZ, 'media', 'railes', 'aplicar.js'), carpeta], { encoding: 'utf8' });
+    assert.equal(hecho.status, 0, hecho.stderr);
+    const pedida = require(path.join(RAIZ, 'media', 'harness', 'package.json')).dependencies['@ericrisco/rsc'];
+    assert.ok(fs.existsSync(path.join(suya, `freno-rsc-${pedida}.mjs`)), 'falta la copia de hoy');
+    assert.ok(!fs.existsSync(path.join(suya, 'freno-rsc-3.0.22.mjs')), 'la copia de antes sigue ahí');
+    assert.ok(fs.existsSync(path.join(suya, 'freno-rsc-notas.md')), 'se ha llevado algo que no es una copia del freno');
+    if (conEnlace) {
+      assert.ok(fs.lstatSync(path.join(suya, 'freno-rsc-2.0.15.mjs')).isSymbolicLink(), 'ha quitado un enlace');
+      assert.equal(fs.readFileSync(fuera, 'utf8'), '// lo de alguien', 'ha tocado lo que hay al otro lado del enlace');
+    }
+    // Y la de hoy no se quita al volver a ponerlos.
+    const otraVez = cp.spawnSync(process.execPath, [path.join(RAIZ, 'media', 'railes', 'aplicar.js'), carpeta], { encoding: 'utf8' });
+    assert.equal(otraVez.status, 0, otraVez.stderr);
+    assert.ok(fs.existsSync(path.join(suya, `freno-rsc-${pedida}.mjs`)), 'la segunda vez se lleva la copia de hoy');
+    return `la de la 3.0.22, fuera; la de la ${pedida}, puesta${conEnlace ? '; el enlace, sin tocar' : ''}`;
+  });
+
+  await comprobar('200: la oferta de MemSlop se calla en un Mac, una vez y sin pisar nada', () => {
+    // La 4 la ofrece al empezar cada conversación en un Mac, con una orden que el freno
+    // le para a quien no es técnico. La barra la calla con el fichero de la máquina que
+    // lee RSC (`~/.rsc/.no-memslop`), y solo ahí.
+    const relevoM = cargar('relevo');
+    const casa = fs.mkdtempSync(path.join(os.tmpdir(), 'memslop-'));
+    const marca = path.join(casa, '.rsc', '.no-memslop');
+    assert.equal(relevoM.callarLaOfertaDeMemSlop({ casa, plataforma: 'win32' }), 'noHaceFalta');
+    assert.equal(relevoM.callarLaOfertaDeMemSlop({ casa, plataforma: 'linux' }), 'noHaceFalta');
+    assert.ok(!fs.existsSync(marca), 'fuera del Mac ha escrito algo');
+    assert.equal(relevoM.callarLaOfertaDeMemSlop({ casa, plataforma: 'darwin' }), 'callada');
+    assert.ok(fs.existsSync(marca), 'en un Mac no se calla');
+    fs.writeFileSync(marca, 'lo dijo la persona\n');
+    assert.equal(relevoM.callarLaOfertaDeMemSlop({ casa, plataforma: 'darwin' }), 'yaEstaba');
+    assert.equal(fs.readFileSync(marca, 'utf8'), 'lo dijo la persona\n', 'ha pisado un «no» que ya estaba');
+
+    // Y el propio RSC la calla con ese fichero: su oferta, con la casa de la prueba.
+    const oferta = path.join(RAIZ, 'media', 'harness', 'node_modules', '@ericrisco', 'rsc', 'targets', 'memslop-offer.mjs');
+    const preguntar = (enCasa) => require('node:child_process').spawnSync(process.execPath, ['--input-type=module', '-e',
+      `const m = await import(${JSON.stringify(require('node:url').pathToFileURL(oferta).href)}); process.stdout.write(m.memslopNotice({ platform: 'darwin', release: '24', home: ${JSON.stringify(enCasa)} }));`],
+    { encoding: 'utf8' });
+    const sinNada = fs.mkdtempSync(path.join(os.tmpdir(), 'memslop-sin-'));
+    assert.match(preguntar(sinNada).stdout, /mem-slop/, 'sin la marca, RSC no la ofrece: la prueba no mira lo que debe');
+    assert.equal(preguntar(casa).stdout, '', 'con la marca de la barra, RSC la sigue ofreciendo');
+    return 'en un Mac, callada; fuera, nada; un «no» suyo, respetado; y RSC calla';
+  });
+
+  await comprobar('200: lo nuevo de la 4 se nombra donde toca, y lo de la máquina solo con su pieza', () => {
+    // El freno a subir sin especificación sale solo si la carpeta lo trae (con ASDD), y
+    // apagado con su interruptor. La oferta de MemSlop, solo en un Mac, solo si la
+    // carpeta trae su pieza, y apagada por la marca de la carpeta personal.
+    const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'lo-de-la-4-'));
+    fs.mkdirSync(path.join(carpeta, '.rsc'), { recursive: true });
+    fs.writeFileSync(path.join(carpeta, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'] }));
+    const casa = fs.mkdtempSync(path.join(os.tmpdir(), 'casa-de-la-4-'));
+    const antesHome = process.env.HOME;
+    const antesPerfil = process.env.USERPROFILE;
+    process.env.HOME = casa;
+    process.env.USERPROFILE = casa;
+    vscode.guion.raiz = carpeta;
+    try {
+      const reglasM = cargar('reglas');
+      const guardian = () => reglasM.losGuardianes().find((g) => g.id === 'asdd-gate');
+      const memslop = () => reglasM.losAutomatismos().find((a) => a.id === 'memslop');
+      const apagadas = () => reglasM.loApagado().map((a) => a.id);
+      assert.equal(guardian(), undefined, 'sin ASDD se nombra un freno que no está');
+      fs.writeFileSync(path.join(carpeta, '.rsc', 'asdd-gate.mjs'), '// pieza');
+      assert.equal(guardian().estado, 'armado');
+      assert.equal(guardian().nombre, 'Freno a subir sin especificación');
+      fs.writeFileSync(path.join(carpeta, '.rsc', '.no-asdd-gate'), '');
+      assert.equal(guardian().estado, 'apagado');
+
+      // La marca de la máquina, sin la pieza en la carpeta: no se cuenta (una de la 3).
+      fs.mkdirSync(path.join(casa, '.rsc'), { recursive: true });
+      fs.writeFileSync(path.join(casa, '.rsc', '.no-memslop'), '');
+      assert.equal(memslop(), undefined, 'se nombra la oferta en una carpeta que no la trae');
+      assert.ok(!apagadas().includes('memslop'), 'se cuenta apagada en una carpeta que no la trae');
+      fs.writeFileSync(path.join(carpeta, '.rsc', 'memslop-offer.mjs'), '// pieza');
+      if (process.platform === 'darwin') {
+        assert.equal(memslop().estado, 'apagado', 'con la marca de la máquina sale activa');
+        assert.equal(memslop().porQue, 'Apagado a propósito: aquí no hace falta');
+        assert.ok(apagadas().includes('memslop'), 'apagada y no se cuenta en lo apagado');
+        fs.unlinkSync(path.join(casa, '.rsc', '.no-memslop'));
+        assert.equal(memslop().estado, 'activo', 'sin la marca sale apagada');
+      } else {
+        assert.equal(memslop(), undefined, 'fuera del Mac se nombra algo que ahí no pasa');
+        assert.ok(!apagadas().includes('memslop'), 'fuera del Mac se cuenta apagada');
+      }
+      return `freno armado y apagado con su interruptor; la oferta, ${process.platform === 'darwin' ? 'con la marca de la máquina' : 'callada fuera del Mac'}`;
+    } finally {
+      process.env.HOME = antesHome;
+      if (antesPerfil === undefined) delete process.env.USERPROFILE;
+      else process.env.USERPROFILE = antesPerfil;
+      vscode.guion.raiz = empresa;
+    }
   });
 
   await comprobar('quitar el disfraz también limpia lo que el disfraz ya no pone', () => {
@@ -12455,8 +12583,11 @@ exec git "$@"
     assert.equal(rscM.comoEsLaVersion('1.4.1'), 'vieja');
     assert.equal(rscM.comoEsLaVersion(LA_DE_LA_CLASE), 'igual');
     assert.equal(rscM.comoEsLaVersion(MAS_NUEVA), 'nueva', `la ${MAS_NUEVA} no es más nueva que la ${LA_DE_LA_CLASE}: se compara como texto`);
-    assert.equal(rscM.comoEsLaVersion('3.1.0'), 'nueva');
+    assert.equal(rscM.comoEsLaVersion('4.2.0'), 'nueva');
     assert.equal(rscM.comoEsLaVersion('2.1.0'), 'vieja', 'una 2 va por detrás de la 3 (decisión 145)');
+    // Y una 3 va por detrás de la 4: la clase de la 3 se pone al día sola (decisión 200).
+    assert.equal(rscM.comoEsLaVersion('3.9.9'), 'vieja', 'una 3 va por detrás de la 4 (decisión 200)');
+    assert.equal(rscM.comoEsLaVersion('3.0.22'), 'vieja', 'la de la clase de octubre va por detrás (decisión 200)');
     // Lo que no es una versión de verdad no se compara a medias (revisión de F4,
     // m2): «2.0» salía más nueva, y «latest», más vieja.
     for (const rara of ['2.0', '2', 'latest', 'x.y.z']) assert.equal(rscM.comoEsLaVersion(rara), 'rara', `«${rara}» se compara como si fuera una versión`);

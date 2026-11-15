@@ -59,11 +59,27 @@ const GUARDIANES = [
   // la barra, que la dejan abierta (`.no-trunk-guard`), como se dijo en clase.
   { id: 'branch-guard', fichero: 'branch-guard.mjs', interruptor: '.no-trunk-guard' },
   { id: 'copy-guard', fichero: 'copy-guard.mjs', interruptor: '.no-copy-guard' },
+  // De la 4 (decisión 200). Va dentro de `ship-guard`, solo se monta con la cadena
+  // ASDD y tiene su propio interruptor: antes de subir a GitHub un cambio de riesgo
+  // pide su especificación. En la rama principal no actúa, y en las carpetas de la
+  // barra se trabaja en ella.
+  { id: 'asdd-gate', fichero: 'asdd-gate.mjs', interruptor: '.no-asdd-gate' },
 ];
 
 const hayEnRsc = (nombre) => {
   const ruta = proyecto.ruta('.rsc', nombre);
   return Boolean(ruta && fs.existsSync(ruta));
+};
+
+// Lo que RSC decide por máquina vive en la carpeta personal, en `~/.rsc/`, y no en
+// la de la carpeta (`MACHINE_OPT_OUTS` de `targets/opt-outs.js`). Hoy, solo la
+// oferta de MemSlop (decisión 200).
+const hayEnCasa = (nombre) => {
+  try {
+    return fs.existsSync(require('node:path').join(require('node:os').homedir(), '.rsc', nombre));
+  } catch {
+    return false;
+  }
 };
 
 // ── Lo que hace solo, sin parar nada ─────────────────────────────────────
@@ -119,19 +135,37 @@ const AUTOMATISMOS = [
   // Apagado por la barra en sus carpetas (decisión 157): con dos conversaciones, a
   // un alumno lo mandaban a trabajar a otra carpeta.
   { id: 'worktree-isolation', interruptor: '.no-worktree-isolation', porQueApagado: 'Apagado a propósito: todo se hace en esta carpeta' },
+  // De la 4 (decisión 200). Los emoji: el montaje los deja como antes, encendidos, y
+  // `rsc emoji off` los quita para todo el equipo. Lo leen el arranque y el guardián
+  // de git, desde `emoji-policy.mjs`.
+  { id: 'emoji', fichero: 'emoji-policy.mjs', interruptor: '.no-emoji' },
+  // La oferta de MemSlop, una app del Mac. Su «no» es de la máquina (`~/.rsc/.no-memslop`)
+  // y la barra lo pone al abrirse (`relevo.callarLaOfertaDeMemSlop`): su instalación pasa
+  // por una orden que el freno le para a quien no es técnico, y ofrecer algo que acaba en
+  // un bloqueo es un mensaje sin salida (decisión 183). Fuera del Mac, RSC no la ofrece.
+  {
+    id: 'memslop', fichero: 'memslop-offer.mjs', interruptor: '.no-memslop', enCasa: true, soloEnMac: true, paraTodos: true,
+    porQueApagado: 'Apagado a propósito: aquí no hace falta',
+  },
 ];
 
 // La memoria no tiene interruptor: se apaga en la declaración, con
 // `memory: false` (`targets/memory.js`, `memoryEnabledForProject`). Salía
 // activa estando apagada (C5).
 const memoriaApagada = () => (proyecto.declaracion() || {}).memory === false;
-const estaApagado = (a) => Boolean(a.interruptor && hayEnRsc(a.interruptor))
+const estaApagado = (a) => Boolean(a.interruptor && (a.enCasa ? hayEnCasa(a.interruptor) : hayEnRsc(a.interruptor)))
   || Boolean(a.entorno && process.env[a.entorno])
   || (a.id === 'session-memory' && memoriaApagada());
 
+// Lo que RSC solo hace en un Mac no se nombra en otro sitio: estaría contando algo
+// que ahí no pasa nunca. Y lo que se apaga en la carpeta personal vale para todas
+// las carpetas de la máquina: aquí solo se cuenta si esta carpeta trae la pieza.
+// Sin eso, una carpeta de la 3, donde no hay oferta que callar, la nombraba apagada.
+const enEsteSistema = (a) => (!a.soloEnMac || process.platform === 'darwin') && (!a.enCasa || hayEnRsc(a.fichero));
+
 function losAutomatismos() {
   return AUTOMATISMOS
-    .filter((a) => hayEnRsc(a.fichero || a.interruptor) && (!a.soloApagado || estaApagado(a)))
+    .filter((a) => hayEnRsc(a.fichero || a.interruptor) && enEsteSistema(a) && (!a.soloApagado || estaApagado(a)))
     .map((a) => {
       const dicho = nombres.comoSeLlama('automatismos', a.id, {});
       const apagado = estaApagado(a);
@@ -195,7 +229,7 @@ function loApagado() {
   };
   for (const g of GUARDIANES) if (hayEnRsc(g.interruptor) && puedeEstarAqui(g)) meter(g.id, nombrar('guardianes', g.id));
   for (const a of AUTOMATISMOS) {
-    if (estaApagado(a) && puedeEstarAqui(a)) meter(a.id, nombrar('automatismos', a.id));
+    if (estaApagado(a) && puedeEstarAqui(a) && enEsteSistema(a)) meter(a.id, nombrar('automatismos', a.id));
   }
 
   const declarados = (proyecto.declaracion() || {}).optOuts;

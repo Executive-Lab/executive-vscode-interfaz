@@ -15,7 +15,7 @@ const entorno = require('./entorno');
 // La versión que trae la barra, y el último recurso si .rsc.json no dice ninguna.
 // Se actualiza a mano, a propósito: subir de versión es una decisión, no un
 // efecto secundario.
-const VERSION_DE_RESPALDO = '3.0.22';
+const VERSION_DE_RESPALDO = '4.1.7';
 
 // Cómo es una versión frente a la que trae la barra (P7, decisión 145: la serie
 // de la clase, y la lleva la barra):
@@ -69,7 +69,7 @@ function paquete() {
 // reproducido). Antes de dejarle escribir, se miran todos los nombres: los de
 // `.rsc.json` y los de cada fichero de estado. Con uno que sale de la carpeta,
 // no se corre, y el motivo queda en el informe de «Algo va mal».
-const QUE_ESCRIBEN = new Set(['sync', 'repair', 'onboard', 'add', 'uninstall', 'purge', 'install', 'upgrade', 'restore',
+const QUE_ESCRIBEN = new Set(['sync', 'repair', 'onboard', 'add', 'uninstall', 'purge', 'install', 'upgrade', 'restore', 'ingest', 'emoji',
   'main', 'isolation', 'knowledge-sync', 'memory', 'git-permissions', 'agents', 'agent-model']);
 // Lo que el arnés usa como nombre de carpeta o de fichero al borrar
 // (`install-apply.js`, `repair.js`, `targets/agents.js`, `targets/commands.js`).

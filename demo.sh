@@ -72,7 +72,7 @@ if [ ! -f "$D/empresa/.rsc.json" ]; then
   if [ -d "$R/instalador/windows/carga/harness" ]; then
     rm -rf "$D/app/harness" && cp -R "$R/instalador/windows/carga/harness" "$D/app/harness"
   else
-    npm install --prefix "$D/app/harness" @ericrisco/rsc@3.0.22 --silent --no-audit --no-fund
+    npm install --prefix "$D/app/harness" @ericrisco/rsc@4.1.7 --silent --no-audit --no-fund
   fi
   node "$D/app/preparar.js" --destino "$D/empresa" --objetivo "organizar mis facturas" --asistente claude --sin-editor \
     || { echo "preparar.js ha fallado; mira $D/empresa/instalacion.log" >&2; exit 1; }

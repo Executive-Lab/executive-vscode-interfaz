@@ -172,8 +172,31 @@ const comoSeEscribe = (partes) => partes.join('/');
 // asistentes, y Codex no es uno. No es que estén en otro sitio — con Codex no
 // hay ninguno que leer, nunca. Así que se dice, en vez de dejarlos en una
 // carpeta muerta. La barra ya sabe explicar ese hueco (`donde.puedeTenerBotones`).
+// La copia del freno de RSC se llama por su versión (`freno-rsc-4.1.7.mjs`), y
+// copiar la habilidad no borra nada: al subir de versión, la de antes se quedaba
+// en la carpeta sin que nadie la cargara (decisión 200). Se quita solo eso: un
+// `freno-rsc-<versión>.mjs` que ya no viaja con la habilidad, y que es un fichero,
+// no un enlace. Se llama con la carpeta ya copiada, que no va por ningún enlace.
+const COPIA_DEL_FRENO = /^freno-rsc-\d+\.\d+\.\d+\.mjs$/;
+function retirarLosFrenosDeAntes(carpeta) {
+  const deHoy = new Set(fs.readdirSync(path.join(origen, 'executive-lab')));
+  let entradas = [];
+  try {
+    entradas = fs.readdirSync(carpeta, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entradas) {
+    if (!e.isFile() || !COPIA_DEL_FRENO.test(e.name) || deHoy.has(e.name)) continue;
+    try {
+      fs.unlinkSync(path.join(carpeta, e.name));
+    } catch { /* se queda: no la carga nadie */ }
+  }
+}
+
 function ponerLaHabilidadYLosComandos(quien, suyo) {
   if (copiarCarpeta(path.join(origen, 'executive-lab'), en(...suyo.habilidades, 'executive-lab'))) {
+    retirarLosFrenosDeAntes(en(...suyo.habilidades, 'executive-lab'));
     habilidadPuesta.add(quien);
     hechos.push(`${comoSeEscribe(suyo.habilidades)}/executive-lab/`);
   } else {
@@ -535,7 +558,7 @@ hechos.push(callarLosAvisos());
 //
 // RSC solo engancha el suyo cuando el plan practica la cadena SDD, y en el resto
 // de carpetas de alumno nada paraba un `rm -rf`. La habilidad trae el
-// envoltorio y la copia fijada del de RSC (`freno.mjs` y `freno-rsc-3.0.22.mjs`,
+// envoltorio y la copia fijada del de RSC (`freno.mjs` y `freno-rsc-4.1.7.mjs`,
 // copiados en el paso 1); aquí se engancha antes de cada orden.
 //
 // La orden no lleva `.rsc/`: RSC quita todo enganche con esa aguja cuando
