@@ -93,6 +93,9 @@ Ahora:
 - en las carpetas de la barra el arnés no se actualiza por su cuenta, porque las versiones las lleva la
   barra (C4).
 
+**16-11-2026, decisión 200.** La serie pasa a la 4: la barra trae la 4.1.7. Una 3 va por detrás y se pone
+al día sola, probado con una carpeta montada con la 3.0.22 de verdad.
+
 **Se comprueba**: la versión tiene que decir lo mismo en todos los sitios donde está escrita. Además,
 una carpeta que va por delante se corre con su versión y no con la de la barra, y no sale ningún botón
 para bajarla.

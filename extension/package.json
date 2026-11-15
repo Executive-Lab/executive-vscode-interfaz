@@ -3,7 +3,7 @@
   "displayName": "Executive Lab",
   "description": "Convierte VS Code en una sola pantalla sencilla para trabajar con un arnés de IA, sin ver ficheros, rutas ni terminales.",
   "publisher": "executivelab",
-  "version": "0.59.0",
+  "version": "0.60.0",
   "license": "MIT",
   "engines": {
     "vscode": "^1.98.0"
@@ -252,7 +252,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true,
-      "description": "La barra funciona igual en una carpeta sin confianza. Al abrirse, si el modo sencillo está puesto lo aplica en esta carpeta, devuelve a su sitio lo que ella misma dejó en los ajustes del asistente, pone en los ajustes de la persona lo del asistente que falte (la vista enfocada de Claude, por ejemplo), repone sus reglas si son de antes y, si está puesto, guarda solo de vez en cuando. Lo demás lo hace cuando se pulsa un botón. Con el instalador de Executive Lab la confianza va apagada y esto no llega a salir; con el .vsix solo, sí."
+      "description": "La barra funciona igual en una carpeta sin confianza. Al abrirse, si el modo sencillo está puesto lo aplica en esta carpeta, devuelve a su sitio lo que ella misma dejó en los ajustes del asistente, pone en los ajustes de la persona lo del asistente que falte (la vista enfocada de Claude, por ejemplo), en un Mac calla la oferta de instalar MemSlop que hace el arnés, repone sus reglas si son de antes y, si está puesto, guarda solo de vez en cuando. Lo demás lo hace cuando se pulsa un botón. Con el instalador de Executive Lab la confianza va apagada y esto no llega a salir; con el .vsix solo, sí."
     },
     "virtualWorkspaces": false
   },

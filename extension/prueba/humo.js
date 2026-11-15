@@ -29741,6 +29741,85 @@ exec git "$@"
       return `${botones.length} botones desde cero`;
     });
 
+    await comprobar('200: una carpeta que la barra montó con la 3.0.22 se pone al día sola a la 4, sin perder nada', async () => {
+      // Los alumnos de octubre tienen carpetas montadas por la barra con la 3.0.22. Al
+      // abrirlas con la barra de la 4 van por detrás, y por P9 se ponen al día solas
+      // (`rumbo`, rama `ponerAlDia`: traer, arreglar y lo nuestro). Se juega entero: se
+      // monta con una 3.0.22 de verdad y el código de la barra, la copia del freno se deja
+      // como la dejaba la barra de la 3, y se abre con la que viaja dentro.
+      const cp = require('node:child_process');
+      const barraDeLaTres = fs.mkdtempSync(path.join(os.tmpdir(), 'barra-de-la-3-'));
+      const bajada = cp.spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm',
+        ['install', '--prefix', path.join(barraDeLaTres, 'media', 'harness'), '@ericrisco/rsc@3.0.22', '--ignore-scripts', '--no-audit', '--no-fund', '--silent'],
+        { encoding: 'utf8', shell: process.platform === 'win32' });
+      assert.equal(bajada.status, 0, `no se ha podido bajar la 3.0.22 (hace falta red): ${bajada.stderr}`);
+
+      const rscM = cargar('rsc');
+      const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'empresa-de-la-3-'));
+      const hay = (...p) => fs.existsSync(path.join(carpeta, ...p));
+      const declarada = () => JSON.parse(fs.readFileSync(path.join(carpeta, '.rsc.json'), 'utf8'));
+      const enDisco = () => rscM.habilidadesDelArnesEnDisco('claude');
+      const antes = vscode.guion.raiz;
+      vscode.guion.raiz = carpeta;
+      try {
+        // 1. Montada como en octubre.
+        rscM.saberDondeEstamos(barraDeLaTres);
+        vscode.guion.respuestas = ['Llevar el día a día', 'Un departamento o un área', 'De 2 a 10', 'Organizar el papeleo',
+          'Lo justo', 'Facturas', 'Ferretería Soler', ''];
+        const montada = await cargar('arrancar').arrancar(contexto, vscode.window.createOutputChannel());
+        assert.equal(montada.ok, true, montada.mensaje || 'el montaje con la 3 se ha quedado a medias');
+        assert.equal(declarada().catalogVersion, '3.0.22', 'no se ha montado con la 3');
+        assert.ok(enDisco().includes('sdd') && enDisco().includes('ui-engineering'), `la 3 no trae lo que se esperaba: ${enDisco()}`);
+        const suya = path.join(carpeta, '.claude', 'skills', 'executive-lab');
+        const pedida = require(path.join(RAIZ, 'media', 'harness', 'package.json')).dependencies['@ericrisco/rsc'];
+        fs.renameSync(path.join(suya, `freno-rsc-${pedida}.mjs`), path.join(suya, 'freno-rsc-3.0.22.mjs'));
+        fs.writeFileSync(path.join(suya, 'freno.mjs'), fs.readFileSync(path.join(suya, 'freno.mjs'), 'utf8').replaceAll(`freno-rsc-${pedida}.mjs`, 'freno-rsc-3.0.22.mjs'));
+        const g = (...a) => cp.execFileSync('git', a, { cwd: carpeta, encoding: 'utf8' });
+        g('add', '-A');
+        g('commit', '-q', '--allow-empty', '-m', 'Como la dejó la barra de la 3');
+        const MARCAS = ['.no-trunk-guard', '.no-knowledge-sync', '.no-auto-update', '.no-worktree-isolation', '.no-audit', '.no-gitmoji', '.no-worktree-cleanup', '.no-scope-check'];
+        for (const m of MARCAS) assert.ok(hay('.rsc', m), `con la 3 no queda ${m}`);
+        const deAntes = declarada();
+        const perfilDeAntes = fs.readFileSync(path.join(carpeta, '02-DOCS', 'wiki', 'harness', 'user-profile.md'), 'utf8');
+
+        // 2. Abierta con la barra de la 4: va por detrás, y se pone al día sin preguntar nada.
+        rscM.saberDondeEstamos(RAIZ);
+        assert.equal(cargar('terreno').mirarYClasificar().versionAtrasada, true, 'la 3.0.22 no se ve por detrás');
+        vscode.guion.respuestas = [];
+        const alDia = await cargar('arrancar').arrancar(contexto, vscode.window.createOutputChannel());
+        assert.equal(alDia.ok, true, alDia.mensaje || 'al ponerla al día ha preguntado algo');
+        assert.equal(declarada().catalogVersion, pedida, 'no queda en la versión de la barra');
+        assert.equal(cargar('terreno').mirarYClasificar().versionAtrasada, false, 'sigue viéndose por detrás');
+
+        // Lo decidido, igual: ni una marca menos, ni un apagado menos, y sin subir sin preguntar.
+        for (const m of MARCAS) assert.ok(hay('.rsc', m), `al ponerla al día se pierde ${m}`);
+        assert.equal(declarada().gitPermissions, false, 'el asistente puede subir sin preguntar');
+        for (const id of deAntes.optOuts || []) assert.ok((declarada().optOuts || []).includes(id), `se pierde ${id} de optOuts`);
+        // Lo retirado, por su sucesora, en disco y en lo declarado; y el suelo de la 4 entero.
+        assert.ok(!enDisco().includes('sdd') && enDisco().includes('asdd'), `sdd no pasa a asdd: ${enDisco()}`);
+        assert.ok(!enDisco().includes('ui-engineering') && enDisco().includes('ux'), `ui-engineering no pasa a ux: ${enDisco()}`);
+        for (const id of cargar('deshacer').SUELO) assert.ok(enDisco().includes(id), `falta ${id}, que es del suelo de la 4`);
+        assert.ok(!(declarada().skills || []).includes('sdd'), '.rsc.json sigue declarando sdd');
+        // Los raíles: la copia del freno de antes, fuera; la de hoy, puesta y enganchada.
+        assert.ok(!hay('.claude', 'skills', 'executive-lab', 'freno-rsc-3.0.22.mjs'), 'la copia del freno de la 3 sigue ahí');
+        assert.ok(hay('.claude', 'skills', 'executive-lab', `freno-rsc-${pedida}.mjs`), 'falta la copia del freno de hoy');
+        assert.match(fs.readFileSync(path.join(suya, 'freno.mjs'), 'utf8'), new RegExp(`freno-rsc-${pedida.replace(/\./g, '\\.')}\\.mjs`), 'el envoltorio carga la copia de antes');
+        assert.ok(cargar('reglas').enganchadoAntesDeBash(fs.readFileSync(path.join(carpeta, '.claude', 'settings.json'), 'utf8'), '/executive-lab/freno.mjs'), 'el freno se ha desenganchado');
+        assert.match(fs.readFileSync(path.join(suya, 'siempre.md'), 'utf8'), /`ingest`/, 'los raíles no son los de la 4');
+        // Lo de la 4 está, y el perfil (los dos nombres) no se toca.
+        assert.ok(hay('.rsc', 'memslop-offer.mjs') && hay('.rsc', 'emoji-policy.mjs'), 'faltan las piezas de la 4');
+        const perfil = fs.readFileSync(path.join(carpeta, '02-DOCS', 'wiki', 'harness', 'user-profile.md'), 'utf8');
+        for (const nombre of ['Facturas', 'Ferretería Soler']) assert.equal(perfil.includes(nombre), perfilDeAntes.includes(nombre), `el perfil pierde «${nombre}»`);
+        // Y el arnés, entero según él mismo.
+        const salud = rscM.comoEstaDeSalud(await rscM.salud());
+        assert.equal(rscM.estaEntero(salud), true, `el arnés no queda entero: ${JSON.stringify(rscM.queFaltaEnDisco(salud))}`);
+        return `de la 3.0.22 a la ${pedida}: ${MARCAS.length} marcas y lo apagado, igual; sdd → asdd, ui-engineering → ux; el freno, el de hoy; entero`;
+      } finally {
+        rscM.saberDondeEstamos(RAIZ);
+        vscode.guion.raiz = antes;
+      }
+    });
+
     await comprobar('con «irá sumando piezas» queda montado, y guardar en español no se deniega', async () => {
       // El caso que más se rompía: con «Algo que irá sumando piezas» RSC elige
       // la cadena SDD y monta el guardián de gitmoji (A11). Con la 2 dejaba los
