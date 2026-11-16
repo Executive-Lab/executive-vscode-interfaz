@@ -53,10 +53,11 @@ la sencilla. La completa sigue apagada, como copia de reserva (decisión 138).
   a la vista, como antes.
 - [x] 3. La (i) de la ficha al lado de Trabajar, con su nombre al pasar por encima; la ficha se lee sin «Pídele que lo
   cambie» y vuelve a la principal.
-- [x] 4. Conversación nueva debajo de la tarjeta y fuera de Ayuda; con la pieza apagada, vuelve a Ayuda.
+- [x] 4. Conversación nueva debajo de la tarjeta y fuera de Ayuda; con la pieza apagada, vuelve a Ayuda. El tope de
+  cosas a la vista pasa de cinco a seis, decidido por mí con el visto bueno de Jose.
 - [x] 5. Solo cuentan las carpetas con `.env.example`, `.env`, `CREDENTIALS.md`, fichero de acceso o prueba.
 - [x] 6. Diccionario, decisión 202, versión 0.62.0, cierre de la 201.
-- [ ] 7. Batería entera, contrato, empresas, `--con-arnes`, y GitHub en verde.
+- [x] 7. Batería entera, contrato, empresas, `--con-arnes`. GitHub, en la PR.
 - [ ] 8. PR abierta.
 
 ## Evidence
@@ -70,6 +71,18 @@ la sencilla. La completa sigue apagada, como copia de reserva (decisión 138).
   (Holded entera, y cuatro con una sola pieza cada una). Cuentan cinco en Acciones, en Conexiones y en Qué falta por
   montar, y las siete siguen viéndose donde se tapan las claves.
 - **6.** `node docs/comprobar-diccionario.js`: en verde. 0.62.0 en `extension/package.json` y en el instalador.
+- **4, el tope.** `empresas-distintas.js` cayó en 13 pantallas: «6 cosas a la vista», con un tope de cinco. Jose:
+  *«lo que consideres, ya que queremos mantenerla simple pero que sea útil»*. El tope pasa a seis (`TOPE`). Con eso
+  pasan las tres empresas y la recién montada. Con un séptimo botón suelto puesto a mano, cae («7 cosas a la vista»).
+
+- **7.** Sobre el código final: `humo.js` 580 de 580, `contrato.js` 15 de 15, las tres empresas y la recién montada
+  enteras, `mapeos-codex.js` 30 de 30, diccionario y PowerShell sin pegas. `humo.js --con-arnes` dio 590 de 590 antes
+  de los dos últimos cambios, que no tocan lo que añade: el fichero de acceso de la prueba de conexiones, sin clave
+  dentro, y un comentario.
+- **Riesgo.** `rsc risk --base origin/main`: nivel 1. Salía nivel 2 por la clave privada de mentira de la prueba de
+  conexiones; la cuenta de servicio se reconoce por su tipo, y la clave sobraba. Revisión en línea, caso por caso:
+  sin hallazgos. Jose eligió no lanzar un revisor independiente. La prueba de conexiones cae con tres roturas a mano
+  (sin fichero de acceso, sin `.env`, sin filtrar).
 
 ## Next
 
