@@ -58,7 +58,7 @@ la sencilla. La completa sigue apagada, como copia de reserva (decisión 138).
 - [x] 5. Solo cuentan las carpetas con `.env.example`, `.env`, `CREDENTIALS.md`, fichero de acceso o prueba.
 - [x] 6. Diccionario, decisión 202, versión 0.62.0, cierre de la 201.
 - [x] 7. Batería entera, contrato, empresas, `--con-arnes`. GitHub, en la PR.
-- [ ] 8. PR abierta.
+- [x] 8. PR abierta: #112.
 
 ## Evidence
 
@@ -86,6 +86,6 @@ la sencilla. La completa sigue apagada, como copia de reserva (decisión 138).
 
 ## Next
 
-- Batería de cierre (`--con-arnes`, contrato, empresas, `mapeos-codex.js`, PowerShell), `rsc risk`, commit y PR.
+- GitHub en verde en la PR #112 (Windows, el `.exe`, el `.dmg` y la barra en un VS Code de verdad).
 - Que Jose fusione la PR, o diga que la fusione yo.
 - Publicar la 0.62.0, con el sí de Jose.
