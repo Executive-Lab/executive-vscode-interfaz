@@ -120,7 +120,18 @@ Segunda ronda, sobre los arreglos (831452c):
 Veintitrés roturas, sobre copias: caen veintidós. La que queda (un valor de GitHub en una variable de entorno) es el
 diseño.
 
+Tercera ronda, sobre `ffbef9c`, solo pruebas y documentos:
+
+- **Corrección** y **seguridad**: nada. Corrección vio caer tres roturas del YAML y pasar el fichero sano.
+- **Pruebas**: nada bloqueante. Dos detalles de las comprobaciones de texto (llamadas opcionales y un comentario con
+  paréntesis; un segundo `cron` y un `exit 0`), más la nota de seguridad de un secreto en una variable.
+
+Se aparcan los tres, como decisión diferida en la especificación: cerrarlos pide un lector de YAML y de JavaScript, y
+el presupuesto de rondas se acabó.
+
+**Registro** (`.rsc/review-ledger.jsonl`, `mejoras-tras-la-4/closing`): panel de tres lentes sobre `ffbef9c`, ronda 3
+de 3. Diecinueve hallazgos: 12 arreglados, 1 intencionado, 1 irrelevante, 5 aparcados y ninguno abierto.
+
 ## Next
 
-- Apuntar el panel en el registro de revisiones.
 - 2 y 6: el vigía en GitHub, por los dos caminos, y GitHub en verde. 7: la PR.

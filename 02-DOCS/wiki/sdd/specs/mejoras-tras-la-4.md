@@ -152,3 +152,10 @@ suposición tomada, para revisar después. FTD: `02-DOCS/wiki/ftd/tres-mejoras-t
 - **decisión diferida** — Un `.rsc/.no-emoji` que sea un enlace colgante en una carpeta de confianza hostil: lo
   escribe RSC al seguir el enlace, igual que las marcas de los otros cuatro interruptores. Se endurece en conjunto,
   en RSC, no en este cambio (revisión de seguridad de la 201).
+- **decisión diferida** — Mirar el fichero de GitHub con un lector de YAML y el script de `avisar` con un lector de
+  JavaScript, en vez de como texto. Tres rondas de revisión cerraron huecos de las comprobaciones de texto, cada vez
+  más pequeños. El registro marca los criterios 2 y 4 por objeciones de pruebas en las tres, y el presupuesto de
+  rondas se acabó. Quedan aparcados L17 (las llamadas opcionales, `fetch?.(…)`, y el falso fallo con un comentario
+  con paréntesis), L18 (un segundo `cron` y un `exit 0` antes del contrato) y L19 (un secreto en una variable de
+  entorno en mayúsculas). Ninguno está hoy en el fichero, y todos piden que alguien lo escriba así. Se cierran
+  juntos, con un lector, en un cambio aparte, sin rebajar los criterios.
