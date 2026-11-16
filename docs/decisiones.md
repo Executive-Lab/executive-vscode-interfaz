@@ -9980,3 +9980,11 @@ aviso, el interruptor con Codex solo, y que las pruebas del YAML miraran una for
 estructura (dieciocho roturas que sobrevivían, o que tocan los arreglos, caen ahora). Lo que no: una versión rara o
 un fallo de npm dejan la ejecución en rojo sin incidencia (GitHub avisa por correo), las acciones por versión mayor
 como el resto del repositorio, y la marca que sigue un enlace, que es de RSC y de los cinco interruptores a la vez.
+
+En la segunda ronda, corrección y seguridad dieron los arreglos por buenos, sin nada nuevo. Pruebas no encontró
+defectos en el código, pero sí huecos en las pruebas. La orden `como-si` con una versión buena no se probaba: ahora se
+prueba con una copia del vigía dentro de una copia desechable, y la batería ya no corre nada contra la barra de verdad.
+Una línea comentada en el YAML contaba como orden: ahora se buscan líneas enteras. Las claves de arriba del fichero,
+sus disparadores, sus trabajos y lo que llama el script que escribe están ahora en listas cerradas. `conClaude` no se
+probaba con Codex delante ni sin asistentes declarados. De veintitrés roturas caen veintidós. La que queda, un valor de
+GitHub en una variable de entorno, es el diseño: el valor va como dato y no entra en ninguna orden.

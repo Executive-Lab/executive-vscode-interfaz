@@ -85,12 +85,15 @@ suposición tomada, para revisar después. FTD: `02-DOCS/wiki/ftd/tres-mejoras-t
 ## Cómo lo demuestra
 
 - `humo.js`: «201: el vigía de RSC…» (decide como `comoEsLaVersion`, no se fía de versiones raras, la línea de órdenes
-  calla con una rara, el aviso, una por versión y solo las suyas, la barra como si la llevara, y el YAML mirado por su
-  estructura: permisos exactos, pasos de cada trabajo, orden y condiciones); «201: los dibujos…» (con RSC fingido, y
-  con Codex); la prueba de los objetivos con las cuatro en su turno.
+  calla con una rara, el aviso, una por versión y solo las suyas, la barra como si la llevara, también por la línea de
+  órdenes y sobre una copia, y el YAML mirado por su estructura: claves de arriba, disparadores y trabajos en lista
+  cerrada, permisos exactos, pasos de cada trabajo, órdenes por línea entera, orden y condiciones, y lo que llama el
+  script que escribe); «201: los dibujos…» (con RSC fingido, con Codex, con Codex delante y sin asistentes
+  declarados); la prueba de los objetivos con las cuatro en su turno.
 - `humo.js --con-arnes`: el interruptor con el RSC de verdad, la marca y su apunte en `optOuts`, y vuelta.
 - Las pruebas nuevas, vistas caer: el vigía con las roturas de la primera ronda y con las dieciocho que la revisión
-  de pruebas dejó vivas o que tocan los arreglos; las otras, antes de escribir su arreglo.
+  de pruebas dejó vivas o que tocan los arreglos; en la segunda ronda, veintidós de veintitrés (la que queda, un valor
+  de GitHub en una variable de entorno, es el diseño); las otras, antes de escribir su arreglo.
 - El contrato con paquetes de verdad, en una copia: una barra que cree llevar la 4.1.6 con la 4.1.7 instalada cae en
   4 comprobaciones sin `como-si`, y pasa 15 de 15 con él.
 - El vigía contra npm de verdad, y en GitHub por los dos caminos (al día, y con una versión de prueba) después de

@@ -5891,8 +5891,20 @@ exec git "$@"
     assert.throws(() => vigia.hacerComoSiLlevara('9.9.8', copia), /sale 2 veces/);
     fs.writeFileSync(suRsc, '// sin versión');
     assert.throws(() => vigia.hacerComoSiLlevara('9.9.8', copia), /sale 0 veces/);
-    r = cp.spawnSync(process.execPath, [DEL_VIGIA, 'como-si', '9.9'], { encoding: 'utf8' });
+    // Y por la línea de órdenes, que es como lo llama GitHub. El vigía, copiado dentro de la
+    // copia: su raíz es la de la copia, y nunca escribe en la barra de verdad. Sin esto, leer
+    // otro argumento o cambiar el nombre de la orden no lo veía nadie (revisión, segunda ronda).
+    fs.writeFileSync(suRsc, deVerdad);
+    const suVigia = path.join(copia, 'herramientas', 'vigia-rsc.js');
+    fs.mkdirSync(path.dirname(suVigia), { recursive: true });
+    fs.copyFileSync(DEL_VIGIA, suVigia);
+    r = cp.spawnSync(process.execPath, [suVigia, 'como-si', '9.9.7'], { encoding: 'utf8' });
+    assert.deepEqual([r.status, r.stdout], [0, 'La barra, como si llevara la 9.9.7.\n'], r.stderr);
+    const conLaNueva = deVerdad.replace(`const VERSION_DE_RESPALDO = '${fijada}';`, "const VERSION_DE_RESPALDO = '9.9.7';");
+    assert.equal(fs.readFileSync(suRsc, 'utf8'), conLaNueva, 'como-si no pone la versión');
+    r = cp.spawnSync(process.execPath, [suVigia, 'como-si', '9.9'], { encoding: 'utf8' });
     assert.notEqual(r.status, 0, 'como-si con una versión rara acaba bien');
+    assert.equal(fs.readFileSync(suRsc, 'utf8'), conLaNueva, 'como-si con una versión rara ha escrito');
     assert.equal(fs.readFileSync(path.join(RAIZ, 'src', 'rsc.js'), 'utf8'), deVerdad, 'ha tocado la barra de verdad');
     fs.rmSync(copia, { recursive: true, force: true });
 
@@ -5904,6 +5916,14 @@ exec git "$@"
       const hasta = flujo.slice(desde + 1).search(/\n  [a-z-]+:\n/);
       return hasta < 0 ? flujo.slice(desde) : flujo.slice(desde, desde + 1 + hasta);
     };
+    // Las claves de arriba, los disparadores y los trabajos, listas cerradas: con
+    // `pull_request_target`, por ejemplo, correría con lo que trae cualquiera (revisión,
+    // segunda ronda).
+    const lineas = flujo.split('\n');
+    assert.deepEqual(lineas.filter((l) => /^[^\s#]/.test(l)), ['name: Vigía de RSC', 'on:', 'permissions:', 'jobs:'], 'el fichero dice más de lo que se mira');
+    const bloque = (desde, hasta) => lineas.slice(lineas.indexOf(desde) + 1, lineas.indexOf(hasta)).filter((l) => /^ {2}[^\s#]/.test(l));
+    assert.deepEqual(bloque('on:', 'permissions:'), ['  schedule:', '  workflow_dispatch:'], 'corre con otro disparador');
+    assert.deepEqual(lineas.slice(lineas.indexOf('jobs:') + 1).filter((l) => /^ {2}[^\s#]/.test(l)), ['  probar:', '  avisar:'], 'hay otro trabajo');
     const probar = trabajo('probar');
     const avisar = trabajo('avisar');
     // Los permisos, exactos: la raíz solo lee, y cada trabajo dice los suyos.
@@ -5916,11 +5936,29 @@ exec git "$@"
     // El que avisa no corre nada de fuera: solo estos dos pasos, y ninguna orden.
     assert.deepEqual(avisar.split('\n').filter((l) => /^ +- /.test(l)).map((l) => l.trim()), ['- uses: actions/checkout@v4', '- uses: actions/github-script@v7']);
     assert.ok(!/^ +run:/m.test(avisar), 'el trabajo que escribe corre una orden');
+    assert.match(avisar, /^ +sparse-checkout: herramientas$/m, 'el que escribe se baja todo el repositorio');
+    // Y su script, lo que llama, en lista cerrada; un solo `require`, el del vigía. Con
+    // `exec`, `fetch` o `require('node:child_process')` sale aquí (revisión, segunda ronda).
+    // Lo que no ve: una llamada escrita para esconderse (con corchetes o con una plantilla
+    // etiquetada), que ya no es un despiste.
+    const script = avisar.slice(avisar.indexOf('script: |'));
+    const delLenguaje = new Set(['if', 'for', 'while', 'switch', 'catch']);
+    const suyas = [...new Set([...script.matchAll(/([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/g)].map((m) => m[1]))].filter((n) => !delLenguaje.has(n)).sort();
+    assert.deepEqual(suyas, ['Number', 'core.info', 'github.paginate', 'github.rest.issues.create', 'require', 'vigia.elAviso', 'vigia.queHacer'], 'el script que escribe llama a otra cosa');
+    assert.equal(script.split('require(').length, 2, 'el script carga más que el vigía');
+    assert.ok(script.includes('require(`${process.env.GITHUB_WORKSPACE}/herramientas/vigia-rsc.js`)'), 'el script carga otra cosa');
+    assert.ok(!/[\])]\s*\(/.test(script), 'una llamada que la lista no ve');
     // Lo que se baja, sin sus guiones de instalación; y el orden: bajar, como si, preparar, contrato.
     const deNpm = probar.split('\n').filter((l) => /\bnpm (ci|install)\b/.test(l));
     assert.ok(deNpm.length >= 2 && deNpm.every((l) => l.includes('--ignore-scripts')), 'npm corre los guiones del paquete');
-    const pos = (s) => { const i = probar.indexOf(s); assert.ok(i > 0, `falta «${s}»`); return i; };
-    assert.ok(pos('npm install') < pos('vigia-rsc.js como-si "$ULTIMA"') && pos('como-si "$ULTIMA"') < pos('preparar-paquete.js') && pos('preparar-paquete.js') < pos('prueba/contrato.js'), 'el contrato no se pasa como si la llevara');
+    // Por líneas enteras: una comentada, o con algo detrás, no cuenta (revisión, segunda ronda).
+    const ordenes = probar.split('\n').map((l) => l.trim());
+    const linea = (que, es) => { const i = ordenes.findIndex(es); assert.ok(i > 0, `falta la orden de ${que}`); return i; };
+    const bajar = linea('bajarla', (l) => l.startsWith('npm install --prefix extension/media/harness ') && l.endsWith(' "@ericrisco/rsc@$ULTIMA"'));
+    const comoSi = linea('como si', (l) => l === 'node herramientas/vigia-rsc.js como-si "$ULTIMA"');
+    const preparar = linea('preparar', (l) => l === 'node extension/preparar-paquete.js');
+    const elContrato = linea('el contrato', (l) => l.startsWith('node extension/prueba/contrato.js '));
+    assert.ok(bajar < comoSi && comoSi < preparar && preparar < elContrato, 'el contrato no se pasa como si la llevara');
     assert.ok(probar.includes("grep -c '✗' contrato.txt") && fs.readFileSync(path.join(RAIZ, 'prueba', 'contrato.js'), 'utf8').includes('✗'), 'los fallos se cuentan con otra marca');
     // Cuándo corre cada cosa.
     assert.ok(flujo.includes("\n    - cron: '23 6 * * 1'\n"), 'no es los lunes');
@@ -8106,7 +8144,7 @@ exec git "$@"
     const losDe = () => Object.fromEntries(reglas.queHay().interruptores.map((i) => [i.cual, i]));
 
     const llamadas = [];
-    const antes = { correr: rscM.correr, enviar: proveedor.enviar, confianza: vscode.guion.confianza, raiz: vscode.guion.raiz };
+    const antes = { correr: rscM.correr, enviar: proveedor.enviar, confianza: vscode.guion.confianza, raiz: vscode.guion.raiz, instaladas: vscode.guion.extensionesInstaladas };
     let respuesta = null;
     // `rsc emoji on|off` (scripts/rsc.js, 4.1.7): escribe o quita `.rsc/.no-emoji`.
     const comoRsc = { 'emoji off': () => poner('.no-emoji'), 'emoji on': () => quitar('.no-emoji') };
@@ -8180,15 +8218,24 @@ exec git "$@"
       assert.match(r.aviso.texto, /Eso ya no se puede cambiar desde aquí/);
       assert.equal(llamadas.length, 0, 'con Codex se ha corrido la orden');
       quitar('.no-emoji');
-      // Con Claude y Codex, sí: lo cambia para Claude.
+      // Con Claude y Codex, sí: lo cambia para Claude. Y en cualquier orden.
       declarar({ targets: ['claude', 'codex'] });
       assert.deepEqual(losDe().emoji.botones.map((b) => b.id), ['emoji-quitar']);
+      declarar({ targets: ['codex', 'claude'] });
+      assert.deepEqual(losDe().emoji.botones.map((b) => b.id), ['emoji-quitar'], 'con Codex delante no sale');
+      // Sin asistentes declarados, manda con el que se trabaja (revisión, segunda ronda).
+      declarar({ targets: [] });
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      assert.deepEqual(losDe().emoji && losDe().emoji.botones.map((b) => b.id), ['emoji-quitar'], 'sin declarar y con Claude no sale');
+      vscode.guion.extensionesInstaladas = ['openai.chatgpt'];
+      assert.equal(losDe().emoji, undefined, 'sin declarar y con Codex sale');
       return 'quitarlos y ponerlos, con la orden, mirando el disco, solo con la 4 y con Claude';
     } finally {
       rscM.correr = antes.correr;
       proveedor.enviar = antes.enviar;
       vscode.guion.confianza = antes.confianza;
       vscode.guion.raiz = antes.raiz;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
     }
   });
 
