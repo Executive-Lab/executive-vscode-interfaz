@@ -782,7 +782,8 @@ async function radiografia({ aFondo = null, sigueSinCopias = false } = {}) {
   const parte = mirarYClasificar();
 
   const conArnes = hay.tipo === 'conArnes' || hay.tipo === 'aMedias';
-  const proveedores = conArnes ? conexiones.proveedores() : [];
+  // Las conexiones, no cualquier carpeta de 01-TOOLS (decisión 202).
+  const proveedores = conArnes ? conexiones.conectadas() : [];
   const aMedias = proveedores.filter((p) => p.faltan > 0).length;
   const fuera = sueltas.resumen();
   const temas = conArnes ? cerebro.catalogo().length : 0;

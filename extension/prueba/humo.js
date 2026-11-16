@@ -18559,6 +18559,8 @@ exec git "$@"
         accionesRapidas: false, pulso: false, conocimiento: false, enQueEstamos: false, ajustes: false, comandos: false,
         // Decisión 194: solo sale en un monorepo.
         proyectos: true,
+        // Decisión 202: a la vista, debajo de la tarjeta, y no dentro de Ayuda.
+        conversacionNueva: true,
       }, 'la tabla de piezas ha cambiado');
       const ajuste = require(path.join(RAIZ, 'package.json')).contributes.configuration.properties['executiveLab.barraCompleta'];
       assert.equal(ajuste.default, false, 'de fábrica tiene que salir la sencilla');
@@ -26126,7 +26128,9 @@ exec git "$@"
       assert.ok(!JSON.stringify(con).includes(ID), 'el id sale de la extensión');
       const html = pintar(con);
       assert.match(laAyuda(html), /Volver a la última conversación/);
-      assert.match(laAyuda(html), /Seguir donde lo dejé[\s\S]*Volver a la última conversación[\s\S]*Conversación nueva/, 'no está debajo de Seguir donde lo dejé');
+      assert.match(laAyuda(html), /Seguir donde lo dejé[\s\S]*Volver a la última conversación/, 'no está debajo de Seguir donde lo dejé');
+      // «Conversación nueva» ya no está en Ayuda: va a la vista (decisión 202).
+      assert.doesNotMatch(laAyuda(html), /Conversación nueva/, 'sigue dentro de Ayuda');
       // Y en la tarjeta de la última vez.
       const tarjeta = pintar({ ...con, laUltimaVez: { texto: 'La última vez trabajaste en X.', accion: { tipo: 'seguirDondeLoDeje', prompt: 'p', dia: '2026-10-17' }, ahoraNo: { tipo: 'ahoraNoLaUltimaVez', dia: '2026-10-17' } } });
       const laTarjeta = tarjeta.slice(tarjeta.indexOf('La última vez trabajaste en X'));
@@ -29456,9 +29460,9 @@ exec git "$@"
     assert.equal(limpio.guardar, null);
     const sucio = sp.enPantalla({ ...panel, sinGuardar: 3, sinSubir: 2, rama: 'arreglo', ramaSinSubir: false, indice: null });
     assert.deepEqual(sucio.botones.map((b) => b.etiqueta), ['Trabajar en «panel-fundae»', 'Guardar «panel-fundae» en git', 'Subir «panel-fundae» a GitHub']);
-    // Con índice, su documentación a un clic, que en Conocimiento no está entre los temas.
+    // Con índice, su ficha va aparte, en la (i) de al lado de Trabajar (decisión 202).
     const conIndice = sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
-    assert.deepEqual(conIndice.botones[1], { etiqueta: 'Conocimiento de «panel-fundae»', icono: '📚', accion: { tipo: 'leerArticulo', ruta: 'proyectos/panel-fundae/index.md' } });
+    assert.deepEqual(conIndice.botones.map((b) => b.etiqueta), ['Trabajar en «panel-fundae»'], 'la ficha sigue entre los botones');
     assert.equal(sucio.estado, 'Cambios sin guardar · 2 copias sin subir · En la rama «arreglo»');
     assert.equal(sucio.guardar, sucio.botones[1]);
     assert.deepEqual(sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'nueva', ramaSinSubir: true }).botones.map((b) => b.etiqueta).filter((e) => e.startsWith('Subir')), ['Subir «panel-fundae» a GitHub'], 'una rama que no está en GitHub se puede subir');
@@ -29803,6 +29807,215 @@ exec git "$@"
     const dicc = fs.readFileSync(path.join(RAIZ, '..', 'docs', 'diccionario.md'), 'utf8');
     for (const d of new Set(Object.values(esperado))) assert.ok(dicc.includes(d), `«${d}» no está en el diccionario`);
     return `${Object.keys(esperado).length} valores de verdad, ${Object.values(cadaUna).join(' ').split(' ').length} palabras, negaciones`;
+  });
+
+  // ── La 0.62 (decisión 202): cinco arreglos que pidió Jose usando la 0.61 ──
+
+  await comprobar('solo cuentan como conexiones las carpetas de 01-TOOLS que lo son (decisión 202)', async () => {
+    // Jose: «la barra cuenta como conexión cualquier carpeta de 01-TOOLS… eso
+    // deberíamos arreglarlo». Una conexión la monta connect-tool con su
+    // .env.example, su CREDENTIALS.md y su prueba; unas notas o unos guiones
+    // sueltos no lo son.
+    const proveedor = vscode.registrado.proveedor;
+    const carpeta = montar(fs.mkdtempSync(path.join(os.tmpdir(), 'conexiones-de-verdad-')));
+    const escribir = (rel, c) => { const f = path.join(carpeta, '01-TOOLS', ...rel.split('/')); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, c); };
+    const antes = { raiz: vscode.guion.raiz, enviar: proveedor.enviar };
+    const enviados = [];
+    proveedor.enviar = (m) => enviados.push(m);
+    try {
+      vscode.guion.raiz = carpeta;
+      // Lo que no es una conexión: unas notas, unos guiones sueltos.
+      escribir('SECURITY/README.md', '# Revisión de seguridad\n');
+      escribir('SECURITY/checklist.md', '- [ ] algo\n');
+      escribir('CAPTURA/capturar.mjs', 'console.log(1);\n');
+      // Lo que sí, aunque solo tenga una de sus piezas.
+      escribir('SOLO_CREDENCIALES/CREDENTIALS.md', '# Credenciales\n');
+      escribir('SOLO_ENV/.env', 'SOLO_ENV_TOKEN=abc\n');
+      escribir('SOLO_PRUEBA/test_connection.py', 'print(1)\n');
+      // Una cuenta de servicio se reconoce por su tipo: no hace falta escribir una clave.
+      escribir('CUENTA/keys/service-account.json', JSON.stringify({ type: 'service_account', client_email: 'a@b.iam.gserviceaccount.com' }));
+      const DE_VERDAD = ['CUENTA', 'HOLDED', 'SOLO_CREDENCIALES', 'SOLO_ENV', 'SOLO_PRUEBA'];
+      assert.equal(typeof conexiones.conectadas, 'function', 'no hay forma de pedir solo las conexiones');
+      assert.deepEqual(conexiones.conectadas().map((p) => p.id).sort(), DE_VERDAD, 'cuenta como conexión lo que no lo es, o deja fuera una');
+      // Lo demás lo sigue viendo todo: tapar claves, Resultados, lo que ya tiene carpeta.
+      const todas = conexiones.proveedores().map((p) => p.id);
+      for (const id of ['SECURITY', 'CAPTURA', ...DE_VERDAD]) assert.ok(todas.includes(id), `«${id}» deja de verse donde se tapan las claves`);
+      // Donde la barra dice cuántas: Acciones, la pantalla de Conexiones y la radiografía.
+      const estado = await brujula.estado({ fresco: true });
+      assert.equal(estado.conectados, DE_VERDAD.length, 'Acciones cuenta carpetas, no conexiones');
+      proveedor.verConexiones();
+      const pantalla = enviados.find((m) => m.tipo === 'conexiones');
+      assert.deepEqual(pantalla.proveedores.map((p) => p.id).sort(), DE_VERDAD, 'Conexiones enseña lo que no es una conexión');
+      const radio = await cargar('terreno').radiografia();
+      const deConexiones = radio.piezas.find((p) => p.nombre === 'Conexiones con tus herramientas');
+      assert.equal(deConexiones.detalle, String(DE_VERDAD.length), 'la radiografía cuenta carpetas, no conexiones');
+      return `${DE_VERDAD.length} conexiones de ${todas.length} carpetas`;
+    } finally {
+      vscode.guion.raiz = antes.raiz;
+      proveedor.enviar = antes.enviar;
+      brujula.olvidar();
+    }
+  });
+
+  await comprobar('la vista sencilla, a un clic desde el pie: para ir y para volver (decisión 202)', async () => {
+    // Jose: «haz que se pueda hacer y deshacer el modo sencillo. Ya que cuando se
+    // habitúen igual es mejor que puedan usar el modo completo».
+    const proveedor = vscode.registrado.proveedor;
+    const enviados = [];
+    const antes = { enviar: proveedor.enviar, completa: vscode.registrado.ajustes.global['executiveLab.barraCompleta'] };
+    proveedor.enviar = (m) => enviados.push(m);
+    const pintar = (m) => require('./panel-falso').montarPanel().mandar(m);
+    const elPie = (html) => (html.match(/<div class="fila pie">[\s\S]*?<\/div>/) || [''])[0];
+    const tipos = (html) => accionesDe(html).map((a) => a.tipo);
+    try {
+      vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = false;
+      await proveedor.refrescar(true);
+      const base = [...enviados].reverse().find((m) => m.tipo === 'estado');
+      const enSencillo = elPie(pintar({ ...base, modo: 'sencillo' }));
+      assert.match(enSencillo, /Ver el editor completo/, 'en vista sencilla, el pie no deja ver el editor completo');
+      assert.ok(tipos(enSencillo).includes('verEditorCompleto'), '«Ver el editor completo» lleva a otro sitio');
+      assert.ok(!tipos(enSencillo).includes('modoSencillo'), 'en vista sencilla, ofrece volver a ella');
+      const enCompleto = elPie(pintar({ ...base, modo: 'avanzado' }));
+      assert.match(enCompleto, /Volver al modo sencillo/, 'con el editor completo, el pie no deja volver');
+      assert.ok(tipos(enCompleto).includes('modoSencillo'), '«Volver al modo sencillo» lleva a otro sitio');
+      assert.ok(!tipos(enCompleto).includes('verEditorCompleto'), 'con el editor completo, lo ofrece otra vez');
+      // Con Ajustes encendido, que ya lo lleva, no sale dos veces.
+      const conAjustes = pintar({ ...base, modo: 'sencillo', piezas: { ...base.piezas, ajustes: true } });
+      assert.equal((conAjustes.match(/Ver el editor completo/g) || []).length, 1, 'con Ajustes encendido, sale dos veces');
+      // Y la extensión sabe hacer las dos cosas.
+      for (const tipo of ['verEditorCompleto', 'modoSencillo']) assert.match(fs.readFileSync(path.join(RAIZ, 'src', 'extension.js'), 'utf8'), new RegExp(`\\b${tipo}: \\(\\) => this\\.${tipo}\\(\\)`), `nadie atiende «${tipo}»`);
+      return 'ir y volver, desde el pie';
+    } finally {
+      proveedor.enviar = antes.enviar;
+      if (antes.completa === undefined) delete vscode.registrado.ajustes.global['executiveLab.barraCompleta'];
+      else vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = antes.completa;
+    }
+  });
+
+  await comprobar('Conversación nueva, a la vista debajo de la tarjeta, y no dentro de Ayuda (decisión 202)', async () => {
+    // Jose: «¿meterías un botón para abrir una nueva sesión de Claude?». Estaba,
+    // pero dentro de Ayuda, plegado.
+    const proveedor = vscode.registrado.proveedor;
+    const enviados = [];
+    const antes = { enviar: proveedor.enviar, completa: vscode.registrado.ajustes.global['executiveLab.barraCompleta'] };
+    proveedor.enviar = (m) => enviados.push(m);
+    const pintar = (m) => require('./panel-falso').montarPanel().mandar(m);
+    const laAyuda = (html) => (html.match(/<details[^>]*data-abrir="sencilla:ayuda"[\s\S]*?<\/details>/) || [''])[0];
+    try {
+      vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = false;
+      await proveedor.refrescar(true);
+      const base = [...enviados].reverse().find((m) => m.tipo === 'estado');
+      const tabla = JSON.parse(fs.readFileSync(path.join(RAIZ, 'media', 'piezas.json'), 'utf8'));
+      assert.equal(tabla.conversacionNueva, true, 'la pieza no está encendida');
+      const conTarjeta = { ...base, consejo: { id: 'x', texto: 'UN CONSEJO', boton: 'Hacerlo', accion: { tipo: 'verSugerencias' } } };
+      const html = pintar(conTarjeta);
+      assert.equal(accionesDe(html).filter((a) => a.tipo === 'conversacionNueva').length, 1, '«Conversación nueva» no sale una vez');
+      assert.doesNotMatch(laAyuda(html), /Conversación nueva/, 'sigue dentro de Ayuda');
+      const donde = (t) => html.indexOf(t);
+      assert.ok(donde('UN CONSEJO') !== -1 && donde('UN CONSEJO') < donde('conversacionNueva'), 'va antes que la tarjeta');
+      assert.ok(donde('conversacionNueva') < donde('verDocumentos'), 'va después de Documentos, no a la vista');
+      // Apagada la pieza, vuelve a Ayuda: no se pierde.
+      assert.match(laAyuda(pintar({ ...conTarjeta, piezas: { ...base.piezas, conversacionNueva: false } })), /Conversación nueva/, 'apagada la pieza, desaparece del todo');
+      return 'debajo de la tarjeta';
+    } finally {
+      proveedor.enviar = antes.enviar;
+      if (antes.completa === undefined) delete vscode.registrado.ajustes.global['executiveLab.barraCompleta'];
+      else vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = antes.completa;
+    }
+  });
+
+  await comprobar('en la sencilla, «Volver» nunca lleva al buscador de conceptos (decisión 202)', async () => {
+    // Jose: «cuando le doy a Conocimiento de X y luego atrás, me dirige al buscador
+    // de conceptos que no debería salir nunca». En la sencilla, Conocimiento está
+    // apagado: lo que se lee, se lee y se vuelve a la principal.
+    const proveedor = vscode.registrado.proveedor;
+    const enviados = [];
+    const antes = { enviar: proveedor.enviar, completa: vscode.registrado.ajustes.global['executiveLab.barraCompleta'] };
+    proveedor.enviar = (m) => enviados.push(m);
+    const NUNCA = ['verCerebro', 'verTema', 'buscar'];
+    const articulo = { tipo: 'articulo', titulo: 'Panel', cuerpo: '# Panel\n\nVer [el otro](otro.md).\n', enlaces: { 'otro.md': 'proyectos/panel-fundae/otro.md' }, ruta: 'proyectos/panel-fundae/index.md' };
+    const leer = (deBase, extra) => { const p = require('./panel-falso').montarPanel(); p.mandar(deBase); return p.mandar({ ...articulo, ...extra }); };
+    try {
+      vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = false;
+      await proveedor.refrescar(true);
+      const base = [...enviados].reverse().find((m) => m.tipo === 'estado');
+      for (const extra of [{ desde: 'proyectos' }, {}, { tema: 'clientes' }]) {
+        const html = leer(base, extra);
+        const van = accionesDe(html).map((a) => a.tipo);
+        for (const t of NUNCA) assert.ok(!van.includes(t), `leído con ${JSON.stringify(extra)}, lleva a «${t}»`);
+        assert.ok(van.includes('volver'), `leído con ${JSON.stringify(extra)}, no se vuelve a la principal`);
+        assert.match(html, /<nav class="migas"><a[^>]*>Principal<\/a>/, `leído con ${JSON.stringify(extra)}, las migas no empiezan en la principal`);
+      }
+      // La ficha de un proyecto se lee, no se cambia; y sus enlaces vuelven igual.
+      const ficha = leer(base, { desde: 'proyectos' });
+      assert.doesNotMatch(ficha, /Pídele que lo cambie/, 'la ficha no es de solo lectura');
+      const dentro = accionesDe(ficha).filter((a) => a.tipo === 'leerArticulo');
+      assert.ok(dentro.length && dentro.every((a) => a.desde === 'proyectos'), 'un enlace de la ficha ya no vuelve a la principal');
+      // Desde la foto, a la foto, como antes.
+      assert.ok(accionesDe(leer(base, { desde: 'foto' })).some((a) => a.tipo === 'verLaFoto'), 'desde la foto ya no se vuelve a la foto');
+      // Con Conocimiento a la vista (la completa, o su pieza encendida), como antes.
+      for (const conConocimiento of [{ ...base, barraCompleta: true }, { ...base, piezas: { ...base.piezas, conocimiento: true } }]) {
+        const html = leer(conConocimiento, { tema: 'clientes' });
+        assert.ok(accionesDe(html).some((a) => a.tipo === 'verTema'), 'con Conocimiento, ya no se vuelve a su tema');
+        assert.match(html, /Pídele que lo cambie/, 'con Conocimiento, ya no se puede pedir que lo cambie');
+      }
+      // La ficha, también en la completa: se vuelve a donde se abrió, la principal.
+      const enLaCompleta = accionesDe(leer({ ...base, barraCompleta: true }, { desde: 'proyectos' })).map((a) => a.tipo);
+      assert.ok(!enLaCompleta.some((t) => NUNCA.includes(t)), 'en la completa, la ficha lleva a Conocimiento');
+      return 'a la principal, o a la foto';
+    } finally {
+      proveedor.enviar = antes.enviar;
+      if (antes.completa === undefined) delete vscode.registrado.ajustes.global['executiveLab.barraCompleta'];
+      else vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = antes.completa;
+    }
+  });
+
+  await comprobar('la ficha de cada proyecto, una (i) junto a Trabajar, que se lee sin salir de la barra (decisión 202)', async () => {
+    // Jose: «quizá pueda ser útil modo solo lectura… ponerlo al lado del botón de
+    // trabajar como una (i) pequeña con hover». Sustituye a «Conocimiento de X».
+    const raiz = montarMonorepo();
+    const sp = cargar('subproyectos');
+    const proveedor = vscode.registrado.proveedor;
+    const [panel] = sp.cuales(raiz);
+    const LA_FICHA = { etiqueta: 'La ficha de «panel-fundae»', accion: { tipo: 'leerArticulo', ruta: 'proyectos/panel-fundae/index.md', desde: 'proyectos' } };
+    const conIndice = sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false });
+    assert.deepEqual(conIndice.ficha, LA_FICHA, 'la ficha no va aparte');
+    assert.ok(!conIndice.botones.some((b) => /Conocimiento/.test(b.etiqueta)), 'sigue el botón «Conocimiento de»');
+    assert.equal(sp.enPantalla({ ...panel, sinGuardar: 0, sinSubir: 0, rama: 'main', ramaSinSubir: false, indice: null }).ficha, null, 'sin índice, una ficha que no lleva a nada');
+    const enviados = [];
+    const antes = { raiz: vscode.guion.raiz, enviar: proveedor.enviar, completa: vscode.registrado.ajustes.global['executiveLab.barraCompleta'] };
+    proveedor.enviar = (m) => enviados.push(m);
+    try {
+      vscode.guion.raiz = raiz;
+      vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = false;
+      sp.olvidar();
+      await proveedor.refrescar(true);
+      const base = [...enviados].reverse().find((m) => m.tipo === 'estado');
+      // El otro proyecto del monorepo de mentira no tiene índice: sin ficha.
+      assert.deepEqual(base.proyectosDeDentro.map((p) => [p.nombre, p.ficha]), [['panel-fundae', LA_FICHA], ['web-suelta', null]], 'la ficha no llega a la pantalla');
+      const html = require('./panel-falso').montarPanel().mandar(base);
+      // Pegada a Trabajar, en la misma fila, y con su nombre al pasar por encima.
+      const fila = (html.match(/<div class="fila">\s*<button[^>]*>[\s\S]*?Trabajar en «panel-fundae»[\s\S]*?<\/button>\s*<button class="info[^"]*"[^>]*>i<\/button>\s*<\/div>/) || [''])[0];
+      assert.ok(fila, 'la (i) no está al lado de Trabajar');
+      assert.equal((html.match(/<button class="info pequeno"/g) || []).length, 1, 'un proyecto sin ficha lleva (i)');
+      assert.match(fila, /title="La ficha de «panel-fundae»"/, 'al pasar por encima no dice qué es');
+      assert.match(fila, /aria-label="La ficha de «panel-fundae»"/, 'quien no ve la pantalla no sabe qué es');
+      const suAccion = accionesDe(fila).find((a) => a.tipo === 'leerArticulo');
+      assert.deepEqual(suAccion, LA_FICHA.accion, 'la (i) no abre la ficha');
+      // Pulsarla abre la ficha en la barra, y desde ella se vuelve a la principal.
+      enviados.length = 0;
+      await proveedor.manejar(suAccion);
+      const leida = enviados.find((m) => m.tipo === 'articulo');
+      assert.ok(leida, `la ficha no se abre: ${JSON.stringify(enviados.map((m) => m.tipo))}`);
+      assert.equal(leida.desde, 'proyectos', 'la barra no sabe que viene de Proyectos');
+      return 'una (i) al lado de Trabajar';
+    } finally {
+      vscode.guion.raiz = antes.raiz;
+      proveedor.enviar = antes.enviar;
+      sp.olvidar();
+      if (antes.completa === undefined) delete vscode.registrado.ajustes.global['executiveLab.barraCompleta'];
+      else vscode.registrado.ajustes.global['executiveLab.barraCompleta'] = antes.completa;
+    }
   });
 
   await comprobar('un proyecto de un monorepo abierto solo manda a su raíz, no a montar otro arnés dentro (decisión 195)', async () => {

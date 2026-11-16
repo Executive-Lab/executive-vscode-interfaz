@@ -12,7 +12,7 @@
 // cada una. Lo que se comprueba no es el contenido —eso es de `humo.js`— sino
 // que **ninguna revienta y ninguna cae en la pantalla de fallo**, que es la red
 // de seguridad y no un aprobado. Y que la principal sencilla, plegada, no pasa
-// de cinco cosas a la vista (el plan de simplificar la barra).
+// de seis cosas a la vista (el plan de simplificar la barra, y `TOPE` abajo).
 //
 // Al final, una cuarta: una carpeta vacía montada de verdad, con el montaje de la
 // barra y el arnés de la clase, que tiene que acabar en la principal y no en la
@@ -95,6 +95,11 @@ function reciencita() {
 // plegada y lo que quede suelto. Lo de abajo, en pequeño —la versión y Cambiar de
 // proyecto—, no cuenta (propuesta de simplificar la barra: «5 cosas a la vista
 // como mucho»).
+//
+// Seis desde la 0.62 (decisión 202): «Conversación nueva» sale a la vista, debajo
+// de la tarjeta, porque se usa a diario y plegada en Ayuda no se encontraba. Jose:
+// «queremos mantenerla simple pero que sea útil». Es una cosa más, y ninguna otra.
+const TOPE = 6;
 function cosasALaVista(html) {
   let resto = html.replace(/<div class="fila pie">[\s\S]*?<\/div>/g, '');
   const filas = (resto.match(/<details/g) || []).length;
@@ -185,7 +190,7 @@ for (const [nombre, montar] of TODAS) {
 
   // La principal sencilla con lo de esta carpeta (decisión 152): «Esto parece»
   // y las ideas, más un consejo y una versión nueva que también quieren salir.
-  // Sale una tarjeta, y no más de cinco cosas a la vista.
+  // Sale una tarjeta, y no más de `TOPE` cosas a la vista.
   const visto = cargar('ideas').queSeVe({ carpetaDeLaExtension: ext });
   const seAdapta = { parece: visto.parece, idea: visto.ideas[0] || null };
   const conLasDos = {
@@ -233,7 +238,7 @@ for (const [nombre, montar] of TODAS) {
       if (datos.seAdapta.idea || datos.consejo || datos.laUltimaVez || datos.clavesEnLasCopias) {
         if (tarjetas !== 1) rotas.push(`la principal sencilla, ${cual}: ${tarjetas} tarjetas a la vez`);
       } else if (tarjetas > 1) rotas.push(`la principal sencilla, ${cual}: ${tarjetas} tarjetas a la vez`);
-      if (aLaVista > 5) rotas.push(`la principal sencilla, ${cual}: ${aLaVista} cosas a la vista`);
+      if (aLaVista > TOPE) rotas.push(`la principal sencilla, ${cual}: ${aLaVista} cosas a la vista`);
       // La que toca: las claves antes que todo, «Esto parece» antes que la última vez, la
       // última vez antes que el consejo, y el consejo antes que la idea.
       const primera = (datos.clavesEnLasCopias && 'Hay 2 claves de tu aplicación dentro de tus copias.')
@@ -260,7 +265,7 @@ for (const [nombre, montar] of TODAS) {
   }
 
   // Sin el asistente, la tarjeta que lo dice va delante de todo, con el botón que
-  // lo pone dentro: sigue siendo una tarjeta, y cinco cosas como mucho (decisión 166).
+  // lo pone dentro: sigue siendo una tarjeta, y `TOPE` cosas como mucho (decisión 166).
   try {
     const quien = cargar('asistentes').elDeAhora();
     const sinEl = panel.mandar({
@@ -270,7 +275,7 @@ for (const [nombre, montar] of TODAS) {
     });
     const tarjetas = (sinEl.match(/<div class="(consejo|aviso)/g) || []).length;
     if (tarjetas !== 1) rotas.push(`sin el asistente: ${tarjetas} tarjetas a la vez`);
-    if (cosasALaVista(sinEl) > 5) rotas.push(`sin el asistente: ${cosasALaVista(sinEl)} cosas a la vista`);
+    if (cosasALaVista(sinEl) > TOPE) rotas.push(`sin el asistente: ${cosasALaVista(sinEl)} cosas a la vista`);
     const laTarjeta = (sinEl.match(/<div class="aviso malo">[\s\S]*?<\/div>/) || [''])[0];
     if (!laTarjeta.includes(`Poner ${quien.nombre}`) || !laTarjeta.includes('ponerElAsistente')) rotas.push('sin el asistente: la tarjeta no trae el botón que lo pone');
     vistas.push(`sin ${quien.nombre}, ${cosasALaVista(sinEl)} cosas a la vista y en la tarjeta «Poner ${quien.nombre}»`);
@@ -278,8 +283,10 @@ for (const [nombre, montar] of TODAS) {
     rotas.push(`sin el asistente: ${e.message}`);
   }
 
-  // La principal sencilla, plegada: como mucho cinco cosas a la vista (la
+  // La principal sencilla, plegada: como mucho cinco tarjetas y filas (la
   // tarjeta, tres filas y la línea de las copias), con todo lo que pueda salir.
+  // «Conversación nueva» es un botón suelto y no entra en esta cuenta; sí en
+  // `cosasALaVista`, con su tope de seis (decisión 202).
   const [, delEstado] = mensajes.find(([tipo]) => tipo === 'estado');
   const sencilla = panel.mandar({
     tipo: 'estado',
@@ -333,7 +340,7 @@ for (const [nombre, montar] of TODAS) {
 // sin copia fuera —como queda toda carpeta recién montada— contaba como «falta».
 // Aquí se monta una carpeta vacía con el montaje de la barra y el arnés de la
 // clase, como en clase, y se mira lo que se ve al terminar: la principal, con
-// una tarjeta —la de la cuenta— y cinco cosas a la vista como mucho.
+// una tarjeta —la de la cuenta— y `TOPE` cosas a la vista como mucho.
 async function laRecienMontada() {
   const ext = path.join(RAIZ, 'extension');
   if (!fs.existsSync(path.join(ext, 'media', 'harness', 'node_modules', '@ericrisco', 'rsc', 'scripts', 'rsc.js'))) {
@@ -387,7 +394,7 @@ async function laRecienMontada() {
       pulso: [],
     });
     const aLaVista = cosasALaVista(pintada);
-    if (aLaVista > 5) rotas.push(`recién montada: ${aLaVista} cosas a la vista`);
+    if (aLaVista > TOPE) rotas.push(`recién montada: ${aLaVista} cosas a la vista`);
     if (!/Abre Claude y entra con tu cuenta/.test(pintada)) rotas.push('recién montada: la tarjeta que toca no es la de la cuenta');
     const otras = (pintada.match(/<div class="(consejo|aviso)/g) || []).length;
     if (otras) rotas.push(`recién montada: ${otras + 1} tarjetas a la vez`);

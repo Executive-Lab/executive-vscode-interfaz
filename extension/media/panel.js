@@ -2024,6 +2024,9 @@ function pantallaPrincipalSencilla() {
     ${lineaDeVarias()}
     ${encendida('pulso') && pulso.length ? `<p class="pulso">${texto(pulso.join(' · '))}</p>` : ''}
     ${tarjeta}
+    ${/* A la vista, debajo de la tarjeta (decisión 202). Jose: «¿meterías un
+          botón para abrir una nueva sesión de Claude?». Estaba, plegado en Ayuda. */''}
+    ${encendida('conversacionNueva') ? boton({ etiqueta: 'Conversación nueva', icono: '💬', accion: { tipo: 'conversacionNueva' } }) : ''}
     ${encendida('accionesRapidas') ? accionesRapidas(descubiertos) : ''}
     ${encendida('documentos') ? filaDeDocumentos() : ''}
     ${encendida('documentosPlegable') ? grupoDocumentosSencillo() : ''}
@@ -2110,7 +2113,8 @@ function grupoAyudaSencillo() {
       ${boton({ etiqueta: 'Seguir donde lo dejé', icono: '↩️', pequeno: true, accion: ibas ? ibas.accion : { tipo: 'pedir', prompt: 'Sigue donde lo dejamos la última vez: mira lo último que hicimos, dime en qué punto estamos y qué sería lo siguiente.' } })}
       ${ibas ? `<p class="pista ibas-por">${texto(ibas.texto)}</p>` : ''}
       ${botonVolver(true)}
-      ${boton({ etiqueta: 'Conversación nueva', icono: '💬', pequeno: true, accion: { tipo: 'conversacionNueva' } })}
+      ${/* A la vista, no aquí, con su pieza encendida (decisión 202). */''}
+      ${encendida('conversacionNueva') ? '' : boton({ etiqueta: 'Conversación nueva', icono: '💬', pequeno: true, accion: { tipo: 'conversacionNueva' } })}
       ${boton({ etiqueta: 'Dime qué hago ahora', icono: '🧭', pequeno: true, accion: { tipo: 'pedir', prompt: 'Mira cómo está esto y dime qué hago ahora: qué tengo a medias, qué sería lo siguiente y por qué. Dame dos o tres opciones concretas, no una lista larga.' } })}
       ${boton({ etiqueta: 'Pedir ayuda en el foro', icono: '🙋', pequeno: true, accion: { tipo: 'pedirAyudaEnElForo' } })}
       ${boton({ etiqueta: 'Sugerencias', icono: '✨', pequeno: true, accion: { tipo: 'verSugerencias' } })}
@@ -2161,8 +2165,23 @@ function grupoProyectosDeDentro() {
       ${boton({ etiqueta: 'Confiar en esta carpeta', icono: '🔓', pequeno: true, accion: { tipo: 'confiarEnLaCarpeta' } })}` : '') + lista.map((p) => `
       <h3>${texto(p.nombre)}</h3>
       ${p.estado ? `<p class="pista">${texto(p.estado)}</p>` : ''}
-      ${(p.botones || []).map((b) => boton({ ...b, pequeno: true })).join('')}`).join(''),
+      ${botonesDelProyecto(p)}`).join(''),
   });
+}
+
+// El primero, Trabajar, con la ficha del proyecto al lado: una (i) pequeña que
+// dice qué es al pasar por encima y la abre para leerla (decisión 202). Jose: «al
+// lado del botón de trabajar como una (i) pequeña con hover».
+function botonesDelProyecto(p) {
+  const [primero, ...resto] = p.botones || [];
+  if (!primero) return '';
+  const elPrimero = p.ficha ? `
+      <div class="fila">
+        ${boton({ ...primero, pequeno: true })}
+        <button class="info pequeno" title="${atributo(p.ficha.etiqueta)}" aria-label="${atributo(p.ficha.etiqueta)}"
+          data-accion="${atributo(JSON.stringify(p.ficha.accion))}">i</button>
+      </div>` : boton({ ...primero, pequeno: true });
+  return elPrimero + resto.map((b) => boton({ ...b, pequeno: true })).join('');
 }
 
 // Abajo y en pequeño: qué barra es, y Cambiar de carpeta, que se deja a la
@@ -2173,7 +2192,18 @@ function pieDeLaBarra() {
       ${/* Lleva a lo de la versión, no a Más ayuda (decisión 166). */''}
       ${estado.versionDeLaBarra ? boton({ etiqueta: `Barra ${estado.versionDeLaBarra}`, pequeno: true, discreto: true, accion: { tipo: 'verEstaBarra' } }) : ''}
       ${boton({ etiqueta: 'Cambiar de carpeta', icono: '📂', pequeno: true, discreto: true, accion: { tipo: 'elegirCarpeta' } })}
+      ${/* Ir y volver de la vista sencilla, a la vista (decisión 202). Jose: «cuando
+            se habitúen igual es mejor que puedan usar el modo completo». Con
+            Ajustes encendido ya está allí, y no sale dos veces. */''}
+      ${encendida('ajustes') ? '' : botonDeLaVista({ discreto: true })}
     </div>`;
+}
+
+// El editor completo, o volver al sencillo: lo que toque según cómo esté esta ventana.
+function botonDeLaVista({ discreto = false } = {}) {
+  return modo === 'avanzado'
+    ? boton({ etiqueta: 'Volver al modo sencillo', icono: '◂', pequeno: true, discreto, accion: { tipo: 'modoSencillo' } })
+    : boton({ etiqueta: 'Ver el editor completo', icono: '▸', pequeno: true, discreto, accion: { tipo: 'verEditorCompleto' } });
 }
 
 // La de antes, entera: la de `executiveLab.barraCompleta` (decisión 138). No se
@@ -2645,9 +2675,7 @@ function grupoAjustes() {
           accion: { tipo: 'verLaCara' },
         })}
         ${boton({ etiqueta: 'Cambiar de carpeta', icono: '📂', pequeno: true, accion: { tipo: 'elegirCarpeta' } })}
-        ${modo === 'avanzado'
-          ? boton({ etiqueta: 'Volver al modo sencillo', icono: '◂', pequeno: true, accion: { tipo: 'modoSencillo' } })
-          : boton({ etiqueta: 'Ver el editor completo', icono: '▸', pequeno: true, accion: { tipo: 'verEditorCompleto' } })}`,
+        ${botonDeLaVista()}`,
     })}`;
 }
 
@@ -3824,17 +3852,25 @@ function pantallaArticulo({ titulo, cuerpo, tema, enlaces, hermanos, desde }) {
   // Desde la foto del cerebro se vuelve a la foto, también tras seguir un
   // enlace de dentro del artículo (decisión 151).
   const aLaFoto = { tipo: 'verLaFoto', desde: fotoDesde };
-  enlacesDesde = desde === 'foto' ? 'foto' : null;
-  const atras = desde === 'buscar'
-    ? { tipo: 'buscar', texto: ultimaBusqueda }
-    : (desde === 'foto' ? aLaFoto : (tema ? { tipo: 'verTema', tema } : { tipo: 'verCerebro' }));
+  // La ficha de un proyecto se abre desde la principal, y a ella se vuelve; sus
+  // enlaces, igual. En la sencilla, Conocimiento está apagado: lo que se lee ahí
+  // vuelve a la principal, nunca al buscador de conceptos (decisión 202). Jose:
+  // «me dirige al buscador de conceptos, que no debería salir nunca».
+  const deUnProyecto = desde === 'proyectos';
+  const aLaPrincipal = deUnProyecto || !hayConocimiento();
+  enlacesDesde = desde === 'foto' || deUnProyecto ? desde : null;
+  const atras = desde === 'foto' ? aLaFoto
+    : aLaPrincipal ? { tipo: 'volver' }
+    : desde === 'buscar' ? { tipo: 'buscar', texto: ultimaBusqueda }
+    : (tema ? { tipo: 'verTema', tema } : { tipo: 'verCerebro' });
 
-  const rastro = migas(desde === 'foto' ? [{ etiqueta: 'La foto del cerebro', accion: aLaFoto }, { etiqueta: titulo }] : [
-    { etiqueta: 'Conocimiento', accion: { tipo: 'verCerebro' } },
-    desde === 'buscar' ? { etiqueta: `Buscando "${ultimaBusqueda}"`, accion: { tipo: 'buscar', texto: ultimaBusqueda } } : null,
-    tema && desde !== 'buscar' ? { etiqueta: tema, accion: { tipo: 'verTema', tema } } : null,
-    { etiqueta: titulo },
-  ]);
+  const rastro = migas(desde === 'foto' ? [{ etiqueta: 'La foto del cerebro', accion: aLaFoto }, { etiqueta: titulo }]
+    : aLaPrincipal ? [{ etiqueta: 'Principal', accion: { tipo: 'volver' } }, { etiqueta: titulo }] : [
+      { etiqueta: 'Conocimiento', accion: { tipo: 'verCerebro' } },
+      desde === 'buscar' ? { etiqueta: `Buscando "${ultimaBusqueda}"`, accion: { tipo: 'buscar', texto: ultimaBusqueda } } : null,
+      tema && desde !== 'buscar' ? { etiqueta: tema, accion: { tipo: 'verTema', tema } } : null,
+      { etiqueta: titulo },
+    ]);
 
   // Leer una cosa y tener que volver dos pantallas para leer la siguiente del
   // mismo tema era una tontería.
@@ -3851,9 +3887,16 @@ function pantallaArticulo({ titulo, cuerpo, tema, enlaces, hermanos, desde }) {
     <p class="titulo">${texto(titulo)}</p>
     <div class="articulo">${comoMarkdown(cuerpo, enlaces)}</div>
     ${seguir}
-    <hr class="separador">
-    ${boton({ etiqueta: 'Pídele que lo cambie', icono: '✎', accion: { tipo: 'cambiarArticulo', titulo } })}
+    ${/* La ficha de un proyecto es de solo lectura (decisión 202). */''}
+    ${deUnProyecto ? '' : `<hr class="separador">
+    ${boton({ etiqueta: 'Pídele que lo cambie', icono: '✎', accion: { tipo: 'cambiarArticulo', titulo } })}`}
   `;
+}
+
+// Si Conocimiento está a la vista: en la completa, o con su pieza encendida en la
+// sencilla. Sin estado todavía, como la completa, que es como estaba.
+function hayConocimiento() {
+  return !estado || estado.barraCompleta !== false || encendida('conocimiento');
 }
 
 // ----------------------------------------------------------------- resto

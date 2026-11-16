@@ -269,7 +269,8 @@ async function calcular() {
   const [continuacion, copias] = await Promise.all([rsc.retomarSinEsperar(), guardar.copias(1)]);
   const [ultimoAprendido] = cerebro.aprendidoUltimamente(1);
   const sabe = cerebro.cuantoSabe();
-  const conectados = conexiones.proveedores().length;
+  // Solo las que son conexiones, no cualquier carpeta de 01-TOOLS (decisión 202).
+  const conectados = conexiones.conectadas().length;
   const esperando = cerebro.esperandoLectura();
 
   const hiciste = ultimoAprendido

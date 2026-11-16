@@ -757,6 +757,13 @@ button.pequeno {
   font-size: 13px;
 }
 button.pequeno .icono { font-size: 14px; }
+/* La (i) de la ficha de un proyecto, al lado de un botón pequeño (decisión 202):
+   de su misma altura, y sin el relleno de los pequeños, que la descentraría. */
+button.info.pequeno {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+}
 
 /* Solo el dibujo: para acciones que se repiten en cada fila de una lista y que
    escritas enteras le quitarían el sitio a lo que sí cambia, que es el nombre. */
