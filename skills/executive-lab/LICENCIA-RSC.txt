@@ -1,5 +1,5 @@
-freno-rsc-3.0.22.mjs y shell-unwrap.mjs son copias sin cambios de
-targets/danger-guard.mjs y targets/shell-unwrap.mjs de @ericrisco/rsc 3.0.22
+freno-rsc-4.1.7.mjs y shell-unwrap.mjs son copias sin cambios de
+targets/danger-guard.mjs y targets/shell-unwrap.mjs de @ericrisco/rsc 4.1.7
 (https://www.npmjs.com/package/@ericrisco/rsc), de Eric Risco,
 que se distribuye con esta licencia:
 

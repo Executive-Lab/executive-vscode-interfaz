@@ -1,4 +1,4 @@
-# Nueve cosas para Eric
+# Diez cosas para Eric
 
 Salieron montando esta barra sobre RSC, y las nueve son de RSC, no nuestras. Están
 contra la **2.0.5** y comprobadas leyendo el paquete publicado, no deducidas. Las rutas
@@ -371,6 +371,36 @@ los seis que quedaban se reprodujeron con él antes de abrirlos:
 
 Se abrieron en español y con gitmoji en el título, como la #258: es lo que se hace en ese repositorio. La
 nota de los borradores que decía «en inglés» estaba equivocada.
+
+---
+
+## 10. La oferta de MemSlop acaba en el freno, con quien no es técnico (4.1.7, 16-11-2026)
+
+Sin abrir: es un borrador para que Jose decida si se abre (decisión 200).
+
+`targets/memslop-offer.mjs` le pide al asistente, al empezar la conversación en un Mac, que ofrezca MemSlop y que,
+con un sí, lo instale bajando su `install.sh` y pasándoselo a `bash`. Con `technical_level: non-technical`,
+`targets/danger-guard.mjs` le para justo esa orden («pipes a downloaded script straight into a shell»). La persona
+dice que sí y lo siguiente que ve es un bloqueo, con un aviso que le pide que decida si apagar el freno. Lo hemos
+reproducido sin querer: el freno paró hasta un `heredoc` que solo citaba la orden.
+
+**Lo que parece que falta.** Que la oferta mire el mismo `technical_level` que el freno y no se haga a quien no puede
+aceptarla, o que se instale por un camino que el freno deje pasar. Y una forma de callarla por proyecto o por
+entorno: hoy solo se calla con `~/.rsc/.no-memslop`, que es de toda la máquina.
+
+**Nuestro rodeo.** La barra pone `~/.rsc/.no-memslop` al abrirse, solo en un Mac.
+
+**Borrador:**
+
+> 🐛 La oferta de MemSlop acaba bloqueada por danger-guard con usuarios no técnicos. `memslop-offer.mjs` ofrece
+> instalarlo con `curl … | bash`; con `technical_level: non-technical`, `danger-guard.mjs` deniega esa orden. Propuesta:
+> no ofrecerlo (o no proponer esa orden) cuando el perfil no es técnico, y un opt-out por proyecto además del de máquina.
+
+### Y el salto de la 3.0.22 a la 4.1.7 tampoco rompió nada
+
+Comprobado con los dos paquetes, uno al lado del otro: los marcadores que parseamos, `doctor --json`, `repair
+--dry-run`, `reassess`, `memory resume` y `sync --dry-run` dicen lo mismo, y `danger-guard.mjs` y `shell-unwrap.mjs`
+son idénticos byte a byte. Una carpeta montada con la 3.0.22 pasa a la 4.1.7 con un `sync` y conserva cada decisión.
 
 ---
 

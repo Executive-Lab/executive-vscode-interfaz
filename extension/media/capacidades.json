@@ -105,6 +105,23 @@
       ]
     },
     {
+      "id": "sales-funnel",
+      "nombre": "Embudo de venta",
+      "frase": "Los pasos desde la oferta hasta la compra o la cita: las páginas, cómo se recupera a quien se va y qué medir.",
+      "palabras": [
+        "embudo",
+        "funnel",
+        "reserva",
+        "cita",
+        "carrito abandonado",
+        "captacion"
+      ],
+      "para": [
+        "operations",
+        "content"
+      ]
+    },
+    {
       "id": "proposals",
       "nombre": "Propuestas comerciales",
       "frase": "El documento que el cliente lee para decir que sí.",
@@ -311,6 +328,23 @@
       ],
       "para": [
         "operations"
+      ]
+    },
+    {
+      "id": "offer-design",
+      "nombre": "Diseño de la oferta",
+      "frase": "Qué recibe el cliente, por qué le resuelve el problema y qué puedes prometer de verdad.",
+      "palabras": [
+        "oferta",
+        "garantia",
+        "que incluye",
+        "promesa",
+        "bonus",
+        "condiciones"
+      ],
+      "para": [
+        "operations",
+        "content"
       ]
     },
     {
@@ -606,6 +640,24 @@
       ]
     },
     {
+      "id": "customer-research",
+      "nombre": "Investigación de clientes",
+      "frase": "Convertir entrevistas, reseñas y ventas perdidas en lo que tus clientes necesitan, lo que les frena y cómo lo dicen.",
+      "palabras": [
+        "entrevistas",
+        "reseñas",
+        "opiniones",
+        "objeciones",
+        "por que no compran",
+        "venta perdida"
+      ],
+      "para": [
+        "operations",
+        "content",
+        "research"
+      ]
+    },
+    {
       "id": "competitor-watch",
       "nombre": "Vigilancia de la competencia",
       "frase": "Seguir a tus competidores: sus precios, sus novedades y sus cambios, apuntados con fecha.",
@@ -677,6 +729,22 @@
       ],
       "para": [
         "content"
+      ]
+    },
+    {
+      "id": "vsl-script",
+      "nombre": "Guion de vídeo de venta",
+      "frase": "El guion hablado de un vídeo que vende: lo que se dice, lo que se ve en cada momento y una sola acción al final.",
+      "palabras": [
+        "vsl",
+        "video de venta",
+        "guion de venta",
+        "video de ventas",
+        "carta de ventas"
+      ],
+      "para": [
+        "content",
+        "operations"
       ]
     },
     {
@@ -1695,48 +1763,64 @@
     {
       "id": "design",
       "nombre": "Diseño de interfaz",
-      "frase": "Diseñar o refrescar una web o una página para que no parezca hecha con plantilla.",
+      "frase": "Diseñar o refrescar una web o una pantalla para que no parezca hecha con plantilla: el estilo, las imágenes y el movimiento.",
       "palabras": [
         "diseño",
         "interfaz",
         "landing",
         "tipografia",
-        "composicion"
-      ],
-      "para": [
-        "content",
-        "software"
-      ]
-    },
-    {
-      "id": "design-dna",
-      "nombre": "ADN de diseño",
-      "frase": "Fijar el estilo que ha ganado en reglas medibles para que no se pierda.",
-      "palabras": [
+        "composicion",
         "estilo",
         "sistema de diseño",
         "proporciones",
-        "adn visual"
-      ],
-      "para": [
-        "content",
-        "software"
-      ]
-    },
-    {
-      "id": "design-loop",
-      "nombre": "Bucle de diseño",
-      "frase": "Construir algo comparándolo contra una referencia real hasta superarla.",
-      "palabras": [
+        "adn visual",
         "referencia",
         "comparar",
         "critica",
         "mejor que",
-        "iterar el diseño"
+        "iterar el diseño",
+        "animacion",
+        "animaciones",
+        "transicion",
+        "movimiento",
+        "easing"
       ],
       "para": [
         "content",
         "software"
+      ]
+    },
+    {
+      "id": "ux",
+      "nombre": "Facilidad de uso",
+      "frase": "Que cualquiera termine lo que vino a hacer sin manual: recorridos, pantallas, formularios y cada estado.",
+      "palabras": [
+        "usabilidad",
+        "facil de usar",
+        "formulario",
+        "formularios",
+        "navegacion",
+        "experiencia de usuario"
+      ],
+      "para": [
+        "software",
+        "content"
+      ]
+    },
+    {
+      "id": "scroll-film",
+      "nombre": "Portada con vídeo al bajar",
+      "frase": "Una portada de web en la que la cámara avanza a medida que se baja por la página, también en el móvil.",
+      "palabras": [
+        "scroll",
+        "portada",
+        "video de fondo",
+        "estilo apple",
+        "desplazamiento"
+      ],
+      "para": [
+        "software",
+        "content"
       ]
     },
     {
@@ -2558,22 +2642,6 @@
       ]
     },
     {
-      "id": "motion-craft",
-      "nombre": "Movimiento en la interfaz",
-      "frase": "Animaciones que se sienten bien: duraciones, curvas y lo que nunca debe moverse.",
-      "palabras": [
-        "animacion",
-        "animaciones",
-        "transicion",
-        "movimiento",
-        "easing"
-      ],
-      "para": [
-        "content",
-        "software"
-      ]
-    },
-    {
       "id": "mysql",
       "nombre": "MySQL y MariaDB",
       "frase": "Diseñar, consultar e indexar en MySQL o MariaDB.",
@@ -3143,26 +3211,18 @@
       ]
     },
     {
-      "id": "secure-coding",
-      "nombre": "Código seguro",
-      "frase": "Modelar amenazas, revisar cambios y cerrar fallos de seguridad clásicos.",
+      "id": "security-audit",
+      "nombre": "Auditoría de seguridad",
+      "frase": "Saber si lo tuyo es seguro: el código, las claves y los servicios donde funciona, y arreglar lo que apruebes.",
       "palabras": [
         "seguridad",
-        "owasp",
+        "auditoria de seguridad",
+        "vulnerabilidad",
+        "claves filtradas",
         "amenazas",
+        "owasp",
         "autenticacion",
         "secretos",
-        "vulnerabilidad"
-      ],
-      "para": [
-        "software"
-      ]
-    },
-    {
-      "id": "security-scan",
-      "nombre": "Escaneo de seguridad",
-      "frase": "Barrido automático del código: librerías con fallos conocidos, secretos filtrados y configuración.",
-      "palabras": [
         "escaneo",
         "sast",
         "vulnerabilidades",
@@ -3170,7 +3230,8 @@
         "secretos en el codigo"
       ],
       "para": [
-        "software"
+        "software",
+        "operations"
       ]
     },
     {

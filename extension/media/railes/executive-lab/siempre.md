@@ -43,9 +43,10 @@ conexiones, la marca, los documentos que esperan— está en la habilidad `execu
 
 7. **Nada de `npx` sin versión.** Las habilidades y los comandos del arnés te dicen muchas veces que
    corras su paquete sin número de versión, o con `@latest`: para `add`, `agent-model`, `agents`,
-   `audit`, `capabilities`, `catalog`, `consult`, `copy`, `doctor`, `git-permissions`, `isolation`,
-   `knowledge-sync`, `list`, `main`, `memory`, `onboard`, `purge`, `reassess`, `registry`, `repair`,
-   `review`, `sello`, `sync`, `uninstall` y `worktrees`, y en `/save-session`, `/resume-session`,
+   `audit`, `capabilities`, `catalog`, `consult`, `copy`, `doctor`, `emoji`, `git-permissions`,
+   `ingest`, `isolation`, `knowledge-sync`, `list`, `main`, `memory`, `onboard`, `purge`, `reassess`,
+   `registry`, `repair`, `review`, `risk`, `sello`, `spec`, `sync`, `uninstall`, `upgrade` y
+   `worktrees`, y en `/save-session`, `/resume-session`,
    `/learn` y `/checkpoint`. No lo hagas: así se trae la última publicada, que aquí no ha adoptado nadie, y toda
    la clase dejaría de correr el mismo catálogo. Usa, por este orden:
 
@@ -60,8 +61,8 @@ conexiones, la marca, los documentos que esperan— está en la habilidad `execu
       no existe, la respuesta trae los que más se parecen. Si al minuto no hay respuesta, puede que la
       barra no esté abierta o que le esté preguntando a la persona: díselo. No la añadas tú.
    3. Si de verdad hace falta el paquete, **con la versión que declara `.rsc.json`** en
-      `catalogVersion`, escrita detrás del nombre con una arroba. Si dice `3.0.22`:
-      `npx @ericrisco/rsc@3.0.22 doctor`.
+      `catalogVersion`, escrita detrás del nombre con una arroba. Si dice `4.1.7`:
+      `npx @ericrisco/rsc@4.1.7 doctor`.
       Nunca la última publicada, y nunca `@latest`.
 
    Y si nada de eso se puede, dilo y no lo ejecutes. Esas instrucciones las reescribe el arnés en cada

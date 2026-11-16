@@ -4882,6 +4882,8 @@ function activate(contexto) {
     yaHabiaAsistente: Boolean(claude && claude.isActive),
   });
   salida.appendLine(`[relevo] ${elRelevo.modo}${elRelevo.carpeta ? ` en ${elRelevo.carpeta}` : ''}${elRelevo.error ? `: ${elRelevo.error}` : ''}`); // diccionario: interno
+  // Y antes de la primera conversación, la oferta de MemSlop callada (decisión 200).
+  salida.appendLine(`[memslop] ${relevo.callarLaOfertaDeMemSlop()}`); // diccionario: interno
   // El control remoto de Claude, para todas las sesiones (decisión 143), como lo
   // ponen los instaladores: así también lo tiene quien solo instaló el .vsix.
   if (claude) ponerElControlRemoto(salida);

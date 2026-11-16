@@ -31,6 +31,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 
 const clavePath = (env) => Object.keys(env).find((k) => k.toLowerCase() === 'path') || 'PATH';
 
@@ -148,6 +149,32 @@ function callarElAvisoDeVersion(env = process.env) {
   if (!env.RSC_NO_UPDATE_CHECK) env.RSC_NO_UPDATE_CHECK = '1';
 }
 
+// ── Y la oferta de MemSlop, callada (decisión 200) ───────────────────────
+//
+// Desde la 4, en un Mac, el arranque de cada conversación le pide al asistente
+// que ofrezca MemSlop, una app que cierra los servidores y navegadores que dejan
+// abiertos los asistentes, y que la instale con `curl … | bash` si le dicen que
+// sí (`targets/memslop-offer.mjs`). A quien no es técnico, el freno del propio
+// arnés le para esa orden: un sí que acaba en un bloqueo es un mensaje sin
+// salida (decisión 183). Y en clase nadie deja servidores abiertos.
+//
+// RSC la calla con un fichero de la máquina, `~/.rsc/.no-memslop`, y no tiene
+// variable de entorno, así que va ese fichero. Solo en un Mac, que es donde se
+// ofrece; si ya está, no se toca. Va aparte de `ponerAlActivar` para que quien la
+// llame diga en qué carpeta personal escribe.
+function callarLaOfertaDeMemSlop({ casa = os.homedir(), plataforma = process.platform } = {}) {
+  if (plataforma !== 'darwin' || !casa) return 'noHaceFalta';
+  const marca = path.join(casa, '.rsc', '.no-memslop');
+  try {
+    if (fs.existsSync(marca)) return 'yaEstaba';
+    fs.mkdirSync(path.dirname(marca), { recursive: true });
+    fs.writeFileSync(marca, 'Puesto por la barra de Executive Lab: en clase no hace falta (decisión 200).\n', { flag: 'wx' });
+    return 'callada';
+  } catch (error) {
+    return error && error.code === 'EEXIST' ? 'yaEstaba' : 'noSePudo';
+  }
+}
+
 // Lo que se puso al activar la barra, para la pieza «Lo que el arnés hace
 // solo». Si todavía no se ha puesto, se mira sin escribir nada: sin carpeta
 // para el relevo, `asegurar` solo lee el PATH.
@@ -163,4 +190,4 @@ function ponerAlActivar(opciones = {}) {
 }
 const comoEsta = () => ultimo || asegurar({ carpeta: null });
 
-module.exports = { nodeDelPath, asegurar, escribirElRelevo, ponerAlActivar, comoEsta, callarElAvisoDeVersion };
+module.exports = { nodeDelPath, asegurar, escribirElRelevo, ponerAlActivar, comoEsta, callarElAvisoDeVersion, callarLaOfertaDeMemSlop };

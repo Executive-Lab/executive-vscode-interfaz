@@ -187,7 +187,7 @@ tamaño. Luego:
 ```bash
 cd "<su carpeta de trabajo>"
 
-npx @ericrisco/rsc@3.0.22 onboard \
+npx @ericrisco/rsc@4.1.7 onboard \
   --technical-level <non-technical|mixed|technical> \
   --project-kind <software|operations|research|content|mixed> \
   --goal "<lo que quiera conseguir, en sus palabras>" \
@@ -201,16 +201,16 @@ con un tamaño `complex` RSC cierra la rama principal al asistente. Ese comando 
 lo acepte, repite el mismo comando con los mismos flags y añade la huella **tal cual la imprimió**:
 
 ```bash
-npx @ericrisco/rsc@3.0.22 onboard ...los mismos flags... --accept-plan <huella>
+npx @ericrisco/rsc@4.1.7 onboard ...los mismos flags... --accept-plan <huella>
 ```
 
 Y deja la carpeta como la deja la barra (decisión 145): la rama principal abierta, y nada que salga
 del ordenador sin preguntar.
 
 ```bash
-npx @ericrisco/rsc@3.0.22 main unlock
-npx @ericrisco/rsc@3.0.22 knowledge-sync off
-npx @ericrisco/rsc@3.0.22 git-permissions off
+npx @ericrisco/rsc@4.1.7 main unlock
+npx @ericrisco/rsc@4.1.7 knowledge-sync off
+npx @ericrisco/rsc@4.1.7 git-permissions off
 ```
 
 Por último, los raíles de Executive Lab (idioma y vocabulario), que viajan dentro de la extensión:
@@ -236,7 +236,7 @@ ls .claude/skills/executive-lab/SKILL.md              # los raíles
 - **No enciendas la vista sencilla por tu cuenta.** Es un ajuste **por carpeta**
   (`executiveLab.vistaSencilla`) que reconfigura todo el editor. Lo decide esa persona, desde el
   botón de la barra o cuando el asistente se lo pregunte al terminar. Su editor es suyo.
-- **No uses `@latest` para RSC.** La barra trae la **3.0.22**, de la serie de la clase (decisión 145).
+- **No uses `@latest` para RSC.** La barra trae la **4.1.7**, de la serie de la clase (decisión 145).
   Subir de versión es una decisión que se toma, se contrasta y se escribe, nunca un efecto
   secundario de un `npm install`. Una carpeta que va por delante se trabaja con su versión, no se baja.
 - **No inventes las respuestas del onboarding.** Definen el tono, el idioma y las palabras con que el
@@ -274,7 +274,7 @@ Las tres llevan lo mismo, porque el arnés viaja en un solo sitio: dentro del `.
 |---|---|---|---|
 | Versión del panel | la de la release | la misma, dentro | la misma, dentro |
 | Tamaño | 6 MB | **6,8 MB** | **29 MB** |
-| Arnés RSC 3.0.22 | ✅ dentro del paquete | ✅ (dentro del `.vsix`) | ✅ (dentro del `.vsix`) |
+| Arnés RSC 4.1.7 | ✅ dentro del paquete | ✅ (dentro del `.vsix`) | ✅ (dentro del `.vsix`) |
 | Raíles | ✅ `media/railes/` | ✅ (dentro del `.vsix`) | ✅ (dentro del `.vsix`) |
 | Módulos compartidos | ✅ `media/comun/` | ✅ | ✅ |
 | Disfraz (`disfraz.json`) | ✅ | ✅ | ✅ |
@@ -330,7 +330,7 @@ git clone git@github.com:Executive-Lab/executive-vscode-interfaz.git
 cd executive-vscode-interfaz
 
 # El arnés que viaja dentro de la extensión NO está versionado. Antes de empaquetar:
-npm install --prefix extension/media/harness @ericrisco/rsc@3.0.22
+npm install --prefix extension/media/harness @ericrisco/rsc@4.1.7
 ```
 
 ### Probarlo
@@ -403,7 +403,7 @@ agentes); lo que monta RSC está en `.gitignore`. Lo que el equipo apagó (el fo
 otros) viaja en `.rsc.json`, y RSC lo vuelve a poner al montarlo en otra máquina. Para retomarlo:
 
 ```bash
-npx @ericrisco/rsc@3.0.22 sync
+npx @ericrisco/rsc@4.1.7 sync
 ```
 
 > La versión va fijada exacta a propósito, y está escrita en varios sitios —el paquete de la barra,
@@ -413,7 +413,9 @@ npx @ericrisco/rsc@3.0.22 sync
 > marcador que la barra lee había cambiado. Lo que sí cambió está en la decisión 91. Y de la 2.0.5 a la
 > 2.0.15 el 28 de septiembre, con las habilidades idénticas byte a byte: por qué, y lo que cambió, en la
 > decisión 127. Y de la 2.0.15 a la 3.0.22 el 14 de octubre, porque la clase ya iba en la 3: P7 pasó a
-> ser «la serie de la clase», y lo que cambió está en la decisión 145.
+> ser «la serie de la clase», y lo que cambió está en la decisión 145. Y de la 3.0.22 a la 4.1.7 el 16 de
+> noviembre, con las salidas que lee la barra y el freno idénticos: lo que cambió, y cómo se pone al día una
+> carpeta de la 3, en la decisión 200.
 
 ---
 

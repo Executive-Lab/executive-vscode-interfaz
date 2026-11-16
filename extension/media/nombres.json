@@ -106,6 +106,10 @@
     "security-scan": {
       "nombre": "Escaneo de seguridad",
       "queHace": "Busca fallos de seguridad conocidos en el código."
+    },
+    "security-audit": {
+      "nombre": "Auditoría de seguridad",
+      "queHace": "Revisa si el proyecto es seguro: el código, las claves y los servicios donde funciona."
     }
   },
   "habilidades": {
@@ -240,6 +244,46 @@
     "connect-tool": {
       "nombre": "Conectar una herramienta",
       "queHace": "Cuando nombras un programa tuyo (un ERP, un CRM, una hoja de cálculo), busca cómo se conecta de verdad, empieza solo mirando y deja la conexión hecha y probada."
+    },
+    "design-dna": {
+      "nombre": "ADN de diseño",
+      "queHace": "Fijar el estilo que ha ganado en reglas medibles para que no se pierda."
+    },
+    "design-loop": {
+      "nombre": "Bucle de diseño",
+      "queHace": "Construir algo comparándolo contra una referencia real hasta superarla."
+    },
+    "motion-craft": {
+      "nombre": "Movimiento en la interfaz",
+      "queHace": "Animaciones que se sienten bien: duraciones, curvas y lo que nunca debe moverse."
+    },
+    "secure-coding": {
+      "nombre": "Código seguro",
+      "queHace": "Modelar amenazas, revisar cambios y cerrar fallos de seguridad clásicos."
+    },
+    "security-scan": {
+      "nombre": "Escaneo de seguridad",
+      "queHace": "Barrido automático del código: librerías con fallos conocidos, secretos filtrados y configuración."
+    },
+    "asdd": {
+      "nombre": "Desarrollo por especificación (ASDD)",
+      "queHace": "La cadena larga para construir algo grande: qué queremos, cómo, tareas, y una revisión dentro de cada tarea."
+    },
+    "tidy": {
+      "nombre": "Poner orden en git",
+      "queHace": "Deja todo al día con GitHub: lo guardado, subido; lo de los demás, traído; y ninguna copia de trabajo suelta."
+    },
+    "design": {
+      "nombre": "Diseño de interfaz",
+      "queHace": "Diseñar o refrescar una web o una pantalla para que no parezca hecha con plantilla: el estilo, las imágenes y el movimiento."
+    },
+    "security-audit": {
+      "nombre": "Auditoría de seguridad",
+      "queHace": "Saber si lo tuyo es seguro: el código, las claves y los servicios donde funciona, y arreglar lo que apruebes."
+    },
+    "ux": {
+      "nombre": "Facilidad de uso",
+      "queHace": "Que cualquiera termine lo que vino a hacer sin manual: recorridos, pantallas, formularios y cada estado."
     }
   },
   "ayudantes": {
@@ -376,7 +420,9 @@
     "simplify-code",
     "debug",
     "ui-engineering",
-    "fable-operator"
+    "fable-operator",
+    "asdd",
+    "tidy"
   ],
   "_guardianes": [
     "Los guardianes son lo único del arnés que puede DECIRLE QUE NO a alguien: se",
@@ -413,6 +459,10 @@
     "copy-guard": {
       "nombre": "Frases que no se dicen",
       "queHace": "Si el proyecto tiene frases prohibidas, no deja que el asistente te conteste con ellas: lo hace reescribir."
+    },
+    "asdd-gate": {
+      "nombre": "Freno a subir sin especificación",
+      "queHace": "En un cambio delicado (cuentas, pagos, publicación o datos guardados), no deja subirlo a GitHub sin su especificación escrita. En lo principal no actúa."
     }
   },
   "_automatismos": [
@@ -494,6 +544,14 @@
     "worktree-isolation": {
       "nombre": "Trabajo aparte con otra conversación",
       "queHace": "Si otra conversación trabaja en la misma carpeta, lo nuevo va a una copia aparte para no pisarla."
+    },
+    "emoji": {
+      "nombre": "Dibujos en las respuestas (emoji)",
+      "queHace": "El arnés y el asistente ponen dibujos en lo que te contestan y al guardar en git. Se pueden quitar para todo el equipo."
+    },
+    "memslop": {
+      "nombre": "La oferta de MemSlop",
+      "queHace": "En un Mac, al empezar, el arnés le pide al asistente que te ofrezca instalar MemSlop, una app que cierra los programas que los asistentes dejan abiertos."
     }
   },
   "_noSeEnsena": [
@@ -519,6 +577,8 @@
     "session-memory-core": "El motor de `session-memory`. La pieza que se enseña es la memoria.",
     "shell-unwrap": "Lo que usan los guardianes para leer qué ejecuta de verdad una orden. No decide nada.",
     "team-safe-start": "Lo que hace `session-start` al empezar en un proyecto de equipo (rescatar copias, mover carpetas). Va dentro de la brújula al empezar.",
-    "trunk-policy": "Cómo decide `branch-guard` si lo principal está cerrado. La pieza que se enseña es el freno."
+    "trunk-policy": "Cómo decide `branch-guard` si lo principal está cerrado. La pieza que se enseña es el freno.",
+    "risk-policy": "La tabla con la que el arnés decide cuánto riesgo tiene un cambio. La usan el freno a subir sin especificación y la recogida de copias de trabajo; sola no decide nada.",
+    "spec-completeness": "Lo que mira el freno a subir sin especificación dentro de una especificación. La pieza que se enseña es el freno."
   }
 }

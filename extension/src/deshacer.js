@@ -19,8 +19,9 @@ const rsc = require('./rsc');
 const proyecto = require('./proyecto');
 const { etiqueta: unRotulo } = require('./limpio');
 
-// Lo que RSC equipa siempre (`default-skill-floor.js`): `sync` lo volvería a poner.
-const SUELO = new Set(['orient', 'suggest', 'unslop', 'ftd', 'connect-tool']);
+// Lo que RSC equipa siempre (`default-skill-floor.js`): `sync` lo volvería a poner. Con la 4
+// son nueve (decisión 200), y una prueba lo compara con el paquete.
+const SUELO = new Set(['orient', 'suggest', 'unslop', 'ftd', 'connect-tool', 'design', 'ux', 'tidy', 'security-audit']);
 
 // Un id que RSC leería como un nombre y nunca como una opción: no empieza por `-`.
 // El analizador de RSC no entiende `--` como fin de opciones (`rsc.js`: lo salta como

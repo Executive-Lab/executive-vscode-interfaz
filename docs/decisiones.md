@@ -9859,3 +9859,68 @@ de estilo de verdad, a 120, 160, 200, 240 y 300 puntos de ancho: antes, a 200, l
 
 **Lo que no se prueba**: el panel de mentira no mide nada, así que ninguna prueba de `humo.js` lo vería volver. Una que
 buscara la regla en el CSS miraría cómo se escribe y no cómo se ve; por eso no se ha escrito.
+
+## 200. La barra pasa a la 4
+
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de que Jose fusione · FTD
+`02-DOCS/wiki/ftd/la-barra-pasa-a-la-4.md`
+
+Jose, 15-11: *«audita, revisa, adapta a la última versión de RSC y comprueba que todo esté bien para que los alumnos
+usen la barra»*. La barra traía la 3.0.22 y la última publicada es la **4.1.7**. Por P7 (decisión 145), una carpeta
+que va por delante está al día y la barra no escribe en ella: un alumno que montara RSC desde el chat con la 4 se
+quedaba con una barra que mira y no hace. Ensayo sin tocar código: 10 fallos en `humo.js` y 6 en `contrato.js`.
+
+**Lo que trae la 4, comprobado con los dos paquetes uno al lado del otro.**
+
+- **Las salidas que la barra lee no cambian**: el plan en seco, las seis formas de acabar el montaje, `doctor --json`,
+  `repair --dry-run`, `reassess`, `memory resume` y `sync --dry-run`.
+- **El freno y `shell-unwrap.mjs` son los mismos**, byte a byte. Solo cambia el nombre de la copia.
+- **Habilidades.** `sdd` pasa a `asdd`, `ui-engineering` a `ux`, `secure-coding` y `security-scan` a `security-audit`, y
+  `design-dna`, `design-loop` y `motion-craft` a `design` (RSC lo hace solo al leer lo declarado). Entran también
+  `tidy`, `customer-research`, `offer-design`, `sales-funnel`, `scroll-film` y `vsl-script`. El suelo pasa de cinco a
+  nueve: `design`, `ux`, `tidy` y `security-audit` van en toda carpeta.
+- **Enganches nuevos:** `asdd-gate` (dentro de `ship-guard`), `emoji-policy`, `memslop-offer`, `risk-policy` y
+  `spec-completeness`. **Órdenes nuevas:** `risk`, `spec gate`, `ingest` y `emoji`.
+- **El montaje pregunta por los emoji** (por defecto sí, «como antes»), y la ingesta **mueve** a `raw/` lo suelto de la
+  raíz y de `inbox/` en vez de copiarlo.
+
+**Lo que hace la barra.**
+
+1. **La 4.1.7 dentro**, y la versión igual en los seis sitios donde está escrita, también en el arnés de este
+   repositorio (`sync` con la de dentro; `optOuts` intacto). La 3 va por detrás y se pone al día sola (P9).
+2. **La copia del freno se llama `freno-rsc-4.1.7.mjs`**, y al poner los raíles se retira la de antes: solo un
+   `freno-rsc-<versión>.mjs` que ya no viaja con la habilidad, y nunca un enlace. Con la 2 → 3 la vieja se quedaba.
+3. **Catálogo y nombres.** Lo nuevo, con nombre en español y en el diccionario. Lo retirado sale de lo que se ofrece y
+   conserva su nombre para las carpetas que aún lo tengan. `design` y `security-audit` heredan las palabras de las que
+   sustituyen, para que se sigan sugiriendo con lo mismo. El catálogo conserva su orden por temas.
+4. **Lo que no se deja quitar es el suelo de la 4**, y una prueba lo compara con el paquete: ofrecer «Quitarla» en una
+   que el siguiente `sync` vuelve a poner es un botón que no hace nada.
+5. **Los nombres de lo nuevo:** «Freno a subir sin especificación» (`asdd-gate`), «Dibujos en las respuestas (emoji)»
+   y «La oferta de MemSlop». `risk-policy` y `spec-completeness` constan como fontanería, con su porqué. `ingest` y
+   `emoji` cuentan como órdenes que escriben.
+6. **La regla 7** nombra `emoji`, `ingest`, `risk`, `spec` y `upgrade`.
+
+**Tres decisiones de producto, tomadas así para no parar la noche. Jose puede darles la vuelta:**
+
+- **La oferta de MemSlop se calla en un Mac.** RSC le pide al asistente que ofrezca instalar una app bajando un guion
+  de internet y pasándoselo a la consola. A quien no es técnico, el freno del propio RSC le para esa orden: un sí que
+  acaba en un bloqueo es un mensaje sin salida (decisión 183). Y en clase nadie deja servidores abiertos. RSC solo la
+  calla con un fichero de la máquina, `~/.rsc/.no-memslop`, así que la barra lo pone al abrirse, solo en un Mac y sin
+  pisar uno que ya esté. Sale en Lo que se comprueba solo como «Apagado a propósito: aquí no hace falta». Para darle
+  la vuelta: quitar la llamada de `extension.js` y la marca.
+- **Los emoji, como antes.** La barra no añade la pregunta (decisión 184: el primer día, con menos preguntas) y RSC los
+  deja encendidos. Se nombran en Lo que se comprueba solo.
+- **`asdd-gate` no se apaga.** En la rama principal no actúa, y en las carpetas de la barra se trabaja en ella. Solo se
+  monta con ASDD.
+
+**La ingesta que mueve** encaja con la barra: «Añadir documentos» copia a `inbox/` (el original del alumno no se toca)
+y lo suelto de la raíz ya salía como «sin colocar».
+
+**Pruebas.** Cuatro nuevas en `humo.js` (el suelo frente al paquete, la copia vieja del freno, MemSlop callado solo en
+un Mac y sin pisar nada, y lo nuevo nombrado donde toca), y una en la batería larga que juega lo que les pasará a los
+alumnos de octubre: se monta con una 3.0.22 de verdad y el código de la barra, se deja el freno como lo dejaba la barra
+de la 3, y se abre con la de la 4. Se pone al día sin preguntar nada, conserva las ocho marcas, lo apagado y
+`gitPermissions: false`, pasa `sdd` a `asdd` y `ui-engineering` a `ux`, cambia el freno, conserva el perfil y el arnés
+queda entero según su `doctor`. Las nuevas se han visto caer quitando su arreglo.
+
+**Lo que no se ha hecho.** Publicar: la PR la fusiona Jose y `publicar.sh` va después. Y no se pregunta por los emoji.

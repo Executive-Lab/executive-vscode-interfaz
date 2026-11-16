@@ -74,7 +74,7 @@ tamaño— en lenguaje llano, y montará el arnés con esas respuestas.
 Si prefiere que lo hagas tú, las respuestas son suyas, no tuyas: pregúntaselas una a una y luego
 
 ```bash
-npx @ericrisco/rsc@3.0.22 onboard \
+npx @ericrisco/rsc@4.1.7 onboard \
   --technical-level <non-technical|mixed|technical> \
   --project-kind <software|operations|research|content|mixed> \
   --goal "<lo que quiera conseguir>" \
@@ -82,11 +82,11 @@ npx @ericrisco/rsc@3.0.22 onboard \
   --target <claude|codex>
 # el tamaño y --workflow main solo cuentan con software y mixed, y con esos dos son obligatorios.
 # imprime un plan y su huella; solo después de que ACEPTE ese plan exacto:
-npx @ericrisco/rsc@3.0.22 onboard ...mismos flags... --accept-plan <huella>
+npx @ericrisco/rsc@4.1.7 onboard ...mismos flags... --accept-plan <huella>
 # y como la deja la barra (decisión 145): la rama principal abierta y nada que salga sin preguntar
-npx @ericrisco/rsc@3.0.22 main unlock
-npx @ericrisco/rsc@3.0.22 knowledge-sync off
-npx @ericrisco/rsc@3.0.22 git-permissions off
+npx @ericrisco/rsc@4.1.7 main unlock
+npx @ericrisco/rsc@4.1.7 knowledge-sync off
+npx @ericrisco/rsc@4.1.7 git-permissions off
 ```
 
 Y por último, los raíles de Executive Lab (idioma y vocabulario), que van dentro de la extensión:
