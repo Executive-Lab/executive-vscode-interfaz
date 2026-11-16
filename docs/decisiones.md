@@ -9862,7 +9862,7 @@ buscara la regla en el CSS miraría cómo se escribe y no cómo se ve; por eso n
 
 ## 200. La barra pasa a la 4
 
-**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de que Jose fusione · FTD
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.60.0 · FTD
 `02-DOCS/wiki/ftd/la-barra-pasa-a-la-4.md`
 
 Jose, 15-11: *«audita, revisa, adapta a la última versión de RSC y comprueba que todo esté bien para que los alumnos
@@ -9924,3 +9924,72 @@ de la 3, y se abre con la de la 4. Se pone al día sin preguntar nada, conserva 
 queda entero según su `doctor`. Las nuevas se han visto caer quitando su arreglo.
 
 **Lo que no se ha hecho.** Publicar: la PR la fusiona Jose y `publicar.sh` va después. Y no se pregunta por los emoji.
+
+## 201. Tres mejoras tras la 4: el vigía de RSC, los dibujos a un clic y las habilidades de venta
+
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+`02-DOCS/wiki/ftd/tres-mejoras-tras-la-4.md`
+
+Jose, 16-11, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3 y 4»*.
+
+**1. El vigía de RSC.** Con la 4, quien montaba RSC desde el chat se quedó con una barra que miraba y no hacía, y se
+vio tarde. No hace falta una serie nueva para que pase: para la barra, cualquier versión más nueva que la suya va por
+delante (`comoEsLaVersion`, P7), y una carpeta que se pone al día sola a una 4.2 deja de recibir lo que escribe la
+barra. `.github/workflows/vigia-rsc.yml` mira cada lunes la última de npm. Si es más nueva, le pasa el contrato y abre
+una incidencia que dice si pasa, una por versión (cerrarla no hace que vuelva). No sube la versión: eso sigue siendo
+una decisión.
+
+- La lógica está en `herramientas/vigia-rsc.js`, probada sin red: decide igual que `comoEsLaVersion`, y una versión
+  que no sean tres números exactos no se dice (de ahí sale lo que se baja de npm).
+- El contrato se pasa con la barra de esa copia como si ya llevara la versión nueva (`como-si`). Sin eso, la barra
+  la ve por delante y el contrato cae siempre por la versión, y el aviso diría «falla» con cualquier versión. Lo vio
+  la revisión, y se reprodujo con paquetes de verdad: 4 fallos sin `como-si`, 15 de 15 con él.
+- Una por versión, y solo cuentan las incidencias que abrió el vigía: con el repositorio público, una de cualquiera
+  con ese título lo callaba (revisión).
+- Dos trabajos. El que baja y corre la RSC nueva solo puede leer el repositorio. El que abre la incidencia no baja ni
+  corre nada de fuera. La versión llega a las órdenes por el entorno, nunca escrita dentro.
+- Se puede lanzar a mano desde Actions, en seco (lo mira todo y no abre nada) o con una versión de prueba, que va
+  siempre en seco: así se prueba el camino de una versión nueva sin esperar a que salga una.
+- GitHub apaga lo que va con reloj tras 60 días sin actividad en un repositorio público. Si pasa, se enciende en Actions.
+
+**2. Los dibujos en las respuestas, a un clic.** En la 200 la barra dejó los emoji como antes, sin preguntar. P9 dice
+que una preferencia no se rellena por defecto. Sin añadir preguntas al montaje (decisión 184), se cambia en Las reglas ›
+Cómo trabaja el asistente, junto a los cuatro de las decisiones 172 y 176: «Quitar los dibujos» y «Poner los dibujos»
+llaman a `rsc emoji off|on`, que escribe o quita `.rsc/.no-emoji` y lo apunta en `.rsc.json` (lo decide el equipo).
+Después se mira el disco, como con los otros. Sale con Claude, donde RSC monta su pieza (`emoji-policy.mjs`) o donde
+ya están apagados, para poder volver a ponerlos. Con la 3, no. Con Codex solo, tampoco: nada suyo lee la marca, y la
+frase prometería algo que no pasa (revisión).
+
+**3. Las habilidades de venta de la 4, en los objetivos.** Ninguna fila de `objetivos.json` las sugería. Van detrás de
+las de siempre, porque la barra ofrece la primera de la fila que no esté puesta:
+
+- «Vender más y hacer seguimiento»: Diseño de la oferta y Embudo de venta.
+- «Atender mejor a mis clientes»: Investigación de clientes.
+- «Hacer vídeos»: Guion de vídeo de venta.
+
+**Pruebas.** En `humo.js`: el vigía (cómo decide, que no se fía, el aviso y que el trabajo que corre RSC no escribe), el
+interruptor con un RSC fingido, y las de venta en su turno. En la batería larga, el interruptor con el RSC de verdad:
+la marca, su apunte en `optOuts` y vuelta. Las del vigía se han visto caer con siete roturas a mano; las otras dos,
+antes de escribir su arreglo.
+
+**La revisión.** El fichero de GitHub hace la rama de riesgo 2, y el freno de la 4 (`asdd-gate`) no la dejó salir sin
+especificación y sin revisión de tres lentes. Jose eligió hacerlo entero: especificación en
+`02-DOCS/wiki/sdd/specs/mejoras-tras-la-4.md` y tres revisores independientes (corrección, seguridad, pruebas). Lo que
+encontraron y se arregló: el contrato que caía siempre por la versión, la incidencia de cualquiera que callaba el
+aviso, el interruptor con Codex solo, y que las pruebas del YAML miraran una forma de escribirlo en vez de su
+estructura (dieciocho roturas que sobrevivían, o que tocan los arreglos, caen ahora). Lo que no: una versión rara o
+un fallo de npm dejan la ejecución en rojo sin incidencia (GitHub avisa por correo), las acciones por versión mayor
+como el resto del repositorio, y la marca que sigue un enlace, que es de RSC y de los cinco interruptores a la vez.
+
+En la segunda ronda, corrección y seguridad dieron los arreglos por buenos, sin nada nuevo. Pruebas no encontró
+defectos en el código, pero sí huecos en las pruebas. La orden `como-si` con una versión buena no se probaba: ahora se
+prueba con una copia del vigía dentro de una copia desechable, y la batería ya no corre nada contra la barra de verdad.
+Una línea comentada en el YAML contaba como orden: ahora se buscan líneas enteras. Las claves de arriba del fichero,
+sus disparadores, sus trabajos y lo que llama el script que escribe están ahora en listas cerradas. `conClaude` no se
+probaba con Codex delante ni sin asistentes declarados. De veintitrés roturas caen veintidós. La que queda, un valor de
+GitHub en una variable de entorno, es el diseño: el valor va como dato y no entra en ninguna orden.
+
+En la tercera ronda no salió nada bloqueante. Quedan aparcados tres detalles de las comprobaciones de texto del fichero
+de GitHub: llamadas opcionales, un segundo `cron` o un `exit 0`, y un secreto en una variable. Ninguno está hoy en el
+fichero. Se cierran juntos con un lector de YAML y de JavaScript, en un cambio aparte. El registro de revisiones lo
+apunta: panel de tres lentes, tres rondas, y ningún hallazgo abierto.

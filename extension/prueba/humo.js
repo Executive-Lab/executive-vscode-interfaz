@@ -5808,6 +5808,178 @@ exec git "$@"
     return pedida;
   });
 
+  await comprobar('201: el vigía de RSC avisa de cada versión más nueva que la de la barra, una vez, solo con tres números, y la parte que corre RSC no escribe', () => {
+    const cp = require('node:child_process');
+    const DEL_VIGIA = path.join(RAIZ, '..', 'herramientas', 'vigia-rsc.js');
+    const vigia = require(DEL_VIGIA);
+    const rscM = cargar('rsc');
+    // La que lleva la barra, la misma que la del arnés de dentro.
+    assert.equal(vigia.laFijada(), rscM.VERSION_DE_RESPALDO);
+
+    // Decide igual que la barra: lo que para ella va por delante, el vigía lo avisa.
+    const fijada = rscM.VERSION_DE_RESPALDO;
+    const [ma, mi, pa] = fijada.split('.').map(Number);
+    for (const ultima of [fijada, `${ma}.${mi}.${pa + 1}`, `${ma}.${mi + 1}.0`, `${ma + 1}.0.0`, `${ma}.${mi}.${pa + 10}`, `${ma - 1}.9.9`]) {
+      assert.equal(vigia.comoVa({ fijada, ultima }), rscM.comoEsLaVersion(ultima), `con la ${ultima} el vigía y la barra no dicen lo mismo`);
+    }
+    assert.equal(vigia.comoVa({ fijada: '4.1.7', ultima: '4.1.10' }), 'nueva', 'compara letras y no números');
+    // Lo que no son tres números no pasa: de ahí sale lo que se baja de npm.
+    for (const rara of ['latest', '4.2', '4.2.0-beta.1', '4.2.0 && echo', '4.2.0\n', ' 4.2.0', '', undefined, 4.2, '5..', '..', '4.2.', '.1.2', '４.2.0']) {
+      assert.equal(vigia.comoVa({ fijada: '4.1.7', ultima: rara }), 'rara', `se fía de ${JSON.stringify(rara)}`);
+    }
+
+    // Por la línea de órdenes, sin red: lo que lee GitHub, y nada si la versión es rara.
+    const correr = (env) => cp.spawnSync(process.execPath, [DEL_VIGIA, 'versiones'], { encoding: 'utf8', env: { ...process.env, ...env } });
+    let r = correr({ VIGIA_ULTIMA: '4.2.0', VIGIA_FIJADA: '4.1.7' });
+    assert.deepEqual([r.status, r.stdout], [0, 'fijada=4.1.7\nultima=4.2.0\ncomo=nueva\n']);
+    r = correr({ VIGIA_ULTIMA: fijada });
+    assert.deepEqual([r.status, r.stdout], [0, `fijada=${fijada}\nultima=${fijada}\ncomo=igual\n`]);
+    r = correr({ VIGIA_ULTIMA: '4.2.0\nultima=1.0.0', VIGIA_FIJADA: '4.1.7' });
+    assert.notEqual(r.status, 0, 'una versión con otra línea dentro pasa');
+    assert.equal(r.stdout, '', 'una versión rara llega a GitHub');
+
+    // El aviso: título que no cambia, y dice si el contrato pasa, falla o no se pudo pasar.
+    const enlace = 'https://github.com/x/y/actions/runs/1';
+    const pasa = vigia.elAviso({ fijada: '4.1.7', ultima: '4.2.0', contrato: 'pasa', enlace });
+    assert.equal(pasa.titulo, 'RSC 4.2.0 está publicada, y la barra lleva la 4.1.7');
+    assert.ok(pasa.titulo.startsWith(vigia.empiezaPor('4.2.0')));
+    assert.match(pasa.cuerpo, /contrato con la 4\.2\.0, con la barra como si ya la llevara, \*\*pasa\*\*/);
+    assert.match(pasa.cuerpo, /irá por delante de la barra/);
+    assert.ok(pasa.cuerpo.includes(`Lo que dijo, entero: ${enlace}`));
+    assert.ok(!/Cambia la serie/.test(pasa.cuerpo));
+    const falla = vigia.elAviso({ fijada: '4.1.7', ultima: '5.0.0', contrato: 'falla', fallos: 6 });
+    assert.match(falla.cuerpo, /\*\*falla\*\* \(6 comprobaciones\)/);
+    assert.match(vigia.elAviso({ fijada: '4.1.7', ultima: '5.0.0', contrato: 'falla', fallos: 1 }).cuerpo, /\*\*falla\*\* \(1 comprobación\):/);
+    assert.match(falla.cuerpo, /Cambia la serie/);
+    assert.ok(!/Lo que dijo/.test(falla.cuerpo), 'sin enlace, una línea vacía de enlace');
+    assert.ok(!/\(0 /.test(vigia.elAviso({ fijada: '4.1.7', ultima: '4.1.8', contrato: 'falla', fallos: 0 }).cuerpo), 'cuenta cero fallos');
+    assert.match(vigia.elAviso({ fijada: '4.1.7', ultima: '4.1.8', contrato: 'no-corrio' }).cuerpo, /no se ha podido pasar/);
+    assert.match(vigia.elAviso({ fijada: '4.1.7', ultima: '4.1.8', contrato: 'otra cosa' }).cuerpo, /4\.1\.8: sin resultado\./);
+    assert.throws(() => vigia.elAviso({ fijada: '4.1.7', ultima: '4.1.7', contrato: 'pasa' }), /no hay nada que avisar/);
+
+    // Una por versión, y solo cuentan las del vigía: una incidencia de cualquiera con ese
+    // título lo callaba (revisión). Abierta o cerrada; en seco, no se abre nada.
+    const delVigia = (number, title, mas = {}) => ({ number, title, user: { login: 'github-actions[bot]', type: 'Bot' }, ...mas });
+    const deAlguien = (number, title) => ({ number, title, user: { login: 'cualquiera', type: 'User' } });
+    const titulo = pasa.titulo;
+    assert.deepEqual(vigia.queHacer({ todas: [], ultima: '4.2.0' }), { que: 'abrir' });
+    assert.deepEqual(vigia.queHacer({ todas: [delVigia(7, titulo)], ultima: '4.2.0' }), { que: 'ya', numero: 7 });
+    assert.deepEqual(vigia.queHacer({ todas: [delVigia(8, titulo, { state: 'closed' })], ultima: '4.2.0' }), { que: 'ya', numero: 8 }, 'cerrada y vuelve a avisar');
+    assert.deepEqual(vigia.queHacer({ todas: [deAlguien(9, titulo)], ultima: '4.2.0' }), { que: 'abrir' }, 'una de cualquiera lo calla');
+    assert.deepEqual(vigia.queHacer({ todas: [delVigia(10, titulo, { pull_request: {} })], ultima: '4.2.0' }), { que: 'abrir' }, 'una PR cuenta como aviso');
+    assert.deepEqual(vigia.queHacer({ todas: [delVigia(11, 'RSC 4.1.9 está publicada, y la barra lleva la 4.1.7')], ultima: '4.2.0' }), { que: 'abrir' }, 'la de otra versión cuenta');
+    assert.deepEqual(vigia.queHacer({ todas: [delVigia(12, 'RSC 4.2.0 está publicada, y la barra lleva la 4.1.7')], ultima: '4.2.01' }), { que: 'abrir' });
+    assert.deepEqual(vigia.queHacer({ todas: [], ultima: '4.2.0', enSeco: '1' }), { que: 'seco' });
+    for (const otro of ['', '0', 'true', undefined]) assert.deepEqual(vigia.queHacer({ todas: [], ultima: '4.2.0', enSeco: otro }), { que: 'abrir' }, `en seco con ${otro}`);
+    assert.deepEqual(vigia.queHacer({ todas: [delVigia(7, titulo)], ultima: '4.2.0', enSeco: '1' }), { que: 'ya', numero: 7 });
+
+    // El contrato se pasa como si la barra ya llevara la nueva (revisión): una línea, y nada más.
+    const copia = fs.mkdtempSync(path.join(os.tmpdir(), 'vigia-como-si-'));
+    fs.mkdirSync(path.join(copia, 'extension', 'src'), { recursive: true });
+    const deVerdad = fs.readFileSync(path.join(RAIZ, 'src', 'rsc.js'), 'utf8');
+    const suRsc = path.join(copia, 'extension', 'src', 'rsc.js');
+    fs.writeFileSync(suRsc, deVerdad);
+    vigia.hacerComoSiLlevara('9.9.9', copia);
+    const cambiado = fs.readFileSync(suRsc, 'utf8');
+    assert.equal(cambiado, deVerdad.replace(`const VERSION_DE_RESPALDO = '${fijada}';`, "const VERSION_DE_RESPALDO = '9.9.9';"));
+    assert.notEqual(cambiado, deVerdad, 'no ha cambiado nada');
+    for (const rara of ['9.9', '9.9.9; x', '', undefined]) {
+      assert.throws(() => vigia.hacerComoSiLlevara(rara, copia), /tres números/, `se fía de ${JSON.stringify(rara)}`);
+    }
+    assert.equal(fs.readFileSync(suRsc, 'utf8'), cambiado, 'una versión rara ha escrito');
+    fs.writeFileSync(suRsc, `${cambiado}\n${cambiado}`);
+    assert.throws(() => vigia.hacerComoSiLlevara('9.9.8', copia), /sale 2 veces/);
+    fs.writeFileSync(suRsc, '// sin versión');
+    assert.throws(() => vigia.hacerComoSiLlevara('9.9.8', copia), /sale 0 veces/);
+    // Y por la línea de órdenes, que es como lo llama GitHub. El vigía, copiado dentro de la
+    // copia: su raíz es la de la copia, y nunca escribe en la barra de verdad. Sin esto, leer
+    // otro argumento o cambiar el nombre de la orden no lo veía nadie (revisión, segunda ronda).
+    fs.writeFileSync(suRsc, deVerdad);
+    const suVigia = path.join(copia, 'herramientas', 'vigia-rsc.js');
+    fs.mkdirSync(path.dirname(suVigia), { recursive: true });
+    fs.copyFileSync(DEL_VIGIA, suVigia);
+    r = cp.spawnSync(process.execPath, [suVigia, 'como-si', '9.9.7'], { encoding: 'utf8' });
+    assert.deepEqual([r.status, r.stdout], [0, 'La barra, como si llevara la 9.9.7.\n'], r.stderr);
+    const conLaNueva = deVerdad.replace(`const VERSION_DE_RESPALDO = '${fijada}';`, "const VERSION_DE_RESPALDO = '9.9.7';");
+    assert.equal(fs.readFileSync(suRsc, 'utf8'), conLaNueva, 'como-si no pone la versión');
+    r = cp.spawnSync(process.execPath, [suVigia, 'como-si', '9.9'], { encoding: 'utf8' });
+    assert.notEqual(r.status, 0, 'como-si con una versión rara acaba bien');
+    assert.equal(fs.readFileSync(suRsc, 'utf8'), conLaNueva, 'como-si con una versión rara ha escrito');
+    assert.equal(fs.readFileSync(path.join(RAIZ, 'src', 'rsc.js'), 'utf8'), deVerdad, 'ha tocado la barra de verdad');
+    fs.rmSync(copia, { recursive: true, force: true });
+
+    // En GitHub, mirado por su estructura y no por una forma de escribirlo.
+    const flujo = fs.readFileSync(path.join(RAIZ, '..', '.github', 'workflows', 'vigia-rsc.yml'), 'utf8');
+    const trabajo = (nombre) => {
+      const desde = flujo.indexOf(`\n  ${nombre}:\n`);
+      assert.ok(desde > 0, `sin el trabajo ${nombre}`);
+      const hasta = flujo.slice(desde + 1).search(/\n  [a-z-]+:\n/);
+      return hasta < 0 ? flujo.slice(desde) : flujo.slice(desde, desde + 1 + hasta);
+    };
+    // Las claves de arriba, los disparadores y los trabajos, listas cerradas: con
+    // `pull_request_target`, por ejemplo, correría con lo que trae cualquiera (revisión,
+    // segunda ronda).
+    const lineas = flujo.split('\n');
+    assert.deepEqual(lineas.filter((l) => /^[^\s#]/.test(l)), ['name: Vigía de RSC', 'on:', 'permissions:', 'jobs:'], 'el fichero dice más de lo que se mira');
+    const bloque = (desde, hasta) => lineas.slice(lineas.indexOf(desde) + 1, lineas.indexOf(hasta)).filter((l) => /^ {2}[^\s#]/.test(l));
+    assert.deepEqual(bloque('on:', 'permissions:'), ['  schedule:', '  workflow_dispatch:'], 'corre con otro disparador');
+    assert.deepEqual(lineas.slice(lineas.indexOf('jobs:') + 1).filter((l) => /^ {2}[^\s#]/.test(l)), ['  probar:', '  avisar:'], 'hay otro trabajo');
+    const probar = trabajo('probar');
+    const avisar = trabajo('avisar');
+    // Los permisos, exactos: la raíz solo lee, y cada trabajo dice los suyos.
+    assert.ok(flujo.includes('\npermissions:\n  contents: read\n\njobs:\n'), 'de partida, más que leer');
+    assert.ok(probar.includes('\n    permissions:\n      contents: read\n    outputs:\n'), 'el trabajo que corre RSC puede más que leer');
+    assert.ok(avisar.includes('\n    permissions:\n      contents: read\n      issues: write\n    steps:\n'), 'el que avisa, con otros permisos');
+    assert.ok(!/: write/.test(probar), 'el trabajo que corre RSC puede escribir');
+    // Sin credenciales guardadas, como clave de verdad y no en un comentario.
+    for (const [nombre, t] of [['probar', probar], ['avisar', avisar]]) assert.match(t, /^ +persist-credentials: false$/m, `${nombre} guarda credenciales`);
+    // El que avisa no corre nada de fuera: solo estos dos pasos, y ninguna orden.
+    assert.deepEqual(avisar.split('\n').filter((l) => /^ +- /.test(l)).map((l) => l.trim()), ['- uses: actions/checkout@v4', '- uses: actions/github-script@v7']);
+    assert.ok(!/^ +run:/m.test(avisar), 'el trabajo que escribe corre una orden');
+    assert.match(avisar, /^ +sparse-checkout: herramientas$/m, 'el que escribe se baja todo el repositorio');
+    // Y su script, lo que llama, en lista cerrada; un solo `require`, el del vigía. Con
+    // `exec`, `fetch` o `require('node:child_process')` sale aquí (revisión, segunda ronda).
+    // Lo que no ve: una llamada escrita para esconderse (con corchetes o con una plantilla
+    // etiquetada), que ya no es un despiste.
+    const script = avisar.slice(avisar.indexOf('script: |'));
+    const delLenguaje = new Set(['if', 'for', 'while', 'switch', 'catch']);
+    const suyas = [...new Set([...script.matchAll(/([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/g)].map((m) => m[1]))].filter((n) => !delLenguaje.has(n)).sort();
+    assert.deepEqual(suyas, ['Number', 'core.info', 'github.paginate', 'github.rest.issues.create', 'require', 'vigia.elAviso', 'vigia.queHacer'], 'el script que escribe llama a otra cosa');
+    assert.equal(script.split('require(').length, 2, 'el script carga más que el vigía');
+    assert.ok(script.includes('require(`${process.env.GITHUB_WORKSPACE}/herramientas/vigia-rsc.js`)'), 'el script carga otra cosa');
+    assert.ok(!/[\])]\s*\(/.test(script), 'una llamada que la lista no ve');
+    // Lo que se baja, sin sus guiones de instalación; y el orden: bajar, como si, preparar, contrato.
+    const deNpm = probar.split('\n').filter((l) => /\bnpm (ci|install)\b/.test(l));
+    assert.ok(deNpm.length >= 2 && deNpm.every((l) => l.includes('--ignore-scripts')), 'npm corre los guiones del paquete');
+    // Por líneas enteras: una comentada, o con algo detrás, no cuenta (revisión, segunda ronda).
+    const ordenes = probar.split('\n').map((l) => l.trim());
+    const linea = (que, es) => { const i = ordenes.findIndex(es); assert.ok(i > 0, `falta la orden de ${que}`); return i; };
+    const bajar = linea('bajarla', (l) => l.startsWith('npm install --prefix extension/media/harness ') && l.endsWith(' "@ericrisco/rsc@$ULTIMA"'));
+    const comoSi = linea('como si', (l) => l === 'node herramientas/vigia-rsc.js como-si "$ULTIMA"');
+    const preparar = linea('preparar', (l) => l === 'node extension/preparar-paquete.js');
+    const elContrato = linea('el contrato', (l) => l.startsWith('node extension/prueba/contrato.js '));
+    assert.ok(bajar < comoSi && comoSi < preparar && preparar < elContrato, 'el contrato no se pasa como si la llevara');
+    assert.ok(probar.includes("grep -c '✗' contrato.txt") && fs.readFileSync(path.join(RAIZ, 'prueba', 'contrato.js'), 'utf8').includes('✗'), 'los fallos se cuentan con otra marca');
+    // Cuándo corre cada cosa.
+    assert.ok(flujo.includes("\n    - cron: '23 6 * * 1'\n"), 'no es los lunes');
+    assert.ok(probar.includes("\n        if: steps.versiones.outputs.como == 'nueva'\n"), 'el contrato corre sin versión nueva');
+    assert.ok(avisar.includes("\n    if: always() && needs.probar.outputs.como == 'nueva'\n"), 'avisa sin versión nueva');
+    // Una por versión y en seco: lo decide `queHacer`, probado arriba, antes de abrir nada.
+    assert.ok(avisar.includes("state: 'all'"), 'solo mira las abiertas');
+    const enScript = (s) => { const i = avisar.indexOf(s); assert.ok(i > 0, `el script no dice «${s}»`); return i; };
+    assert.ok(enScript('vigia.queHacer({ todas, ultima, enSeco: process.env.EN_SECO })') < enScript("decision.que === 'ya'")
+      && enScript("decision.que === 'ya'") < enScript("decision.que === 'seco'") && enScript("decision.que === 'seco'") < enScript('issues.create'), 'abre antes de mirar');
+    // Probando con otra versión, siempre en seco: nunca una incidencia de mentira.
+    assert.ok(avisar.includes("EN_SECO: ${{ (inputs.en_seco || inputs.fijada) && '1' || '' }}"), 'con una versión de prueba puede abrir una incidencia');
+    assert.ok(probar.includes('VIGIA_FIJADA: ${{ inputs.fijada }}'), 'sin la versión de prueba');
+    // Nada de GitHub entra a pelo en una orden ni en el script: solo como valor de una variable
+    // de entorno (en mayúsculas) o de una salida del trabajo.
+    const aPelo = flujo.split('\n').filter((l) => l.includes('${{') && !/^ +(?:[A-Z][A-Z_]*|fijada|ultima|como|contrato|fallos): \$\{\{ [^{}]+ \}\}$/.test(l));
+    assert.deepEqual(aPelo, [], 'un valor de GitHub dentro de una orden o del script');
+    assert.ok(flujo.split('\n').filter((l) => l.includes('${{')).length >= 5, 'la prueba no mira nada');
+    return 'decide como la barra, no se fía, una por versión y solo las suyas, y separa correr de escribir';
+  });
+
   await comprobar('200: lo que no se deja quitar es el suelo del arnés que viaja dentro', async () => {
     // Con la 4 el suelo pasó de cinco a nueve (`design`, `ux`, `tidy` y `security-audit`).
     // Ofrecer «Quitarla» en una que el siguiente `sync` vuelve a poner es un botón que no
@@ -7949,6 +8121,121 @@ exec git "$@"
       proveedor.arreglandoSolo = false;
       vscode.guion.confianza = antes.confianza;
       vscode.guion.raiz = antes.raiz;
+    }
+  });
+
+  await comprobar('201: los dibujos en las respuestas (emoji) se quitan y se ponen con un clic, por la orden de RSC, y solo donde la 4 trae su pieza', async () => {
+    // En la 200 la pregunta del montaje se quedó sin hacer. P9: una preferencia no se
+    // rellena por defecto, así que se puede cambiar a un clic, como los otros cuatro.
+    const reglas = cargar('reglas');
+    const rscM = cargar('rsc');
+    const p = require('./panel-falso').montarPanel();
+    const proveedor = vscode.registrado.proveedor;
+    const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'emoji-'));
+    fs.mkdirSync(path.join(carpeta, '.rsc'), { recursive: true });
+    const declarar = (datos) => fs.writeFileSync(path.join(carpeta, '.rsc.json'), JSON.stringify({ version: 1, targets: ['claude'], ...datos }));
+    declarar({});
+    const marca = (m) => path.join(carpeta, '.rsc', m);
+    const hay = (m) => fs.existsSync(marca(m));
+    const poner = (...ms) => ms.forEach((m) => fs.writeFileSync(marca(m), ''));
+    const quitar = (...ms) => ms.forEach((m) => fs.rmSync(marca(m), { force: true }));
+    // Una carpeta de la 3: con sus piezas y sin la de los emoji.
+    for (const f of ['trunk-policy.mjs', 'knowledge-sync.mjs', 'session-start.mjs']) fs.writeFileSync(marca(f), '// pieza del arnés');
+    const losDe = () => Object.fromEntries(reglas.queHay().interruptores.map((i) => [i.cual, i]));
+
+    const llamadas = [];
+    const antes = { correr: rscM.correr, enviar: proveedor.enviar, confianza: vscode.guion.confianza, raiz: vscode.guion.raiz, instaladas: vscode.guion.extensionesInstaladas };
+    let respuesta = null;
+    // `rsc emoji on|off` (scripts/rsc.js, 4.1.7): escribe o quita `.rsc/.no-emoji`.
+    const comoRsc = { 'emoji off': () => poner('.no-emoji'), 'emoji on': () => quitar('.no-emoji') };
+    rscM.correr = async (args) => {
+      llamadas.push(args);
+      if (respuesta) return respuesta;
+      comoRsc[args.join(' ')]();
+      return { codigo: 0, salida: 'ok', error: '' };
+    };
+    const enviados = [];
+    proveedor.enviar = (m) => enviados.push(m);
+    vscode.guion.raiz = carpeta;
+    vscode.guion.confianza = true;
+    const pulsar = async (cual) => {
+      enviados.length = 0;
+      await proveedor.manejar({ tipo: 'cambiarInterruptor', cual });
+      return enviados.filter((m) => m.tipo === 'reglas').pop();
+    };
+    try {
+      // Con la 3 no hay pieza ni orden: ni sale, ni se corre.
+      assert.equal(losDe().emoji, undefined, 'sale con un arnés de la 3, que no trae la orden');
+      let r = await pulsar('emoji-quitar');
+      assert.match(r.aviso.texto, /Eso ya no se puede cambiar desde aquí/);
+      assert.equal(llamadas.length, 0);
+
+      // Con la 4: encendidos, como los deja el montaje, y el botón de quitarlos.
+      fs.writeFileSync(marca('emoji-policy.mjs'), '// pieza del arnés');
+      assert.deepEqual(Object.keys(losDe()), ['principal', 'aparte', 'wiki', 'memoria', 'emoji']);
+      assert.deepEqual([losDe().emoji.nombre, losDe().emoji.estado, losDe().emoji.dice], ['Dibujos en las respuestas (emoji)', 'encendido', 'El asistente usa dibujos (emoji) en sus respuestas y en lo que guarda.']);
+      assert.deepEqual(losDe().emoji.botones.map((b) => [b.id, b.etiqueta, b.queCambia]), [['emoji-quitar', 'Quitar los dibujos', 'Si los quitas, el asistente escribe solo con palabras.']]);
+      assert.match(losDe().emoji.equipo, /decisión del equipo.*git/, 'RSC lo apunta en .rsc.json');
+
+      // En la pantalla, su botón con lo que cambia, sin la orden ni la marca.
+      const html = p.mandar({ tipo: 'reglas', ...reglas.queHay() });
+      assert.ok(html.includes('&quot;cual&quot;:&quot;emoji-quitar&quot;'), 'sin botón para quitarlos');
+      assert.match(html, /Dibujos en las respuestas \(emoji\)/);
+      assert.match(html, /Si los quitas, el asistente escribe solo con palabras\./);
+      assert.ok(!/emoji (on|off)|\.no-emoji|emoji-policy/.test(html), 'sale la orden o la marca');
+
+      // El clic llama a la orden oficial y se mira el disco.
+      r = await pulsar('emoji-quitar');
+      assert.deepEqual(llamadas.pop(), ['emoji', 'off']);
+      assert.ok(hay('.no-emoji'));
+      assert.deepEqual([r.aviso.malo, r.aviso.texto], [false, 'Hecho. El asistente escribe solo con palabras, sin dibujos (emoji).']);
+      assert.deepEqual(r.interruptores.find((i) => i.cual === 'emoji').botones.map((b) => [b.id, b.etiqueta, b.queCambia]), [['emoji-poner', 'Poner los dibujos', 'Si los pones, el asistente vuelve a usar dibujos (emoji) en sus respuestas.']]);
+      r = await pulsar('emoji-poner');
+      assert.deepEqual(llamadas.pop(), ['emoji', 'on']);
+      assert.equal(hay('.no-emoji'), false);
+      assert.equal(r.aviso.texto, 'Hecho. El asistente usa dibujos (emoji) en sus respuestas y en lo que guarda.');
+
+      // Dice que sí y la marca no cambia: no se cree.
+      respuesta = { codigo: 0, salida: 'rsc emoji off: ok', error: '' };
+      r = await pulsar('emoji-quitar');
+      assert.equal(r.aviso.malo, true);
+      assert.match(r.aviso.texto, /dice que lo ha hecho, pero la carpeta sigue igual/);
+      respuesta = null;
+      llamadas.length = 0;
+
+      // Apagados y sin la pieza (otro asistente, o una pieza que falta): sale para volver a ponerlos.
+      poner('.no-emoji');
+      quitar('emoji-policy.mjs');
+      assert.deepEqual(losDe().emoji.botones.map((b) => b.id), ['emoji-poner'], 'apagados y no se pueden volver a poner');
+      quitar('.no-emoji');
+      // Con Codex solo, no: nada suyo lee la marca (revisión). Ni con la pieza ni con la marca.
+      fs.writeFileSync(marca('emoji-policy.mjs'), '// pieza del arnés');
+      declarar({ targets: ['codex'] });
+      assert.equal(losDe().emoji, undefined, 'sale con Codex y la pieza');
+      poner('.no-emoji');
+      assert.equal(losDe().emoji, undefined, 'sale con Codex y la marca');
+      r = await pulsar('emoji-poner');
+      assert.match(r.aviso.texto, /Eso ya no se puede cambiar desde aquí/);
+      assert.equal(llamadas.length, 0, 'con Codex se ha corrido la orden');
+      quitar('.no-emoji');
+      // Con Claude y Codex, sí: lo cambia para Claude. Y en cualquier orden.
+      declarar({ targets: ['claude', 'codex'] });
+      assert.deepEqual(losDe().emoji.botones.map((b) => b.id), ['emoji-quitar']);
+      declarar({ targets: ['codex', 'claude'] });
+      assert.deepEqual(losDe().emoji.botones.map((b) => b.id), ['emoji-quitar'], 'con Codex delante no sale');
+      // Sin asistentes declarados, manda con el que se trabaja (revisión, segunda ronda).
+      declarar({ targets: [] });
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      assert.deepEqual(losDe().emoji && losDe().emoji.botones.map((b) => b.id), ['emoji-quitar'], 'sin declarar y con Claude no sale');
+      vscode.guion.extensionesInstaladas = ['openai.chatgpt'];
+      assert.equal(losDe().emoji, undefined, 'sin declarar y con Codex sale');
+      return 'quitarlos y ponerlos, con la orden, mirando el disco, solo con la 4 y con Claude';
+    } finally {
+      rscM.correr = antes.correr;
+      proveedor.enviar = antes.enviar;
+      vscode.guion.confianza = antes.confianza;
+      vscode.guion.raiz = antes.raiz;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
     }
   });
 
@@ -26898,6 +27185,11 @@ exec git "$@"
     for (const o of ofrecidos) assert.deepEqual(por(o), [tabla[o][0]], `«${o}» no da la primera de su fila`);
     assert.deepEqual(por('Poner orden en mis facturas', ['invoicing']), ['bookkeeping'], 'con la primera puesta no ofrece la segunda');
     assert.deepEqual(por('Poner orden en mis facturas', ['invoicing', 'bookkeeping']), [], 'ofrece una que ya está');
+    // Las de venta de la 4 (decisión 201), cada una en su turno: detrás de las de siempre.
+    assert.deepEqual(por('Vender más y hacer seguimiento', ['sales-pipeline', 'proposals']), ['offer-design'], 'Diseño de la oferta no sale');
+    assert.deepEqual(por('Vender más y hacer seguimiento', ['sales-pipeline', 'proposals', 'offer-design']), ['sales-funnel'], 'Embudo de venta no sale');
+    assert.deepEqual(por('Atender mejor a mis clientes', ['customer-support', 'client-onboarding']), ['customer-research'], 'Investigación de clientes no sale');
+    assert.deepEqual(por('Hacer vídeos', ['video-shorts', 'shortform-editing']), ['vsl-script'], 'Guion de vídeo de venta no sale');
     assert.deepEqual(por('Llevar los contratos de mis proveedores'), [], 'lo escrito a mano no va por la tabla');
     assert.deepEqual(por(''), []);
     // Antes, de los dieciséis, solo uno daba algo por palabras, y era una que viene puesta.
@@ -29678,7 +29970,7 @@ exec git "$@"
         const botones = () => reglasM.losInterruptores().flatMap((i) => i.botones.map((b) => b.id));
         try {
           // Recién montada: la rama abierta, el trabajo aparte apagado y sin compartir.
-          assert.deepEqual(botones(), ['principal-cerrar', 'aparte-encender', 'wiki-compartir', 'memoria-dejar'], 'los botones de una carpeta recién montada');
+          assert.deepEqual(botones(), ['principal-cerrar', 'aparte-encender', 'wiki-compartir', 'memoria-dejar', 'emoji-quitar'], 'los botones de una carpeta recién montada');
           for (const [ir, volver, marca, optOut, estaba, llega] of [
             ['principal-cerrar', 'principal-abrir', '.no-trunk-guard', 'trunk-guard', 'abierta', 'cerrada'],
             ['aparte-encender', 'aparte-apagar', '.no-worktree-isolation', 'worktree-isolation', 'apagado', 'encendido'],
@@ -29714,14 +30006,29 @@ exec git "$@"
           assert.equal(aviso.malo, false, aviso.texto);
           assert.equal(declaradaMemoria(), false, 'RSC no lo ha apuntado en .rsc.json');
           assert.deepEqual(enganchada(), [], 'apagada y sigue enganchada');
-          assert.deepEqual(botones().slice(-1), ['memoria-recordar']);
+          assert.ok(botones().includes('memoria-recordar'), 'apagada y sin botón para encenderla');
           dichos.length = 0;
           await proveedor.manejar({ tipo: 'cambiarInterruptor', cual: 'memoria-recordar' });
           aviso = dichos.filter((m) => m.tipo === 'reglas').pop().aviso;
           assert.equal(aviso.malo, false, aviso.texto);
           assert.notEqual(declaradaMemoria(), false);
           assert.deepEqual(enganchada(), conEnganche, 'encendida y no vuelve a engancharse');
-          assert.deepEqual(botones(), ['principal-cerrar', 'aparte-encender', 'wiki-compartir', 'memoria-dejar'], 'queda como estaba');
+          // Los dibujos (decisión 201), con el RSC de verdad: la marca, su apunte en `.rsc.json`, y vuelta.
+          assert.equal(reglasM.estadoDe('emoji'), 'encendido');
+          assert.ok(!marcaDe('.no-emoji') && !optOuts().includes('emoji'), 'recién montada y sin dibujos');
+          dichos.length = 0;
+          await proveedor.manejar({ tipo: 'cambiarInterruptor', cual: 'emoji-quitar' });
+          aviso = dichos.filter((m) => m.tipo === 'reglas').pop().aviso;
+          assert.equal(aviso.malo, false, aviso.texto);
+          assert.ok(marcaDe('.no-emoji'), 'RSC no ha puesto .no-emoji');
+          assert.ok(optOuts().includes('emoji'), 'RSC no lo ha apuntado en .rsc.json');
+          assert.equal(reglasM.estadoDe('emoji'), 'apagado');
+          dichos.length = 0;
+          await proveedor.manejar({ tipo: 'cambiarInterruptor', cual: 'emoji-poner' });
+          aviso = dichos.filter((m) => m.tipo === 'reglas').pop().aviso;
+          assert.equal(aviso.malo, false, aviso.texto);
+          assert.ok(!marcaDe('.no-emoji') && !optOuts().includes('emoji'), 'puestos y siguen apagados');
+          assert.deepEqual(botones(), ['principal-cerrar', 'aparte-encender', 'wiki-compartir', 'memoria-dejar', 'emoji-quitar'], 'queda como estaba');
         } finally {
           proveedor.enviar = guardado.enviar;
           vscode.guion.confianza = guardado.confianza;
