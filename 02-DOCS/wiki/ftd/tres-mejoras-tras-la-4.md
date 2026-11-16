@@ -106,7 +106,21 @@ Tres revisores independientes, primera ronda:
   `persist-credentials` como clave, orden y condiciones), y el «una por versión» y el «en seco» están en `queHacer`,
   probado. Dieciocho roturas (las que sobrevivían y las de los arreglos) caen todas; sana, pasa.
 
+Segunda ronda, sobre los arreglos (831452c):
+
+- **Corrección** y **seguridad**: resuelto, nada nuevo. Corrección repitió el contrato con paquetes de verdad (15 de 15
+  con `como-si`) y lo vio caer con un RSC roto (11 fallos): el «pasa» no es automático.
+- **Pruebas**: sin defectos en el código, con huecos en las pruebas. Se han cerrado:
+  - `como-si` con una versión buena, por la línea de órdenes, con una copia del vigía en una copia. La batería ya no
+    corre nada contra la barra de verdad.
+  - Las órdenes del YAML, por línea entera.
+  - Las claves de arriba, los disparadores, los trabajos y lo que llama el script que escribe, en lista cerrada.
+  - `conClaude` con Codex delante y sin asistentes declarados.
+
+Veintitrés roturas, sobre copias: caen veintidós. La que queda (un valor de GitHub en una variable de entorno) es el
+diseño.
+
 ## Next
 
-- La segunda ronda de los tres revisores sobre los arreglos, y apuntar el panel.
+- Apuntar el panel en el registro de revisiones.
 - 2 y 6: el vigía en GitHub, por los dos caminos, y GitHub en verde. 7: la PR.
