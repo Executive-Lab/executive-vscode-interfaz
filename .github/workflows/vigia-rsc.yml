@@ -1,0 +1,109 @@
+# El vigía de RSC (decisión 201). Cada lunes mira si hay una RSC más nueva que la que
+# lleva la barra. Si la hay, le pasa el contrato y abre una incidencia que dice si pasa,
+# una por versión. No cambia nada de la barra: subirla sigue siendo una decisión.
+#
+# Por qué: con la 4, quien montaba RSC desde el chat se quedó con una barra que miraba y
+# no hacía, y se vio tarde. Para la barra, cualquier versión más nueva va por delante (P7).
+#
+# Ojo: GitHub apaga lo que va con reloj en un repositorio público tras 60 días sin
+# actividad. Si pasa, se vuelve a encender en Actions.
+name: Vigía de RSC
+
+on:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      en_seco:
+        description: 'Mirarlo todo sin abrir la incidencia'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Baja la última RSC y le pasa el contrato. Corre código de fuera, recién bajado de npm,
+  # así que no puede escribir nada: ni en el repositorio ni en las incidencias.
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      fijada: ${{ steps.versiones.outputs.fijada }}
+      ultima: ${{ steps.versiones.outputs.ultima }}
+      como: ${{ steps.versiones.outputs.como }}
+      contrato: ${{ steps.contrato.outputs.contrato }}
+      fallos: ${{ steps.contrato.outputs.fallos }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Solo tres números: el vigía no dice una versión rara.
+      - name: Qué RSC lleva la barra y cuál es la última
+        id: versiones
+        run: node herramientas/vigia-rsc.js versiones >> "$GITHUB_OUTPUT"
+
+      - name: El contrato con la última
+        id: contrato
+        if: steps.versiones.outputs.como == 'nueva'
+        env:
+          ULTIMA: ${{ steps.versiones.outputs.ultima }}
+        run: |
+          echo "contrato=no-corrio" >> "$GITHUB_OUTPUT"
+          npm ci --prefix extension/media/harness --ignore-scripts --no-audit --no-fund
+          npm install --prefix extension/media/harness --no-save --ignore-scripts --no-audit --no-fund "@ericrisco/rsc@$ULTIMA"
+          node extension/preparar-paquete.js
+          set +e
+          node extension/prueba/contrato.js 2>&1 | tee contrato.txt
+          salida=${PIPESTATUS[0]}
+          set -e
+          fallos=$(grep -c '✗' contrato.txt || true)
+          if [ "$salida" = "0" ]; then echo "contrato=pasa" >> "$GITHUB_OUTPUT"; else echo "contrato=falla" >> "$GITHUB_OUTPUT"; fi
+          echo "fallos=$fallos" >> "$GITHUB_OUTPUT"
+
+  # Abre la incidencia. No baja ni corre nada de fuera: solo el texto del vigía, que es de
+  # este repositorio.
+  avisar:
+    needs: probar
+    if: always() && needs.probar.outputs.como == 'nueva'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: herramientas
+
+      - uses: actions/github-script@v7
+        env:
+          FIJADA: ${{ needs.probar.outputs.fijada }}
+          ULTIMA: ${{ needs.probar.outputs.ultima }}
+          CONTRATO: ${{ needs.probar.outputs.contrato || 'no-corrio' }}
+          FALLOS: ${{ needs.probar.outputs.fallos }}
+          EN_SECO: ${{ inputs.en_seco && '1' || '' }}
+        with:
+          script: |
+            const vigia = require(`${process.env.GITHUB_WORKSPACE}/herramientas/vigia-rsc.js`);
+            const { owner, repo } = context.repo;
+            const { FIJADA: fijada, ULTIMA: ultima, CONTRATO: contrato } = process.env;
+            const enlace = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const { titulo, cuerpo } = vigia.elAviso({ fijada, ultima, contrato, fallos: Number(process.env.FALLOS || 0), enlace });
+
+            // Una por versión, abierta o cerrada: cerrarla no hace que vuelva a salir.
+            const todas = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', per_page: 100 });
+            const ya = todas.find((i) => !i.pull_request && i.title.startsWith(vigia.empiezaPor(ultima)));
+            if (ya) return core.info(`Ya se avisó de la ${ultima}: #${ya.number}.`);
+
+            if (process.env.EN_SECO === '1') return core.info(`En seco. Se abriría «${titulo}»:\n\n${cuerpo}`);
+            const { data } = await github.rest.issues.create({ owner, repo, title: titulo, body: cuerpo });
+            core.info(`Abierta: #${data.number}.`);

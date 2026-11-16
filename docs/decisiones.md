@@ -9862,7 +9862,7 @@ buscara la regla en el CSS miraría cómo se escribe y no cómo se ve; por eso n
 
 ## 200. La barra pasa a la 4
 
-**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de que Jose fusione · FTD
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.60.0 · FTD
 `02-DOCS/wiki/ftd/la-barra-pasa-a-la-4.md`
 
 Jose, 15-11: *«audita, revisa, adapta a la última versión de RSC y comprueba que todo esté bien para que los alumnos
@@ -9924,3 +9924,43 @@ de la 3, y se abre con la de la 4. Se pone al día sin preguntar nada, conserva 
 queda entero según su `doctor`. Las nuevas se han visto caer quitando su arreglo.
 
 **Lo que no se ha hecho.** Publicar: la PR la fusiona Jose y `publicar.sh` va después. Y no se pregunta por los emoji.
+
+## 201. Tres mejoras tras la 4: el vigía de RSC, los dibujos a un clic y las habilidades de venta
+
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+`02-DOCS/wiki/ftd/tres-mejoras-tras-la-4.md`
+
+Jose, 16-11, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3 y 4»*.
+
+**1. El vigía de RSC.** Con la 4, quien montaba RSC desde el chat se quedó con una barra que miraba y no hacía, y se
+vio tarde. No hace falta una serie nueva para que pase: para la barra, cualquier versión más nueva que la suya va por
+delante (`comoEsLaVersion`, P7), y una carpeta que se pone al día sola a una 4.2 deja de recibir lo que escribe la
+barra. `.github/workflows/vigia-rsc.yml` mira cada lunes la última de npm. Si es más nueva, le pasa el contrato y abre
+una incidencia que dice si pasa, una por versión (cerrarla no hace que vuelva). No sube la versión: eso sigue siendo
+una decisión.
+
+- La lógica está en `herramientas/vigia-rsc.js`, probada sin red: decide igual que `comoEsLaVersion`, y una versión
+  que no sean tres números exactos no se dice (de ahí sale lo que se baja de npm).
+- Dos trabajos. El que baja y corre la RSC nueva solo puede leer el repositorio. El que abre la incidencia no baja ni
+  corre nada de fuera. La versión llega a las órdenes por el entorno, nunca escrita dentro.
+- Se puede lanzar a mano desde Actions, también en seco: lo mira todo y no abre nada.
+- GitHub apaga lo que va con reloj tras 60 días sin actividad en un repositorio público. Si pasa, se enciende en Actions.
+
+**2. Los dibujos en las respuestas, a un clic.** En la 200 la barra dejó los emoji como antes, sin preguntar. P9 dice
+que una preferencia no se rellena por defecto. Sin añadir preguntas al montaje (decisión 184), se cambia en Las reglas ›
+Cómo trabaja el asistente, junto a los cuatro de las decisiones 172 y 176: «Quitar los dibujos» y «Poner los dibujos»
+llaman a `rsc emoji off|on`, que escribe o quita `.rsc/.no-emoji` y lo apunta en `.rsc.json` (lo decide el equipo).
+Después se mira el disco, como con los otros. Sale donde RSC monta su pieza (`emoji-policy.mjs`, con Claude), o donde
+ya están apagados, para poder volver a ponerlos. Con la 3 o con Codex sin la pieza, no.
+
+**3. Las habilidades de venta de la 4, en los objetivos.** Ninguna fila de `objetivos.json` las sugería. Van detrás de
+las de siempre, porque la barra ofrece la primera de la fila que no esté puesta:
+
+- «Vender más y hacer seguimiento»: Diseño de la oferta y Embudo de venta.
+- «Atender mejor a mis clientes»: Investigación de clientes.
+- «Hacer vídeos»: Guion de vídeo de venta.
+
+**Pruebas.** En `humo.js`: el vigía (cómo decide, que no se fía, el aviso y que el trabajo que corre RSC no escribe), el
+interruptor con un RSC fingido, y las de venta en su turno. En la batería larga, el interruptor con el RSC de verdad:
+la marca, su apunte en `optOuts` y vuelta. Las del vigía se han visto caer con cinco roturas a mano; las otras dos,
+antes de escribir su arreglo.

@@ -244,7 +244,7 @@ function loApagado() {
   return lista;
 }
 
-// ── Los tres interruptores que la persona mueve con un clic (decisión 172) ─
+// ── Los interruptores que la persona mueve con un clic (decisiones 172, 176 y 201) ─
 //
 // RSC 3.0.22 trae una orden oficial para cada uno: `main lock|unlock`,
 // `isolation on|off` y `knowledge-sync on|off`. Escriben la marca de `.rsc/`, la
@@ -302,6 +302,21 @@ const INTERRUPTORES = {
     },
     botones: { encendido: ['memoria-dejar'], apagado: ['memoria-recordar'] },
   },
+  // Los dibujos en las respuestas (decisión 201): `emoji on|off`, de la 4. RSC escribe o
+  // quita `.rsc/.no-emoji` y lo apunta en `.rsc.json`: lo decide el equipo. El montaje los
+  // deja encendidos sin preguntar (decisión 200), y una preferencia no se rellena por
+  // defecto (P9): aquí se cambia a un clic. Sale donde RSC monta su pieza (con Claude), o
+  // donde ya están apagados, para poder volver a ponerlos.
+  emoji: {
+    nombre: 'Dibujos en las respuestas (emoji)',
+    cuando: () => hayEnRsc('emoji-policy.mjs') || hayEnRsc('.no-emoji'),
+    estado: () => (hayEnRsc('.no-emoji') ? 'apagado' : 'encendido'),
+    dice: {
+      encendido: 'El asistente usa dibujos (emoji) en sus respuestas y en lo que guarda.',
+      apagado: 'El asistente escribe solo con palabras, sin dibujos (emoji).',
+    },
+    botones: { encendido: ['emoji-quitar'], apagado: ['emoji-poner'] },
+  },
 };
 
 // Cada botón: su orden, lo que cambia al pulsarlo y cómo tiene que quedar la
@@ -315,6 +330,8 @@ const BOTONES = {
   'memoria-dejar': { cual: 'memoria', etiqueta: 'Dejar de recordar entre conversaciones', args: ['memory', 'off'], llega: 'apagado', queCambia: 'Si lo dejas, el asistente empieza cada conversación de cero.' },
   'memoria-recordar': { cual: 'memoria', etiqueta: 'Recordar entre conversaciones', args: ['memory', 'on'], llega: 'encendido', queCambia: 'Si lo enciendes, el asistente se acordará de lo que hicisteis la última vez.' },
   'wiki-compartir': { cual: 'wiki', etiqueta: 'Compartir el conocimiento', args: ['knowledge-sync', 'on'], llega: 'encendido', queCambia: 'Si lo compartes, las conexiones y lo que sabe de tu empresa se suben solos y se traen los de los demás.' },
+  'emoji-quitar': { cual: 'emoji', etiqueta: 'Quitar los dibujos', args: ['emoji', 'off'], llega: 'apagado', queCambia: 'Si los quitas, el asistente escribe solo con palabras.' },
+  'emoji-poner': { cual: 'emoji', etiqueta: 'Poner los dibujos', args: ['emoji', 'on'], llega: 'encendido', queCambia: 'Si los pones, el asistente vuelve a usar dibujos (emoji) en sus respuestas.' },
 };
 
 const hayArnesDeLaTres = () => donde.puedeTenerFrenos() && hayEnRsc('trunk-policy.mjs');
