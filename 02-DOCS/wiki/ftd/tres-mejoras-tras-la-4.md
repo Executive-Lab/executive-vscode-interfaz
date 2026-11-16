@@ -49,8 +49,8 @@ Jose, 16-11-2026, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3
   y con el de verdad.
 - [x] 4. Las habilidades de venta en los objetivos, cada una en su turno.
 - [x] 5. Diccionario, decisión 201, versión 0.61.0.
-- [ ] 6. Batería entera, contrato, `--con-arnes`, y GitHub en verde.
-- [ ] 7. PR abierta.
+- [x] 6. Batería entera, contrato, `--con-arnes`, y GitHub en verde.
+- [x] 7. PR abierta.
 
 ## Evidence
 
@@ -67,6 +67,11 @@ Jose, 16-11-2026, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3
   oferta no sale»), y en verde después.
 - **5.** `node docs/comprobar-diccionario.js`: en verde. Decisión 201 escrita; la 200, marcada publicada. 0.61.0 en
   `extension/package.json` y en el instalador.
+- **6.** Tras la segunda ronda, sobre el último código: `humo.js --con-arnes` 585 de 585, `contrato.js` 15 de 15, las
+  empresas enteras, y `mapeos-codex.js`, diccionario y PowerShell en verde. GitHub sobre `5d03088`: Windows, el `.exe`,
+  el `.dmg` y la barra en un VS Code de verdad, los cuatro en verde (ejecución 43854885031).
+- **7.** PR #111. Para que el freno la dejara salir, la copia de enlace de la especificación está en el monorepo, y el
+  panel en su registro, con el commit del proyecto. Es lo mismo que en la PR #30 de FUNDAE y la #203 de certificados.
 
 ### Controles por tarea (`/verify`)
 
@@ -134,4 +139,8 @@ de 3. Diecinueve hallazgos: 12 arreglados, 1 intencionado, 1 irrelevante, 5 apar
 
 ## Next
 
-- 2 y 6: el vigía en GitHub, por los dos caminos, y GitHub en verde. 7: la PR.
+- Que Jose fusione la PR #111, o diga que la fusione yo.
+- 2, después de fusionar (GitHub solo lanza a mano lo que está en `main`): `gh workflow run vigia-rsc.yml -f en_seco=true`,
+  que debe decir `igual`, y `gh workflow run vigia-rsc.yml -f fijada=4.1.6`, que debe tomar el camino de versión nueva,
+  pasar el contrato y avisar en seco.
+- Publicar la 0.61.0, con el sí de Jose.
