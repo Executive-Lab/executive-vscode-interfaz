@@ -9988,3 +9988,8 @@ Una línea comentada en el YAML contaba como orden: ahora se buscan líneas ente
 sus disparadores, sus trabajos y lo que llama el script que escribe están ahora en listas cerradas. `conClaude` no se
 probaba con Codex delante ni sin asistentes declarados. De veintitrés roturas caen veintidós. La que queda, un valor de
 GitHub en una variable de entorno, es el diseño: el valor va como dato y no entra en ninguna orden.
+
+En la tercera ronda no salió nada bloqueante. Quedan aparcados tres detalles de las comprobaciones de texto del fichero
+de GitHub: llamadas opcionales, un segundo `cron` o un `exit 0`, y un secreto en una variable. Ninguno está hoy en el
+fichero. Se cierran juntos con un lector de YAML y de JavaScript, en un cambio aparte. El registro de revisiones lo
+apunta: panel de tres lentes, tres rondas, y ningún hallazgo abierto.
