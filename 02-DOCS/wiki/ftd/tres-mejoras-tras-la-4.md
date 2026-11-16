@@ -5,7 +5,7 @@ date: 2026-11-16
 author: Jose Sanchis
 branch: mejoras-tras-la-4
 spec: mejoras-tras-la-4
-status: in-progress
+status: done
 ---
 
 # Tres mejoras tras la 4
@@ -44,7 +44,7 @@ Jose, 16-11-2026, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3
 
 - [x] 1. El vigía: decide con tres números, avisa una vez por versión, dice si el contrato pasa, y la parte
   que corre código de fuera no puede escribir en el repositorio.
-- [ ] 2. El vigía corre de verdad en GitHub, por los dos caminos (al día y versión nueva).
+- [x] 2. El vigía corre de verdad en GitHub, por los dos caminos (al día y versión nueva).
 - [x] 3. El interruptor de los emoji: estado, botones, orden oficial, comprobado en disco, con RSC fingido
   y con el de verdad.
 - [x] 4. Las habilidades de venta en los objetivos, cada una en su turno.
@@ -61,6 +61,9 @@ Jose, 16-11-2026, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3
   versión rara, comparar al revés, dar `issues: write` al trabajo que corre RSC, la versión a pelo en una orden y un
   valor de GitHub dentro del script, y no forzar el modo seco con una versión de prueba. Contra npm de verdad: `fijada=4.1.7 ultima=4.1.7 como=igual`, y con
   `VIGIA_FIJADA=4.1.6`, `como=nueva`. El YAML se lee con un lector de verdad (y uno roto da error).
+- **2.** Tras fusionar, en `main`: `gh workflow run vigia-rsc.yml -f en_seco=true` (ejecución 43856546007) dijo
+  `igual` y saltó el aviso. `gh workflow run vigia-rsc.yml -f fijada=4.1.6` (ejecución 43856551303) tomó el camino
+  de versión nueva: contrato 15 de 15, aviso en seco y ninguna incidencia abierta.
 - **3.** «201: los dibujos en las respuestas…» con RSC fingido: vista caer antes del arreglo. Con el RSC de verdad,
   dentro de la batería larga: `rsc emoji off` pone `.rsc/.no-emoji` y `emoji` en `optOuts`, y `on` lo quita.
 - **4.** La prueba de los objetivos pide las cuatro en su turno: vista caer antes de cambiar la tabla («Diseño de la
@@ -139,8 +142,5 @@ de 3. Diecinueve hallazgos: 12 arreglados, 1 intencionado, 1 irrelevante, 5 apar
 
 ## Next
 
-- Que Jose fusione la PR #111, o diga que la fusione yo.
-- 2, después de fusionar (GitHub solo lanza a mano lo que está en `main`): `gh workflow run vigia-rsc.yml -f en_seco=true`,
-  que debe decir `igual`, y `gh workflow run vigia-rsc.yml -f fijada=4.1.6`, que debe tomar el camino de versión nueva,
-  pasar el contrato y avisar en seco.
-- Publicar la 0.61.0, con el sí de Jose.
+Hecho. PR #111 fusionada con el «dale, fusiona!» de Jose, el vigía probado en GitHub por los dos caminos, y la 0.61.0
+publicada y puesta en su VS Code. Lo siguiente va en `02-DOCS/wiki/ftd/la-0.62.md`.
