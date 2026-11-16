@@ -73,9 +73,9 @@ contrato.
 - [x] 4. La regla 7 con `risk`, `spec`, `ingest`, `emoji` y `upgrade`. — Prueba de la regla 7.
 - [x] 5. Lo nuevo que llega al alumno, decidido y probado (emoji, MemSlop, ingesta, `asdd-gate`).
 - [x] 6. Contrato con la 4.1.7 de verdad en verde. — `contrato.js`.
-- [ ] 7. Batería larga con el arnés real (`--con-arnes`), `empresas-distintas.js`,
+- [x] 7. Batería larga con el arnés real (`--con-arnes`), `empresas-distintas.js`,
   `mapeos-codex.js`, Windows en GitHub y la barra en un VS Code de verdad.
-- [ ] 8. Diccionario, constitución (P7), decisión 200, README y el diario.
+- [x] 8. Diccionario, constitución (P7), decisión 200, README y el diario.
 - [x] 9. Revisión adversaria en línea (corrección y seguridad) del diff entero.
 - [ ] 10. El `.vsix` empaquetado y la PR abierta.
 
@@ -99,6 +99,17 @@ contrato.
 - **7, en parte.** `--con-arnes` con la 4.1.7: 582 de 582. Y el escenario de los alumnos de octubre, «200:
   una carpeta que la barra montó con la 3.0.22 se pone al día sola a la 4, sin perder nada»: en verde, y en
   rojo sin la retirada del freno.
+- **7, entero.** `publicar.sh` sobre `3dffad3`, 16-11: `--con-arnes` 583 de 583 (con el escenario de octubre),
+  `contrato.js` 15 de 15, las tres empresas y la recién montada enteras, diccionario y PowerShell sin pegas.
+  GitHub, ejecución 43774358963 sobre `3dffad3`: `windows` (573 y 15), `vscode-de-verdad` (la barra 0.60.0 en
+  un VS Code 1.146.0 de verdad en Windows, 9 de 9, con el freno denegando a través del relevo), `el-exe` y
+  `el-dmg`, los cuatro en verde.
+- **7, en el Mac.** La barra 0.60.0 en un VS Code 1.146.0 de verdad: 9 de 9. La prueba se quedaba parada antes
+  de empezar, y en `main` (0.59.0) igual: con el HOME desviado (para no escribir fuera del proyecto), macOS no
+  encuentra el llavero y el editor espera. Con `--use-mock-keychain` añadido desde fuera, sin tocar la prueba,
+  arranca y pasa entera. No es del cambio.
+- **8.** El diario en `02-DOCS/raw/worklog/2026-11-16-la-200.md`. Diccionario, P7, decisión 200 y README, en el
+  commit `3dffad3`.
 - **9.** Revisión en línea: la marca de MemSlop se escribe con `wx` (un enlace roto ahí da `EEXIST` y no se
   escribe a través de él); el borrado solo toca ficheros normales con el nombre exacto, después de una copia
   que ya rechaza enlaces; nada privado nombrado en este repositorio público. Una cosa que salió: el
@@ -106,5 +117,4 @@ contrato.
 
 ## Next
 
-- Lo que queda de 7: Windows y macOS en GitHub y la barra en un VS Code de verdad.
-- 8: el diario. 10: `./publicar.sh` y la PR.
+- 10: la PR abierta. El `.vsix` de la 0.60.0 ya está empaquetado y comprobado (`publicacion/`, fuera de git).
