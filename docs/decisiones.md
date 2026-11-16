@@ -9943,7 +9943,8 @@ una decisión.
   que no sean tres números exactos no se dice (de ahí sale lo que se baja de npm).
 - Dos trabajos. El que baja y corre la RSC nueva solo puede leer el repositorio. El que abre la incidencia no baja ni
   corre nada de fuera. La versión llega a las órdenes por el entorno, nunca escrita dentro.
-- Se puede lanzar a mano desde Actions, también en seco: lo mira todo y no abre nada.
+- Se puede lanzar a mano desde Actions, en seco (lo mira todo y no abre nada) o con una versión de prueba, que va
+  siempre en seco: así se prueba el camino de una versión nueva sin esperar a que salga una.
 - GitHub apaga lo que va con reloj tras 60 días sin actividad en un repositorio público. Si pasa, se enciende en Actions.
 
 **2. Los dibujos en las respuestas, a un clic.** En la 200 la barra dejó los emoji como antes, sin preguntar. P9 dice
@@ -9962,5 +9963,5 @@ las de siempre, porque la barra ofrece la primera de la fila que no esté puesta
 
 **Pruebas.** En `humo.js`: el vigía (cómo decide, que no se fía, el aviso y que el trabajo que corre RSC no escribe), el
 interruptor con un RSC fingido, y las de venta en su turno. En la batería larga, el interruptor con el RSC de verdad:
-la marca, su apunte en `optOuts` y vuelta. Las del vigía se han visto caer con cinco roturas a mano; las otras dos,
+la marca, su apunte en `optOuts` y vuelta. Las del vigía se han visto caer con siete roturas a mano; las otras dos,
 antes de escribir su arreglo.

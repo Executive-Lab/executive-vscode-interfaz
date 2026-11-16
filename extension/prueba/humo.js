@@ -5869,6 +5869,9 @@ exec git "$@"
     assert.match(probar, /persist-credentials: false/);
     assert.match(avisar, /issues: write/);
     assert.ok(!/npm |contrato\.js|preparar-paquete/.test(avisar), 'el trabajo que escribe corre algo de fuera');
+    // Probando con otra versión, siempre en seco: nunca una incidencia de mentira.
+    assert.ok(avisar.includes("EN_SECO: ${{ (inputs.en_seco || inputs.fijada) && '1' || '' }}"), 'con una versión de prueba puede abrir una incidencia');
+    assert.ok(probar.includes('VIGIA_FIJADA: ${{ inputs.fijada }}'), 'sin la versión de prueba');
     // Nada de GitHub entra a pelo en una orden ni en el script: solo como `CLAVE: ${{ … }}`,
     // de una salida o del entorno.
     const aPelo = flujo.split('\n').filter((l) => l.includes('${{') && !/^\s+[A-Za-z_]+: \$\{\{ [^{}]+ \}\}$/.test(l));

@@ -4,6 +4,7 @@ title: Tres mejoras tras la 4
 date: 2026-11-16
 author: Jose Sanchis
 branch: mejoras-tras-la-4
+spec: mejoras-tras-la-4
 status: in-progress
 ---
 
@@ -56,9 +57,9 @@ Jose, 16-11-2026, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3
 - **1.** «201: el vigía de RSC avisa…» en `humo.js`: decide igual que `comoEsLaVersion` con seis versiones alrededor
   de la de la barra, no se fía de nueve versiones raras, la línea de órdenes no dice nada con una versión que lleva
   otra línea dentro, el aviso dice pasa, falla o no se pudo, y en el fichero de GitHub el trabajo que corre RSC solo
-  lee y el que escribe no corre nada de fuera. Vista caer con seis roturas a mano: fiarse de espacios, decir una
+  lee y el que escribe no corre nada de fuera. Vista caer con siete roturas a mano: fiarse de espacios, decir una
   versión rara, comparar al revés, dar `issues: write` al trabajo que corre RSC, la versión a pelo en una orden y un
-  valor de GitHub dentro del script. Contra npm de verdad: `fijada=4.1.7 ultima=4.1.7 como=igual`, y con
+  valor de GitHub dentro del script, y no forzar el modo seco con una versión de prueba. Contra npm de verdad: `fijada=4.1.7 ultima=4.1.7 como=igual`, y con
   `VIGIA_FIJADA=4.1.6`, `como=nueva`. El YAML se lee con un lector de verdad (y uno roto da error).
 - **3.** «201: los dibujos en las respuestas…» con RSC fingido: vista caer antes del arreglo. Con el RSC de verdad,
   dentro de la batería larga: `rsc emoji off` pone `.rsc/.no-emoji` y `emoji` en `optOuts`, y `on` lo quita.

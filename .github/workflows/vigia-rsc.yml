@@ -18,6 +18,12 @@ on:
         description: 'Mirarlo todo sin abrir la incidencia'
         type: boolean
         default: false
+      # Para probar el camino de una versión nueva sin esperar a que salga una. Con esto
+      # puesto va siempre en seco: nunca abre una incidencia de mentira.
+      fijada:
+        description: 'Probar como si la barra llevara esta versión de RSC (tres números; vacío, la de verdad)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -48,6 +54,8 @@ jobs:
       # Solo tres números: el vigía no dice una versión rara.
       - name: Qué RSC lleva la barra y cuál es la última
         id: versiones
+        env:
+          VIGIA_FIJADA: ${{ inputs.fijada }}
         run: node herramientas/vigia-rsc.js versiones >> "$GITHUB_OUTPUT"
 
       - name: El contrato con la última
@@ -90,7 +98,7 @@ jobs:
           ULTIMA: ${{ needs.probar.outputs.ultima }}
           CONTRATO: ${{ needs.probar.outputs.contrato || 'no-corrio' }}
           FALLOS: ${{ needs.probar.outputs.fallos }}
-          EN_SECO: ${{ inputs.en_seco && '1' || '' }}
+          EN_SECO: ${{ (inputs.en_seco || inputs.fijada) && '1' || '' }}
         with:
           script: |
             const vigia = require(`${process.env.GITHUB_WORKSPACE}/herramientas/vigia-rsc.js`);
