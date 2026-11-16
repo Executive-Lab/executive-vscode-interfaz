@@ -308,9 +308,6 @@ function enPantalla(p) {
   const botones = [
     boton('trabajar', p),
     ...(p.sinGuardar === null && !p.sinConfianza ? [boton('mirar', p)] : []),
-    // Su documentación, que en Conocimiento no está entre los temas de la raíz. Con el
-    // nombre del diccionario («Conocimiento de <nombre>»), no con una perífrasis (98).
-    ...(p.indice ? [{ etiqueta: `Conocimiento de «${p.nombre}»`, icono: '📚', accion: { tipo: 'leerArticulo', ruta: p.indice } }] : []),
     ...(guardarlo ? [guardarlo] : []),
     ...(p.sinSubir || p.ramaSinSubir ? [boton('subir', p)] : []),
   ];
@@ -323,6 +320,12 @@ function enPantalla(p) {
     // El de guardar, aparte: la línea de las copias lo lleva también.
     guardar: guardarlo,
     botones,
+    // Su ficha, que en Conocimiento no está entre los temas de la raíz: una (i) al
+    // lado de Trabajar, para leerla sin cambiar nada (decisión 202). Antes era el
+    // botón «Conocimiento de <nombre>», y al volver llevaba al buscador de conceptos.
+    ficha: p.indice
+      ? { etiqueta: `La ficha de «${p.nombre}»`, accion: { tipo: 'leerArticulo', ruta: p.indice, desde: 'proyectos' } }
+      : null,
   };
 }
 

@@ -2187,7 +2187,8 @@ ${cabecera}
 
   verConexiones() {
     this.donde = { tipo: 'conexiones' };
-    const lista = conexiones.proveedores();
+    // Las conexiones, no unas notas o unos guiones de 01-TOOLS (decisión 202).
+    const lista = conexiones.conectadas();
     const deMcp = this.lasDeMcp(lista);
     this.enviar({
       tipo: 'conexiones',

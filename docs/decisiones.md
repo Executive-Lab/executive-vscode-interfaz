@@ -9927,7 +9927,7 @@ queda entero según su `doctor`. Las nuevas se han visto caer quitando su arregl
 
 ## 201. Tres mejoras tras la 4: el vigía de RSC, los dibujos a un clic y las habilidades de venta
 
-**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.61.0 · FTD
 `02-DOCS/wiki/ftd/tres-mejoras-tras-la-4.md`
 
 Jose, 16-11, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3 y 4»*.
@@ -9993,3 +9993,49 @@ En la tercera ronda no salió nada bloqueante. Quedan aparcados tres detalles de
 de GitHub: llamadas opcionales, un segundo `cron` o un `exit 0`, y un secreto en una variable. Ninguno está hoy en el
 fichero. Se cierran juntos con un lector de YAML y de JavaScript, en un cambio aparte. El registro de revisiones lo
 apunta: panel de tres lentes, tres rondas, y ningún hallazgo abierto.
+
+## 202. La 0.62: cinco arreglos tras usar la 0.61
+
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+`02-DOCS/wiki/ftd/la-0.62.md`
+
+Jose, 16-11, usando la 0.61 en su monorepo: *«haz la versión 62 con esos 5 puntos»*. La barra que se usa es la
+sencilla. La completa sigue apagada, como copia de reserva (decisión 138): estos cambios no la tocan, salvo donde se
+dice.
+
+**1. Ir y volver de la vista sencilla, a un clic.** Jose: *«haz que se pueda hacer y deshacer el modo sencillo. Ya que
+cuando se habitúen igual es mejor que puedan usar el modo completo»*. Los dos botones ya existían, pero dentro de
+Ajustes, que en la sencilla está apagado. Ahora van abajo, en el pie, junto a Cambiar de carpeta: «Ver el editor
+completo» o, con él puesto, «Volver al modo sencillo». Con Ajustes encendido ya están allí, y no salen dos veces.
+
+**2. «Volver» nunca lleva al buscador de conceptos.** Desde «Conocimiento de X», Volver llevaba a Conocimiento, con
+su buscador. En la sencilla esa pantalla está apagada, y Jose: *«no debería salir nunca»*. Lo que se lee en la
+sencilla vuelve a la principal, y desde la foto del cerebro, a la foto, como antes. Con Conocimiento a la vista (la
+completa, o su pieza encendida) todo sigue igual.
+
+**3. La ficha de cada proyecto, una (i) al lado de Trabajar.** Jose dudaba si quitar el botón: *«quizá pueda ser útil
+modo solo lectura… ponerlo al lado del botón de trabajar como una (i) pequeña con hover»*. Ahora es eso: al pasar por
+encima dice «La ficha de «X»», y al pulsarla se lee en la barra. Es de solo lectura: no lleva «Pídele que lo cambie».
+Volver lleva a la principal, también en la completa, porque se abrió desde allí. Sus enlaces, igual.
+
+**4. Conversación nueva, a la vista.** Jose: *«¿meterías un botón para abrir una nueva sesión de Claude?»*. Ya estaba,
+pero plegado dentro de Ayuda. Ahora va debajo de la tarjeta, con su pieza en `piezas.json` (`conversacionNueva`).
+Apagada la pieza, vuelve a Ayuda.
+
+Con ella, la principal enseña seis cosas a la vista, y el plan de simplificar la barra decía cinco como mucho
+(`empresas-distintas.js` lo vigila). Jose lo dejó en mis manos: *«lo que consideres, ya que queremos mantenerla
+simple pero que sea útil»*. El tope pasa a seis. Abrir una conversación nueva se hace a diario, y plegado no se
+encontraba. Es una cosa más, y ninguna otra: con un séptimo botón suelto, la batería cae. En un monorepo ya salían
+seis antes, por la fila de Proyectos.
+
+**5. Solo cuentan las conexiones de verdad.** La barra contaba como conexión cualquier carpeta de `01-TOOLS`, también
+unas notas de seguridad o unos guiones sueltos. En el monorepo de Jose, Acciones decía «23 programas» donde había 17.
+Ahora una carpeta es una conexión si tiene lo que monta connect-tool: `.env.example`, `.env`, `CREDENTIALS.md`, un
+fichero de acceso en su sitio (`keys/`) o su prueba. Con una sola de esas piezas ya cuenta, aunque esté a medias.
+Se filtra solo donde la barra dice «conexiones»: el número de Acciones, la pantalla de Conexiones y Qué falta por
+montar. Lo demás sigue mirando todas las carpetas: tapar las claves, Resultados (out), lo que se mira de un vistazo y
+lo que evita ofrecer otra vez algo que ya tiene carpeta.
+
+**Pruebas.** Cinco nuevas en `humo.js`, una por punto, vistas caer antes de escribir el arreglo. Cambian tres que ya
+estaban: la tabla de piezas, el orden de Ayuda y los botones de cada proyecto. En `empresas-distintas.js`, el tope de
+cosas a la vista pasa de cinco a seis (`TOPE`).

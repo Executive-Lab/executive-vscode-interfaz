@@ -646,7 +646,30 @@ function proveedores() {
         cositas: scripts(e.name).length,
       };
     })
+    .map((p) => ({ ...p, esConexion: esUnaConexion(path.join(base, p.id), p) }))
     .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'));
+}
+
+// ── Qué carpeta de 01-TOOLS es una conexión (decisión 202) ─────────────────
+//
+// Jose: «la barra cuenta como conexión cualquier carpeta de 01-TOOLS… eso
+// deberíamos arreglarlo». En 01-TOOLS también viven unas notas de seguridad o
+// unos guiones sueltos, y contarlos daba «23 programas» donde había 17. Una
+// conexión la monta connect-tool con sus claves (`.env.example`, `.env`), su
+// `CREDENTIALS.md`, su fichero de acceso en `keys/` o su prueba: con una de esas
+// piezas ya es una conexión, aunque esté a medias.
+//
+// Solo se filtra donde la barra dice «conexiones». Tapar claves, Resultados y lo
+// que evita ofrecer otra vez algo que ya tiene carpeta siguen mirándolas todas.
+const LO_QUE_LA_HACE_CONEXION = ['.env.example', '.env', 'CREDENTIALS.md'];
+
+function esUnaConexion(carpeta, p) {
+  if (p.conFichero > 0 || p.tienePrueba) return true;
+  return LO_QUE_LA_HACE_CONEXION.some((f) => fs.existsSync(path.join(carpeta, f)));
+}
+
+function conectadas() {
+  return proveedores().filter((p) => p.esConexion);
 }
 
 // Las claves de un proveedor: las que espera (.env.example) más las que ya
@@ -1413,7 +1436,7 @@ const tienePrueba = (proveedorId) => {
   }
 };
 
-module.exports = { huella, tienePrueba, proveedores, claves, escribir, probar, scripts, loQueSePuedeMirar, ejecutar, etiquetaDeClave, enmascarar, leerEnv, taparClaves, valoresDeClaves, quePython };
+module.exports = { huella, tienePrueba, proveedores, conectadas, claves, escribir, probar, scripts, loQueSePuedeMirar, ejecutar, etiquetaDeClave, enmascarar, leerEnv, taparClaves, valoresDeClaves, quePython };
 // Decisión 156: la clase de acceso, lo que pedirle a su informático y el fichero de acceso.
 Object.assign(module.exports, { comoSeEntra, clasesQueNombra, leerLasClases, paraTuInformatico, ponerFicheroDeAcceso, elQueBusca, NOMBRE_SECRETO, CABE_UN_FICHERO_DE_ACCESO });
 // Decisión 159: lo que lee la guía en PDF.
