@@ -88,7 +88,25 @@ Jose, 16-11-2026, de las mejoras propuestas tras publicar la 0.60.0: *«haz 1, 3
     que los otros cuatro (confianza, carpeta preparada, arnés ocupado, carpeta por delante).
 - **Trazabilidad:** cada cambio sale de uno de los tres puntos de Jose, más la versión y la decisión. Ninguno suelto.
 
+### Revisión de tres lentes (pasó a ASDD)
+
+El freno de la 4 (`asdd-gate`) paró la subida: el fichero de GitHub hace la rama de riesgo 2. Jose eligió ASDD
+completo. Especificación: `02-DOCS/wiki/sdd/specs/mejoras-tras-la-4.md` (`rsc spec gate`: PASS, 8 puntos con tipo).
+Tres revisores independientes, primera ronda:
+
+- **Corrección.** Alta: con una RSC nueva el contrato caía siempre por la versión, y el aviso diría «falla» siempre.
+  Arreglado con `como-si`; reproducido con paquetes de verdad en una copia (barra a la 4.1.6, arnés 4.1.7): 4 fallos
+  sin, 15 de 15 con. Baja: con Codex solo salía el interruptor; ahora solo con Claude. Baja, se queda: versión rara o
+  npm caído, ejecución en rojo sin incidencia (GitHub avisa por correo).
+- **Seguridad.** Baja: una incidencia de cualquiera con el título callaba el aviso; ahora solo cuentan las del vigía
+  (`queHacer`). Bajas que se quedan, en la especificación: acciones por versión mayor, y la marca que sigue un enlace
+  (es de RSC y de los cinco interruptores).
+- **Pruebas.** Las del YAML miraban una forma de escribirlo: `run: ${{ … }}` pasaba, y quitar los permisos propios de
+  `probar` también. Ahora miran estructura (permisos exactos, lista cerrada de pasos de `avisar`, `--ignore-scripts`,
+  `persist-credentials` como clave, orden y condiciones), y el «una por versión» y el «en seco» están en `queHacer`,
+  probado. Dieciocho roturas (las que sobrevivían y las de los arreglos) caen todas; sana, pasa.
+
 ## Next
 
-- 2 y 6: el vigía en GitHub, por los dos caminos, y GitHub en verde.
-- 7: la PR.
+- La segunda ronda de los tres revisores sobre los arreglos, y apuntar el panel.
+- 2 y 6: el vigía en GitHub, por los dos caminos, y GitHub en verde. 7: la PR.

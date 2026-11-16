@@ -67,6 +67,8 @@ jobs:
           echo "contrato=no-corrio" >> "$GITHUB_OUTPUT"
           npm ci --prefix extension/media/harness --ignore-scripts --no-audit --no-fund
           npm install --prefix extension/media/harness --no-save --ignore-scripts --no-audit --no-fund "@ericrisco/rsc@$ULTIMA"
+          # Como si la barra ya la llevara: si no, la ve por delante y el contrato cae por la versión.
+          node herramientas/vigia-rsc.js como-si "$ULTIMA"
           node extension/preparar-paquete.js
           set +e
           node extension/prueba/contrato.js 2>&1 | tee contrato.txt
@@ -107,11 +109,10 @@ jobs:
             const enlace = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const { titulo, cuerpo } = vigia.elAviso({ fijada, ultima, contrato, fallos: Number(process.env.FALLOS || 0), enlace });
 
-            // Una por versión, abierta o cerrada: cerrarla no hace que vuelva a salir.
+            // Una por versión, abierta o cerrada, y solo las del vigía: lo decide `queHacer`, probado en la batería.
             const todas = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'all', per_page: 100 });
-            const ya = todas.find((i) => !i.pull_request && i.title.startsWith(vigia.empiezaPor(ultima)));
-            if (ya) return core.info(`Ya se avisó de la ${ultima}: #${ya.number}.`);
-
-            if (process.env.EN_SECO === '1') return core.info(`En seco. Se abriría «${titulo}»:\n\n${cuerpo}`);
+            const decision = vigia.queHacer({ todas, ultima, enSeco: process.env.EN_SECO });
+            if (decision.que === 'ya') return core.info(`Ya se avisó de la ${ultima}: #${decision.numero}.`);
+            if (decision.que === 'seco') return core.info(`En seco. Se abriría «${titulo}»:\n\n${cuerpo}`);
             const { data } = await github.rest.issues.create({ owner, repo, title: titulo, body: cuerpo });
             core.info(`Abierta: #${data.number}.`);

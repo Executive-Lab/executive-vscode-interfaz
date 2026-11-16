@@ -9941,6 +9941,11 @@ una decisión.
 
 - La lógica está en `herramientas/vigia-rsc.js`, probada sin red: decide igual que `comoEsLaVersion`, y una versión
   que no sean tres números exactos no se dice (de ahí sale lo que se baja de npm).
+- El contrato se pasa con la barra de esa copia como si ya llevara la versión nueva (`como-si`). Sin eso, la barra
+  la ve por delante y el contrato cae siempre por la versión, y el aviso diría «falla» con cualquier versión. Lo vio
+  la revisión, y se reprodujo con paquetes de verdad: 4 fallos sin `como-si`, 15 de 15 con él.
+- Una por versión, y solo cuentan las incidencias que abrió el vigía: con el repositorio público, una de cualquiera
+  con ese título lo callaba (revisión).
 - Dos trabajos. El que baja y corre la RSC nueva solo puede leer el repositorio. El que abre la incidencia no baja ni
   corre nada de fuera. La versión llega a las órdenes por el entorno, nunca escrita dentro.
 - Se puede lanzar a mano desde Actions, en seco (lo mira todo y no abre nada) o con una versión de prueba, que va
@@ -9951,8 +9956,9 @@ una decisión.
 que una preferencia no se rellena por defecto. Sin añadir preguntas al montaje (decisión 184), se cambia en Las reglas ›
 Cómo trabaja el asistente, junto a los cuatro de las decisiones 172 y 176: «Quitar los dibujos» y «Poner los dibujos»
 llaman a `rsc emoji off|on`, que escribe o quita `.rsc/.no-emoji` y lo apunta en `.rsc.json` (lo decide el equipo).
-Después se mira el disco, como con los otros. Sale donde RSC monta su pieza (`emoji-policy.mjs`, con Claude), o donde
-ya están apagados, para poder volver a ponerlos. Con la 3 o con Codex sin la pieza, no.
+Después se mira el disco, como con los otros. Sale con Claude, donde RSC monta su pieza (`emoji-policy.mjs`) o donde
+ya están apagados, para poder volver a ponerlos. Con la 3, no. Con Codex solo, tampoco: nada suyo lee la marca, y la
+frase prometería algo que no pasa (revisión).
 
 **3. Las habilidades de venta de la 4, en los objetivos.** Ninguna fila de `objetivos.json` las sugería. Van detrás de
 las de siempre, porque la barra ofrece la primera de la fila que no esté puesta:
@@ -9965,3 +9971,12 @@ las de siempre, porque la barra ofrece la primera de la fila que no esté puesta
 interruptor con un RSC fingido, y las de venta en su turno. En la batería larga, el interruptor con el RSC de verdad:
 la marca, su apunte en `optOuts` y vuelta. Las del vigía se han visto caer con siete roturas a mano; las otras dos,
 antes de escribir su arreglo.
+
+**La revisión.** El fichero de GitHub hace la rama de riesgo 2, y el freno de la 4 (`asdd-gate`) no la dejó salir sin
+especificación y sin revisión de tres lentes. Jose eligió hacerlo entero: especificación en
+`02-DOCS/wiki/sdd/specs/mejoras-tras-la-4.md` y tres revisores independientes (corrección, seguridad, pruebas). Lo que
+encontraron y se arregló: el contrato que caía siempre por la versión, la incidencia de cualquiera que callaba el
+aviso, el interruptor con Codex solo, y que las pruebas del YAML miraran una forma de escribirlo en vez de su
+estructura (dieciocho roturas que sobrevivían, o que tocan los arreglos, caen ahora). Lo que no: una versión rara o
+un fallo de npm dejan la ejecución en rojo sin incidencia (GitHub avisa por correo), las acciones por versión mayor
+como el resto del repositorio, y la marca que sigue un enlace, que es de RSC y de los cinco interruptores a la vez.

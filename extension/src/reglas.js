@@ -305,11 +305,13 @@ const INTERRUPTORES = {
   // Los dibujos en las respuestas (decisión 201): `emoji on|off`, de la 4. RSC escribe o
   // quita `.rsc/.no-emoji` y lo apunta en `.rsc.json`: lo decide el equipo. El montaje los
   // deja encendidos sin preguntar (decisión 200), y una preferencia no se rellena por
-  // defecto (P9): aquí se cambia a un clic. Sale donde RSC monta su pieza (con Claude), o
-  // donde ya están apagados, para poder volver a ponerlos.
+  // defecto (P9): aquí se cambia a un clic. Sale con Claude, que es a quien RSC le monta la
+  // pieza que lo lee, donde está esa pieza o donde ya están apagados, para poder volver a
+  // ponerlos. Con Codex solo, no: nada suyo lee la marca, y la frase prometería algo que no
+  // pasa (revisión de la 201).
   emoji: {
     nombre: 'Dibujos en las respuestas (emoji)',
-    cuando: () => hayEnRsc('emoji-policy.mjs') || hayEnRsc('.no-emoji'),
+    cuando: () => conClaude() && (hayEnRsc('emoji-policy.mjs') || hayEnRsc('.no-emoji')),
     estado: () => (hayEnRsc('.no-emoji') ? 'apagado' : 'encendido'),
     dice: {
       encendido: 'El asistente usa dibujos (emoji) en sus respuestas y en lo que guarda.',
@@ -340,6 +342,13 @@ const hayArnesDeLaTres = () => donde.puedeTenerFrenos() && hayEnRsc('trunk-polic
 // ofrece en cuanto la carpeta es de uno de los dos y el arnés trae su pieza: no hace
 // falta que haya frenos. Con otro asistente, o con una carpeta sin la pieza (la 2),
 // no hay nada que mover.
+// Si Claude es uno de los asistentes de esta carpeta: los que declara, o con el que se trabaja.
+const conClaude = () => {
+  const dec = proyecto.declaracion() || {};
+  const quienes = Array.isArray(dec.targets) && dec.targets.length ? dec.targets : [asistentes.conQuien().id];
+  return quienes.includes('claude');
+};
+
 const hayMemoria = () => {
   const dec = proyecto.declaracion() || {};
   const quienes = Array.isArray(dec.targets) && dec.targets.length ? dec.targets : [asistentes.conQuien().id];
