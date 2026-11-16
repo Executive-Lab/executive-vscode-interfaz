@@ -49,10 +49,12 @@ suposición tomada, para revisar después. FTD: `02-DOCS/wiki/ftd/tres-mejoras-t
 
 - **El vigía.** Cada lunes (y a mano desde Actions) mira la última versión de `@ericrisco/rsc` en npm y la que lleva la
   barra (`extension/media/harness/package.json`). Si la última es más nueva, la instala en una copia desechable del
-  arnés, pasa `contrato.js` y abre una incidencia con el resultado: pasa, falla (con cuántas) o no se pudo pasar.
-  Una por versión, abierta o cerrada. Se puede lanzar en seco, y con una versión de prueba (siempre en seco).
-- **El interruptor.** En una carpeta con la pieza de la 4 (`.rsc/emoji-policy.mjs`) o con los emoji ya apagados
-  (`.rsc/.no-emoji`), Las reglas enseña «Dibujos en las respuestas (emoji)», cómo está y un botón: «Quitar los
+  arnés, pone la barra de esa copia como si ya la llevara (si no, la ve por delante y el contrato cae siempre por la
+  versión), pasa `contrato.js` y abre una incidencia con el resultado: pasa, falla (con cuántas) o no se pudo pasar.
+  Una por versión, abierta o cerrada, y solo cuentan las que abrió el propio vigía. Se puede lanzar en seco, y con
+  una versión de prueba (siempre en seco).
+- **El interruptor.** En una carpeta con Claude y con la pieza de la 4 (`.rsc/emoji-policy.mjs`) o con los emoji ya
+  apagados (`.rsc/.no-emoji`), Las reglas enseña «Dibujos en las respuestas (emoji)», cómo está y un botón: «Quitar los
   dibujos» o «Poner los dibujos». El clic llama a `rsc emoji off|on`, mira el disco y dice lo que ha pasado.
 - **Las sugerencias.** Las cuatro van detrás de las de siempre en sus filas; la barra ofrece la primera que no esté
   puesta.
@@ -74,7 +76,8 @@ suposición tomada, para revisar después. FTD: `02-DOCS/wiki/ftd/tres-mejoras-t
 
 - **El vigía corre código bajado de internet.** El trabajo que lo corre solo lee el repositorio y no guarda
   credenciales; el que abre la incidencia no corre nada de fuera. Ningún valor de GitHub entra a pelo en una orden ni
-  en el script. Solo pasan versiones de tres números exactos (revisión de seguridad de P9, L1).
+  en el script. Solo pasan versiones de tres números exactos (revisión de seguridad de P9, L1). El repositorio es
+  público: una incidencia de cualquiera no puede callar el aviso.
 - **El interruptor**, las guardas de los otros cuatro (decisión 172): confianza, carpeta preparada, arnés ocupado,
   carpeta por delante; la orden la elige la barra de su tabla, nunca el panel; la barra no escribe la marca a mano.
 - **Todo texto de pantalla**, por el diccionario (P2). **Nada privado** en el repositorio público.
@@ -82,10 +85,14 @@ suposición tomada, para revisar después. FTD: `02-DOCS/wiki/ftd/tres-mejoras-t
 ## Cómo lo demuestra
 
 - `humo.js`: «201: el vigía de RSC…» (decide como `comoEsLaVersion`, no se fía de versiones raras, la línea de órdenes
-  calla con una rara, el aviso, y la separación de los dos trabajos en el YAML); «201: los dibujos…» (con RSC
-  fingido); la prueba de los objetivos con las cuatro en su turno.
+  calla con una rara, el aviso, una por versión y solo las suyas, la barra como si la llevara, y el YAML mirado por su
+  estructura: permisos exactos, pasos de cada trabajo, orden y condiciones); «201: los dibujos…» (con RSC fingido, y
+  con Codex); la prueba de los objetivos con las cuatro en su turno.
 - `humo.js --con-arnes`: el interruptor con el RSC de verdad, la marca y su apunte en `optOuts`, y vuelta.
-- Las pruebas nuevas, vistas caer: el vigía con siete roturas a mano, las otras antes de escribir su arreglo.
+- Las pruebas nuevas, vistas caer: el vigía con las roturas de la primera ronda y con las dieciocho que la revisión
+  de pruebas dejó vivas o que tocan los arreglos; las otras, antes de escribir su arreglo.
+- El contrato con paquetes de verdad, en una copia: una barra que cree llevar la 4.1.6 con la 4.1.7 instalada cae en
+  4 comprobaciones sin `como-si`, y pasa 15 de 15 con él.
 - El vigía contra npm de verdad, y en GitHub por los dos caminos (al día, y con una versión de prueba) después de
   fusionar, porque GitHub solo lanza a mano los flujos que ya están en `main`.
 - La revisión de tres lentes (corrección, seguridad, pruebas), apuntada en el registro de revisiones.
@@ -93,14 +100,15 @@ suposición tomada, para revisar después. FTD: `02-DOCS/wiki/ftd/tres-mejoras-t
 ## Criterios de aceptación
 
 1. Con la última igual a la de la barra, el vigía dice `como=igual` y no abre nada.
-2. Con una más nueva, dice `como=nueva`, pasa el contrato con ella y abre una incidencia; con una ya avisada, no abre
-   otra.
+2. Con una más nueva, dice `como=nueva`, pasa el contrato con ella con la barra como si la llevara (y, si RSC no ha
+   cambiado lo que la barra le manda, pasa) y abre una incidencia; con una ya avisada por el vigía, abierta o cerrada,
+   no abre otra; una incidencia de otra persona con ese título no lo calla.
 3. Con una versión que no sean tres números exactos, el vigía no dice nada y termina con error.
 4. El trabajo que corre la RSC bajada tiene solo `contents: read` y `persist-credentials: false`; el que escribe no
    corre `npm`, `contrato.js` ni `preparar-paquete.js`.
 5. Con una versión de prueba, el vigía va en seco.
-6. En una carpeta de la 4 con Claude sale el interruptor encendido; con la 3 o con Codex sin la pieza, no; apagados sin
-   la pieza, sale para ponerlos.
+6. En una carpeta de la 4 con Claude sale el interruptor encendido; con la 3, no; con Codex solo, ni con la pieza ni
+   con la marca; con Claude, apagados y sin la pieza, sale para ponerlos.
 7. El clic llama a `rsc emoji off|on`; si RSC dice que sí y la marca no cambia, la barra lo dice.
 8. Con las dos primeras de su fila puestas, «Vender más y hacer seguimiento» sugiere Diseño de la oferta, y con esa
    también, Embudo de venta; «Atender mejor a mis clientes», Investigación de clientes; «Hacer vídeos», Guion de vídeo
@@ -134,5 +142,10 @@ suposición tomada, para revisar después. FTD: `02-DOCS/wiki/ftd/tres-mejoras-t
 - **suposición tomada** — Los textos del interruptor («Quitar los dibujos», «Poner los dibujos» y sus frases), escritos
   en el diccionario, sin que Jose los haya visto.
 - **suposición tomada** — Versión 0.61.0, menor: el alumno ve dos cosas nuevas.
+- **suposición tomada** — Si npm falla o devuelve una versión rara, la ejecución sale en rojo y no abre incidencia.
+  Base: GitHub avisa por correo de un flujo con reloj que falla, a quien lo cambió por última vez. Revisión de la 201.
 - **decisión diferida** — Fijar las acciones de GitHub por su código en vez de por versión mayor: el resto del
   repositorio va por versión mayor, y se cambia todo junto o nada.
+- **decisión diferida** — Un `.rsc/.no-emoji` que sea un enlace colgante en una carpeta de confianza hostil: lo
+  escribe RSC al seguir el enlace, igual que las marcas de los otros cuatro interruptores. Se endurece en conjunto,
+  en RSC, no en este cambio (revisión de seguridad de la 201).
