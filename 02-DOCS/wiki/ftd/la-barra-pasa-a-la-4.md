@@ -4,7 +4,7 @@ title: La barra pasa a la 4
 date: 2026-11-15
 author: Jose Sanchis
 branch: la-rsc-4
-status: in-progress
+status: done
 ---
 
 # La barra pasa a la 4
@@ -77,7 +77,7 @@ contrato.
   `mapeos-codex.js`, Windows en GitHub y la barra en un VS Code de verdad.
 - [x] 8. Diccionario, constitución (P7), decisión 200, README y el diario.
 - [x] 9. Revisión adversaria en línea (corrección y seguridad) del diff entero.
-- [ ] 10. El `.vsix` empaquetado y la PR abierta.
+- [x] 10. El `.vsix` empaquetado y la PR abierta.
 
 ## Evidence
 
@@ -108,6 +108,8 @@ contrato.
   de empezar, y en `main` (0.59.0) igual: con el HOME desviado (para no escribir fuera del proyecto), macOS no
   encuentra el llavero y el editor espera. Con `--use-mock-keychain` añadido desde fuera, sin tocar la prueba,
   arranca y pasa entera. No es del cambio.
+- **10.** `executive-lab-0.60.0.vsix` (7,9 MB) y sus notas en `publicacion/`, con las cuatro frases que verá el
+  alumno comprobadas con la función que las enseña. La PR, #110.
 - **8.** El diario en `02-DOCS/raw/worklog/2026-11-16-la-200.md`. Diccionario, P7, decisión 200 y README, en el
   commit `3dffad3`.
 - **9.** Revisión en línea: la marca de MemSlop se escribe con `wx` (un enlace roto ahí da `EEXIST` y no se
@@ -117,4 +119,5 @@ contrato.
 
 ## Next
 
-- 10: la PR abierta. El `.vsix` de la 0.60.0 ya está empaquetado y comprobado (`publicacion/`, fuera de git).
+- Hecho por esta rama. La PR es la #110; la fusiona Jose, y después `./publicar.sh` y la release 0.60.0.
+- Si entra antes la #108, el conflicto es solo en `docs/decisiones.md`: se dejan las dos, la 199 antes.
