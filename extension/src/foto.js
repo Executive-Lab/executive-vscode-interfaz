@@ -29,6 +29,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { tildesDeTema } = require('./limpio');
 
 // Cuántos puntos caben en la foto. Una wiki de empresa anda por los cientos;
 // con más, la foto se vuelve una mancha y colocarlos tarda: se enseñan los que
@@ -466,7 +467,7 @@ function losGrupos(nodos, cuantos = CON_COLOR) {
   return [...cuantosHay.entries()]
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
     .slice(0, cuantos)
-    .map(([id, puntos]) => ({ id, etiqueta: humanizar(id.split('/').pop()).slice(0, LARGO_DE_UN_NOMBRE), puntos }));
+    .map(([id, puntos]) => ({ id, etiqueta: tildesDeTema(humanizar(id.split('/').pop())).slice(0, LARGO_DE_UN_NOMBRE), puntos }));
 }
 
 // Los que llevan su nombre escrito al lado: los que más enlazan, en orden.

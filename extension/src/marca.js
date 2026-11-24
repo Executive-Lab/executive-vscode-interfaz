@@ -79,15 +79,6 @@ function llevaElNombre(campos, fichero) {
   return medida.ancho / medida.alto >= DE_TIRA_PARA_ARRIBA;
 }
 
-// Un apagado que se lea sobre los dos fondos en los que va a salir. Se empieza
-// por el que peor lo pone y se comprueba en el otro.
-function masApagadoQueSeLea(texto, fondo, superficie) {
-  const contra = color.contraste(texto, fondo) <= color.contraste(texto, superficie) ? fondo : superficie;
-  const candidato = color.apagadoSobre(texto, contra);
-  const otro = contra === fondo ? superficie : fondo;
-  return color.contraste(candidato, otro) >= 4.5 ? candidato : texto;
-}
-
 // ¿Se va a ver el logotipo de la empresa sobre el fondo que le toca?
 //
 // El nuestro se tiñe y asunto resuelto. El suyo no se toca: es su marca. Lo que
@@ -198,6 +189,11 @@ function leer() {
       '--fondo': esquema.superficie,
       '--superficie': esquema.tarjeta,
       '--superficie-2': esquema.tarjeta,
+      // Lo que en oscuro ponía VS Code (decisión 203): con la marca, lo suyo.
+      '--encima': esquema.tarjeta,
+      '--campo': esquema.tarjeta,
+      '--campo-texto': esquema.texto,
+      '--codigo': esquema.tarjeta,
       '--texto': esquema.texto,
       '--texto-fuerte': esquema.texto,
       '--apagado': esquema.apagado,
@@ -252,7 +248,10 @@ const GRUPOS_EN_OSCURO = { '--grupo-1': '#ec4429', '--grupo-2': '#3987e5', '--gr
 //
 // El alto contraste se queda fuera a propósito: quien lo usa lo usa porque lo
 // necesita, y ninguna marca vale eso.
-function estilo(marca) {
+// `nonce`: la contraseña de un solo uso de la página. Su seguridad solo deja
+// pasar los estilos que la llevan; sin ella, este bloque no se aplicaba nunca en
+// un VS Code de verdad (decisión 203).
+function estilo(marca, nonce = null) {
   if (!marca || !marca.tokens) return '';
   const lineas = Object.entries(marca.tokens).map(([k, v]) => `  ${k}: ${v};`).join('\n');
 
@@ -268,7 +267,8 @@ function estilo(marca) {
   // ninguna marca vale eso.
   const tipo = tipografiaDe(marca);
 
-  return `<style>
+  const contrasena = nonce ? ` nonce="${String(nonce).replace(/[^A-Za-z0-9+/=]/g, '')}"` : '';
+  return `<style${contrasena}>
 :root {
 ${lineas}${tipo}
 }

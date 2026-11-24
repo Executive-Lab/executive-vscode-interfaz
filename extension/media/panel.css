@@ -106,6 +106,25 @@ body.vscode-dark, body.vscode-high-contrast {
   --grupo-resto: #77736d;
 }
 
+/* Lo que en oscuro pone VS Code: el botón al pasar por encima, los campos y el
+   código. Va en fichas, y no en reglas sueltas, para que la marca de una empresa
+   —que manda también con el editor en oscuro— las pueda fijar: con una marca
+   clara, su texto oscuro caía sobre el gris de VS Code y al pasar por encima no
+   se leía (contraste 1,23, decisión 203). Sin fichas, cada regla usa lo de
+   siempre. En alto contraste, lo de siempre, aunque haya marca. */
+body.vscode-dark {
+  --encima: var(--vscode-list-hoverBackground);
+  --campo: var(--vscode-input-background);
+  --campo-texto: var(--vscode-input-foreground);
+  --codigo: var(--vscode-textBlockQuote-background, rgba(255, 255, 255, .08));
+}
+body.vscode-high-contrast {
+  --encima: var(--superficie-2, var(--superficie));
+  --campo: var(--superficie);
+  --campo-texto: var(--texto);
+  --codigo: var(--superficie-2, var(--superficie));
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -255,6 +274,11 @@ h2 {
   overflow: hidden;
 }
 
+/* Un título de sección que abre la tarjeta no lleva el margen de arriba de los
+   demás: dejaba un hueco en blanco dentro, encima de «Ayuda», «Las reglas» y
+   otras diez (decisión 203). */
+.brujula > h2:first-child { margin-top: 0; }
+
 .brujula .hiciste { margin: 7px 0 0; color: var(--apagado); font-size: 13px; }
 
 .brujula .detalle { margin: 7px 0 0; font-size: 12px; color: var(--apagado); }
@@ -280,8 +304,7 @@ button {
   transition: transform .18s cubic-bezier(.22, 1, .36, 1), background .18s;
 }
 
-button:hover { background: var(--superficie-2, var(--superficie)); transform: translateY(-1px); }
-body.vscode-dark button:hover { background: var(--vscode-list-hoverBackground); }
+button:hover { background: var(--encima, var(--superficie-2, var(--superficie))); transform: translateY(-1px); }
 
 button:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
 
@@ -381,12 +404,11 @@ input[type="text"], input[type="password"], textarea.caja {
   margin-bottom: 8px;
   font-family: inherit;
   font-size: 15px;
-  color: var(--texto);
-  background: var(--superficie);
+  color: var(--campo-texto, var(--texto));
+  background: var(--campo, var(--superficie));
   border: 1px solid var(--borde);
   border-radius: 8px;
 }
-body.vscode-dark input, body.vscode-dark textarea.caja { background: var(--vscode-input-background); color: var(--vscode-input-foreground); }
 input:focus-visible, textarea.caja:focus-visible { outline: 3px solid var(--acento); outline-offset: 1px; }
 
 /* Lo que se cuenta a Executive Lab: se escribe con calma y se lee entero antes
@@ -430,9 +452,8 @@ pre.datos {
   text-align: center;
   color: var(--texto-fuerte);
   border-radius: var(--radio);
-  background: var(--superficie-2, var(--superficie));
+  background: var(--codigo, var(--superficie-2, var(--superficie)));
 }
-body.vscode-dark .codigo { background: var(--vscode-textBlockQuote-background, rgba(255, 255, 255, .08)); }
 
 .cargando { padding: 26px 0; text-align: center; color: var(--apagado); }
 

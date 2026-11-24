@@ -1004,7 +1004,7 @@ contraseña de entrar: es una llave aparte que se puede anular sin tocar la cuen
   await comprobar('la wiki se lee del índice de RSC', () => {
     const temas = cerebro.catalogo();
     assert.deepEqual(temas.map((t) => t.id), ['facturacion', 'clientes']);
-    assert.equal(temas[0].etiqueta, 'Facturacion');
+    assert.equal(temas[0].etiqueta, 'Facturación');
     assert.equal(temas[1].articulos.length, 1, 'las filas de plantilla no cuentan');
     assert.equal(cerebro.cuantoSabe(), 3);
     return `${temas.length} temas · ${cerebro.cuantoSabe()} cosas`;
@@ -1240,7 +1240,7 @@ contraseña de entrar: es una llave aparte que se puede anular sin tocar la cuen
   // --------------------------------------------------------------- brújula
   await comprobar('la brújula traduce rutas a zonas del diccionario', () => {
     const dos = brujula.interpretar('files: 02-DOCS/wiki/facturacion/ciclo.md, 01-TOOLS/HOLDED/.env, .rsc/x');
-    assert.equal(dos, 'Conocimiento (Facturacion)', 'dos zonas no caben: se queda la primera');
+    assert.equal(dos, 'Conocimiento (Facturación)', 'dos zonas no caben: se queda la primera');
     const donde = brujula.interpretar('files: 01-TOOLS/HOLDED/.env, 01-TOOLS/GMAIL/.env');
     assert.equal(donde, 'Conexiones (Holded, Gmail)', 'dos del mismo sitio no repiten el rótulo');
     assert.equal(brujula.interpretar('(no local continuation for this branch/worktree)'), null);
@@ -1251,7 +1251,7 @@ contraseña de entrar: es una llave aparte que se puede anular sin tocar la cuen
     // partir del primer guardado— la brújula no decía dónde se había trabajado.
     assert.equal(
       brujula.interpretar('files: M 02-DOCS/wiki/facturacion/ciclo.md, M 01-TOOLS/HOLDED/.env'),
-      'Conocimiento (Facturacion)',
+      'Conocimiento (Facturación)',
       'una ruta marcada por git sigue siendo su zona',
     );
     assert.equal(
@@ -3662,6 +3662,142 @@ exec git "$@"
 
     montarMarca(empresa);
     return `${cabeceras.length} cabeceras, todas se arman`;
+  });
+
+  await comprobar('203: los colores de la empresa llegan a la barra: la seguridad de la página deja pasar su estilo, y solo ese', () => {
+    // La marca entraba como un `<style>` escrito dentro de la página, y la
+    // seguridad de la página (`style-src` solo con los ficheros de la barra)
+    // lo bloqueaba. En un VS Code de verdad la barra seguía con los colores de
+    // Executive Lab: salía el nombre de la empresa, y nada más. Ninguna prueba
+    // lo veía porque las fotos y esta prueba miraban la página sin su seguridad.
+    // Visto en Chromium, el motor de VS Code: «Refused to apply inline style».
+    const proveedor = vscode.registrado.proveedor;
+    const medios = vscode.Uri.joinPath(contexto.extensionUri, 'media');
+    const webview = {
+      cspSource: 'vscode-resource:',
+      asWebviewUri: (u) => ({ toString: () => `vscode-resource:${u.fsPath || u.path}` }),
+    };
+    const reglas = (pagina) => {
+      const csp = (pagina.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1];
+      assert.ok(csp, 'la página se deja la seguridad');
+      const deEstilo = (csp.split(';').map((d) => d.trim()).find((d) => d.startsWith('style-src ')) || '').split(/\s+/).slice(1);
+      return { deEstilo, csp };
+    };
+    const vistos = [];
+    for (const [que, preparar] of [
+      ['clara', () => montarMarca(empresa)],
+      ['oscura', () => montarMarca(empresa, { fondo: '#0d1117', texto: '#e6edf3', acento: '#22d3ee', logo: false })],
+      ['con su tipografía', () => montarMarca(empresa, { tipografia: 'grande' })],
+    ]) {
+      preparar();
+      const pagina = proveedor.html(webview, medios, marca.leer());
+      const { deEstilo } = reglas(pagina);
+      const estilos = [...pagina.matchAll(/<style\b([^>]*)>([\s\S]*?)<\/style>/g)];
+      assert.ok(estilos.some(([, , css]) => /--fondo:/.test(css)), `"${que}": la marca no lleva su estilo`);
+      for (const [, atributos] of estilos) {
+        const suyo = (atributos.match(/\bnonce="([^"]+)"/) || [])[1];
+        assert.ok(suyo, `"${que}": un estilo sin su contraseña, que la página bloquea`);
+        assert.ok(deEstilo.includes(`'nonce-${suyo}'`), `"${que}": la seguridad no deja pasar el estilo de la marca (${deEstilo.join(' ')})`);
+      }
+      assert.ok(!deEstilo.includes("'unsafe-inline'"), `"${que}": se deja pasar cualquier estilo, no solo el nuestro`);
+      vistos.push(que);
+    }
+    // Una contraseña por página: la de una no vale para la siguiente.
+    const una = proveedor.html(webview, medios, marca.leer());
+    const otra = proveedor.html(webview, medios, marca.leer());
+    assert.notEqual(reglas(una).csp, reglas(otra).csp, 'la contraseña se repite de una página a otra');
+    // Y sin marca de empresa, la seguridad sigue igual de cerrada.
+    cargar('tema').quitarla();
+    const nuestra = proveedor.html(webview, medios, marca.leer());
+    assert.ok(!reglas(nuestra).deEstilo.includes("'unsafe-inline'"), 'sin marca, se deja pasar cualquier estilo');
+    montarMarca(empresa);
+    return `${vistos.join(', ')}: el estilo pasa con su contraseña, y nada más`;
+  });
+
+  await comprobar('203: los temas de la wiki recuperan la tilde que les quita el nombre de carpeta, y nada más', () => {
+    // RSC escribe los temas como nombres de carpeta (`## facturacion`), y la
+    // barra los enseñaba tal cual: «Facturacion» en Conocimiento, en la brújula
+    // y en la foto. Solo se toca un nombre sin ninguna tilde, y solo lo que en
+    // español siempre la lleva. Las herramientas no pasan por aquí: un programa
+    // que se llame «Fusion» no pasa a «Fusión».
+    const { tildesDeTema } = cargar('limpio');
+    for (const [entra, sale] of [
+      ['Facturacion', 'Facturación'], ['Atencion al cliente', 'Atención al cliente'], ['Gestion de pedidos', 'Gestión de pedidos'],
+      ['Comunicacion e informacion', 'Comunicación e información'], ['Version y decision', 'Versión y decisión'],
+      ['Relaciones', 'Relaciones'], ['Clientes', 'Clientes'], ['Facturación', 'Facturación'],
+      ['Notion', 'Notion'], ['Automation', 'Automation'], ['Session', 'Session'], ['Mission', 'Mission'],
+      ['Facturacion de España', 'Facturacion de España'], ['FACTURACION', 'FACTURACION'],
+    ]) assert.equal(tildesDeTema(entra), sale, `«${entra}»`);
+    const temas = cargar('cerebro').catalogo().map((t) => t.etiqueta);
+    assert.ok(temas.includes('Facturación'), `el tema sale sin tilde: ${temas.join(', ')}`);
+    return `14 nombres; en la wiki: ${temas.join(', ')}`;
+  });
+
+  await comprobar('203: las migas de un artículo nombran su tema por su rótulo, no por su carpeta', async () => {
+    // Visto en las fotos de la 0.63: «Conocimiento › facturacion › Ciclo de
+    // facturación». El artículo recibía el tema por su nombre de carpeta.
+    const proveedor = vscode.registrado.proveedor;
+    const antes = proveedor.enviar;
+    let enviado = null;
+    proveedor.enviar = (m) => { enviado = m; };
+    try {
+      await proveedor.manejar({ tipo: 'leerArticulo', ruta: 'facturacion/ciclo.md', tema: 'facturacion', desde: 'cerebro' });
+    } finally {
+      proveedor.enviar = antes;
+    }
+    assert.equal(enviado && enviado.tipo, 'articulo', 'no se ha abierto el artículo');
+    assert.equal(enviado.nombreDelTema, 'Facturación', 'el artículo no lleva el rótulo de su tema');
+    const migas = (require('./panel-falso').montarPanel().mandar(enviado).match(/<nav class="migas">[\s\S]*?<\/nav>/) || [''])[0];
+    assert.match(migas, />Facturación</, `las migas no dicen el tema: ${migas}`);
+    assert.ok(!/>facturacion</.test(migas), 'las migas enseñan el nombre de la carpeta');
+    assert.match(migas, /&quot;tema&quot;:&quot;facturacion&quot;/, 'y el enlace sigue yendo a su tema');
+    return 'Conocimiento › Facturación › Ciclo de facturación';
+  });
+
+  await comprobar('203: con la marca de una empresa y el editor en oscuro, lo de encima, los campos y el código se leen', () => {
+    // La marca manda también con el editor en oscuro (su paleta entera). Pero
+    // tres reglas de la hoja tiraban de VS Code en oscuro: el botón al pasar por
+    // encima, los campos y el código. Con una marca clara, el texto oscuro de la
+    // marca caía sobre el gris oscuro de VS Code: contraste 1,23 al pasar por
+    // encima, medido en Chromium. Ahora van por fichas que la marca también fija.
+    const css = fs.readFileSync(path.join(RAIZ, 'media', 'panel.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const reglasCss = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, sel, cuerpo]) => [sel.trim(), cuerpo]);
+    // En oscuro, todo lo que sale de VS Code pasa por una ficha: ninguna regla
+    // pinta directamente con un color suyo fuera de los bloques de fichas.
+    for (const [sel, cuerpo] of reglasCss) {
+      if (!/vscode-dark/.test(sel)) continue;
+      for (const decl of cuerpo.split(';').map((d) => d.trim()).filter(Boolean)) {
+        if (decl.startsWith('--')) continue;
+        assert.ok(!/var\(--vscode-/.test(decl), `«${sel}» pinta con VS Code sin ficha, y una marca no lo puede fijar: ${decl}`);
+      }
+    }
+    const usa = (selector, propiedad, ficha) => reglasCss.some(([sel, cuerpo]) => sel.split(',').map((s) => s.trim()).includes(selector)
+      && new RegExp(`(^|;)\\s*${propiedad}\\s*:\\s*var\\(${ficha}[,)]`).test(cuerpo));
+    assert.ok(usa('button:hover', 'background', '--encima'), 'el botón, al pasar por encima, no usa su ficha');
+    assert.ok(usa('textarea.caja', 'background', '--campo') && usa('textarea.caja', 'color', '--campo-texto'), 'los campos no usan sus fichas');
+    assert.ok(usa('.codigo', 'background', '--codigo'), 'el código no usa su ficha');
+
+    const color = cargar('color');
+    const medidas = [];
+    for (const [que, opciones] of [
+      ['clara', {}],
+      ['oscura', { fondo: '#0d1117', texto: '#e6edf3', acento: '#22d3ee', logo: false }],
+      ['con acento amarillo', { acento: '#ffd400' }],
+    ]) {
+      montarMarca(empresa, opciones);
+      const t = marca.leer().tokens;
+      for (const [fondo, letra] of [['--encima', '--texto'], ['--campo', '--campo-texto'], ['--codigo', '--texto-fuerte']]) {
+        assert.ok(t[fondo] && t[letra], `"${que}": la marca no fija ${fondo} o ${letra}`);
+        const cuanto = color.contraste(t[fondo], t[letra]);
+        assert.ok(cuanto >= 4.5, `"${que}": ${letra} sobre ${fondo} no se lee (${cuanto.toFixed(2)})`);
+        medidas.push(cuanto);
+      }
+      // Y va en los dos bloques: el claro y el del editor en oscuro.
+      const bloqueOscuro = (marca.estilo(marca.leer()).match(/body\.vscode-dark\s*\{([^}]*)\}/) || [])[1] || '';
+      for (const ficha of ['--encima', '--campo', '--campo-texto', '--codigo']) assert.match(bloqueOscuro, new RegExp(`${ficha}:`), `"${que}": ${ficha} no llega al editor en oscuro`);
+    }
+    montarMarca(empresa);
+    return `tres marcas, contraste mínimo ${Math.min(...medidas).toFixed(1)}`;
   });
 
   await comprobar('el panel se ajusta al arnés conforme se monta', async () => {
@@ -9696,7 +9832,7 @@ exec git "$@"
         yaLeidos: cerebroM.yaLeidos(),
         hayPanel: cerebroM.hayPanel(),
         aviso: null,
-      }, /Facturacion|Lo que sabe|tema/i],
+      }, /Facturaci[oó]n|Lo que sabe|tema/i],
       ['conexiones', { tipo: 'conexiones', proveedores: conexiones.proveedores() }, /Holded/],
       ['copias', { tipo: 'copias', copias: [] }, /./],
       ['copiaFuera', { tipo: 'copiaFuera', github: { conectado: false, usuario: null, remoto: null } }, /Entrar en mi cuenta/],
@@ -19577,11 +19713,11 @@ exec git "$@"
 
       // Decisión 197. Cada grupo con su color y su leyenda, y los mandos para
       // moverse, que se mueven ahí mismo y no le piden nada a la extensión.
-      assert.deepEqual(m.grupos.map((g) => [g.id, g.etiqueta, g.puntos]), [['clientes', 'Clientes', 2], ['facturacion', 'Facturacion', 2]], 'los grupos no son las carpetas');
+      assert.deepEqual(m.grupos.map((g) => [g.id, g.etiqueta, g.puntos]), [['clientes', 'Clientes', 2], ['facturacion', 'Facturación', 2]], 'los grupos no son las carpetas');
       assert.deepEqual(m.nodos.map((n) => n.grupo), [0, 0, 1, 1], 'un punto no es de su grupo');
       assert.equal((html.match(/<circle class="g0"/g) || []).length, 2, 'los de Clientes no van con su color');
       assert.equal((html.match(/<circle class="g1"/g) || []).length, 2, 'los de Facturación no van con su color');
-      assert.match(html, /<ul class="foto-leyenda">[\s\S]*>Clientes <span class="puntos">2 conceptos<[\s\S]*>Facturacion <[\s\S]*<\/ul>/, 'sin leyenda, o el nombre y cuántos en dos columnas');
+      assert.match(html, /<ul class="foto-leyenda">[\s\S]*>Clientes <span class="puntos">2 conceptos<[\s\S]*>Facturación <[\s\S]*<\/ul>/, 'sin leyenda, o el nombre y cuántos en dos columnas');
       assert.doesNotMatch(html, /Lo demás/, 'sin nada fuera de los grupos, sale el gris');
       const mandos = (html.match(/<div class="foto-mandos">[\s\S]*?<\/div>/) || [''])[0];
       for (const que of ['acercar', 'alejar']) assert.match(mandos, new RegExp(`<button type="button" data-foto="${que}">`), `sin el mando ${que}`);
@@ -19651,7 +19787,7 @@ exec git "$@"
       assert.equal(suColor['clientes/ferreteria-soler.md'], suColor['clientes/talleres-ruiz.md'], 'dos del mismo grupo, de dos colores');
       assert.notEqual(suColor['clientes/ferreteria-soler.md'], suColor['facturacion/ciclo.md'], 'dos grupos, del mismo color');
       assert.deepEqual(dibujado.muestras, [suColor['clientes/ferreteria-soler.md'], suColor['facturacion/ciclo.md']], 'la leyenda no lleva el color de cada grupo');
-      for (const g of ['Clientes', 'Facturacion']) assert.ok(dibujado.textos.includes(g), `la leyenda de la foto no dice «${g}»`);
+      for (const g of ['Clientes', 'Facturación']) assert.ok(dibujado.textos.includes(g), `la leyenda de la foto no dice «${g}»`);
       // Los puntos, debajo de lo que dice arriba y dentro de la foto.
       assert.ok(dibujado.circulos.every((c) => c.arriba >= 130), 'un punto pisa lo que dice arriba de la foto');
       assert.ok(dibujado.circulos.every((c) => c.abajo <= dibujado.lienzo.height), 'un punto se sale por abajo de la foto');

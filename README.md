@@ -34,15 +34,15 @@ investigarla, y debajo de cada campo, de dónde se saca esa clave en concreto:
 ![La pantalla de una conexión, con su guía](docs/conexion.png)
 
 Y cuando la persona dice cuál es la web de su empresa, el panel deja de llevar nuestra marca y lleva
-la suya — mismos botones, sus colores, su logotipo:
+la suya — mismos botones, sus colores, su logotipo, clara u oscura:
 
-![El mismo panel con la marca de Executive Lab y con la de la empresa del alumno](docs/marca.png)
+![El mismo panel con la marca de Executive Lab, con la de una empresa clara y con la de una oscura](docs/marca.png)
 
 Y si la carpeta guarda varios proyectos, cada uno con su propio git —un monorepo como el de Executive
 Lab, con el arnés en la raíz y los proyectos en `03-PROYECTOS/`—, la barra los enseña en **Proyectos**.
 Dice cómo está cada uno: cambios sin guardar, copias sin subir y la rama. Trae un botón para trabajar en
-él y otro para ver su conocimiento, y guardarlo o subirlo se le encarga al asistente, que sigue las
-reglas de ese proyecto (decisión 195).
+él y, al lado, una (i) pequeña con su ficha, que se lee sin salir de la barra. Guardarlo o subirlo se le
+encarga al asistente, que sigue las reglas de ese proyecto (decisiones 195 y 202).
 
 ### La regla que ordena el panel
 
@@ -187,7 +187,7 @@ tamaño. Luego:
 ```bash
 cd "<su carpeta de trabajo>"
 
-npx @ericrisco/rsc@4.1.7 onboard \
+npx @ericrisco/rsc@4.1.9 onboard \
   --technical-level <non-technical|mixed|technical> \
   --project-kind <software|operations|research|content|mixed> \
   --goal "<lo que quiera conseguir, en sus palabras>" \
@@ -201,16 +201,16 @@ con un tamaño `complex` RSC cierra la rama principal al asistente. Ese comando 
 lo acepte, repite el mismo comando con los mismos flags y añade la huella **tal cual la imprimió**:
 
 ```bash
-npx @ericrisco/rsc@4.1.7 onboard ...los mismos flags... --accept-plan <huella>
+npx @ericrisco/rsc@4.1.9 onboard ...los mismos flags... --accept-plan <huella>
 ```
 
 Y deja la carpeta como la deja la barra (decisión 145): la rama principal abierta, y nada que salga
 del ordenador sin preguntar.
 
 ```bash
-npx @ericrisco/rsc@4.1.7 main unlock
-npx @ericrisco/rsc@4.1.7 knowledge-sync off
-npx @ericrisco/rsc@4.1.7 git-permissions off
+npx @ericrisco/rsc@4.1.9 main unlock
+npx @ericrisco/rsc@4.1.9 knowledge-sync off
+npx @ericrisco/rsc@4.1.9 git-permissions off
 ```
 
 Por último, los raíles de Executive Lab (idioma y vocabulario), que viajan dentro de la extensión:
@@ -236,7 +236,7 @@ ls .claude/skills/executive-lab/SKILL.md              # los raíles
 - **No enciendas la vista sencilla por tu cuenta.** Es un ajuste **por carpeta**
   (`executiveLab.vistaSencilla`) que reconfigura todo el editor. Lo decide esa persona, desde el
   botón de la barra o cuando el asistente se lo pregunte al terminar. Su editor es suyo.
-- **No uses `@latest` para RSC.** La barra trae la **4.1.7**, de la serie de la clase (decisión 145).
+- **No uses `@latest` para RSC.** La barra trae la **4.1.9**, de la serie de la clase (decisión 145).
   Subir de versión es una decisión que se toma, se contrasta y se escribe, nunca un efecto
   secundario de un `npm install`. Una carpeta que va por delante se trabaja con su versión, no se baja.
 - **No inventes las respuestas del onboarding.** Definen el tono, el idioma y las palabras con que el
@@ -274,7 +274,7 @@ Las tres llevan lo mismo, porque el arnés viaja en un solo sitio: dentro del `.
 |---|---|---|---|
 | Versión del panel | la de la release | la misma, dentro | la misma, dentro |
 | Tamaño | 6 MB | **6,8 MB** | **29 MB** |
-| Arnés RSC 4.1.7 | ✅ dentro del paquete | ✅ (dentro del `.vsix`) | ✅ (dentro del `.vsix`) |
+| Arnés RSC 4.1.9 | ✅ dentro del paquete | ✅ (dentro del `.vsix`) | ✅ (dentro del `.vsix`) |
 | Raíles | ✅ `media/railes/` | ✅ (dentro del `.vsix`) | ✅ (dentro del `.vsix`) |
 | Módulos compartidos | ✅ `media/comun/` | ✅ | ✅ |
 | Disfraz (`disfraz.json`) | ✅ | ✅ | ✅ |
@@ -330,7 +330,7 @@ git clone git@github.com:Executive-Lab/executive-vscode-interfaz.git
 cd executive-vscode-interfaz
 
 # El arnés que viaja dentro de la extensión NO está versionado. Antes de empaquetar:
-npm install --prefix extension/media/harness @ericrisco/rsc@4.1.7
+npm install --prefix extension/media/harness @ericrisco/rsc@4.1.9
 ```
 
 ### Probarlo
@@ -403,7 +403,7 @@ agentes); lo que monta RSC está en `.gitignore`. Lo que el equipo apagó (el fo
 otros) viaja en `.rsc.json`, y RSC lo vuelve a poner al montarlo en otra máquina. Para retomarlo:
 
 ```bash
-npx @ericrisco/rsc@4.1.7 sync
+npx @ericrisco/rsc@4.1.9 sync
 ```
 
 > La versión va fijada exacta a propósito, y está escrita en varios sitios —el paquete de la barra,
@@ -415,7 +415,8 @@ npx @ericrisco/rsc@4.1.7 sync
 > decisión 127. Y de la 2.0.15 a la 3.0.22 el 14 de octubre, porque la clase ya iba en la 3: P7 pasó a
 > ser «la serie de la clase», y lo que cambió está en la decisión 145. Y de la 3.0.22 a la 4.1.7 el 16 de
 > noviembre, con las salidas que lee la barra y el freno idénticos: lo que cambió, y cómo se pone al día una
-> carpeta de la 3, en la decisión 200.
+> carpeta de la 3, en la decisión 200. Y de la 4.1.7 a la 4.1.9 el 24 de noviembre, con las habilidades, el
+> freno y las salidas que lee la barra idénticos: dos arreglos de RSC y una conexión nueva, en la decisión 203.
 
 ---
 

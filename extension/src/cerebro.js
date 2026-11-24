@@ -18,13 +18,15 @@ const proyecto = require('./proyecto');
 const lecturas = require('./lecturas');
 const rutas = require('./rutas');
 const { quedaDentro } = require('./foto');
+const { tildesDeTema } = require('./limpio');
 
 const WIKI = ['02-DOCS', 'wiki'];
 const INBOX = ['02-DOCS', 'inbox'];
 
+// Con las tildes que el nombre de carpeta le quitó (decisión 203).
 function humanizar(texto) {
   const limpio = texto.replace(/[-_]+/g, ' ').trim();
-  return limpio.charAt(0).toUpperCase() + limpio.slice(1);
+  return tildesDeTema(limpio.charAt(0).toUpperCase() + limpio.slice(1));
 }
 
 // Con tope (decisión 188): `log.md` crece sin fin y `index.md` con cada
