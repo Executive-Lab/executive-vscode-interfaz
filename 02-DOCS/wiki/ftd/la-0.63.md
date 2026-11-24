@@ -55,7 +55,7 @@ Dos cosas:
 - [x] 9. Lo que tarda `refrescar`, medido.
 - [x] 10. Diccionario, decisión 203, constitución, versión 0.63.0, cierre de la 202.
 - [x] 11. Batería entera, contrato, empresas, `--con-arnes`, mapeos, PowerShell y VS Code de verdad.
-- [ ] 12. PR abierta, con GitHub en verde.
+- [x] 12. PR abierta, con GitHub en verde: #114.
 
 ## Evidence
 
@@ -89,10 +89,10 @@ Dos cosas:
   fusiona Jose. Revisión en línea, fichero por fichero: un comentario con un ejemplo que no venía al caso, corregido.
 
 - **No se corrió aquí.** `windows.js`, el `.exe` y el `.dmg`: en un Mac no se pueden probar, y los corre GitHub en la PR.
+- **12.** PR #114. GitHub en verde: Windows (6 min 47 s), el `.exe`, el `.dmg` y la barra en un VS Code de verdad.
 - **Cómo se deshace.** `git revert` del commit de la fusión. No hay datos que migrar: una carpeta que la 0.63 puso en
   la 4.1.9 va por delante de una barra 0.62, y esa barra trabaja ahí con la 4.1.9 sin bajarla (constitución, P7).
 
 ## Next
 
-- Abrir la PR y esperar a GitHub.
 - Jose: fusionar y publicar la 0.63.0. Con ella, cerrar #113 y la PR #108, que la 0.62 ya dejó atrás.
