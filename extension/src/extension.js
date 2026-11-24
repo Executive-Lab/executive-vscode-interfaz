@@ -282,7 +282,10 @@ class Panel {
     // la empresa bloqueando dominios.
     const csp = [
       "default-src 'none'",
-      `style-src ${webview.cspSource}`,
+      // Y el estilo de la marca, que va escrito en la página: con la misma
+      // contraseña de un solo uso que el guion. Sin ella, la página lo
+      // bloqueaba y los colores de la empresa no llegaban nunca (decisión 203).
+      `style-src ${webview.cspSource} 'nonce-${nonce}'`,
       `font-src ${webview.cspSource}`,
       `img-src ${webview.cspSource}`,
       `script-src 'nonce-${nonce}'`,
@@ -321,7 +324,7 @@ class Panel {
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <link rel="stylesheet" href="${uri('panel.css')}">
-${marca.estilo(suya)}
+${marca.estilo(suya, nonce)}
 </head>
 <body${enGrande ? ' class="en-grande"' : ''}>
 ${cabecera}
@@ -2685,7 +2688,10 @@ ${cabecera}
       }
     }
 
-    return this.enviar({ tipo: 'articulo', ...leido, tema, desde, hermanos, ruta });
+    // El tema, por su rótulo: las migas enseñaban el nombre de la carpeta,
+    // «facturacion» (decisión 203).
+    const nombreDelTema = tema ? ((cerebro.catalogo().find((t) => t.id === tema) || {}).etiqueta || null) : null;
+    return this.enviar({ tipo: 'articulo', ...leido, tema, nombreDelTema, desde, hermanos, ruta });
   }
 
   async abrirFuera(ruta) {

@@ -3848,7 +3848,7 @@ function pantallaTema({ tema }) {
 
 // El artículo, dentro del panel. La vista previa de VS Code enseñaría primero
 // su cabecera técnica, que es justo lo que aquí no se enseña nunca.
-function pantallaArticulo({ titulo, cuerpo, tema, enlaces, hermanos, desde }) {
+function pantallaArticulo({ titulo, cuerpo, tema, nombreDelTema, enlaces, hermanos, desde }) {
   // Desde la foto del cerebro se vuelve a la foto, también tras seguir un
   // enlace de dentro del artículo (decisión 151).
   const aLaFoto = { tipo: 'verLaFoto', desde: fotoDesde };
@@ -3868,7 +3868,7 @@ function pantallaArticulo({ titulo, cuerpo, tema, enlaces, hermanos, desde }) {
     : aLaPrincipal ? [{ etiqueta: 'Principal', accion: { tipo: 'volver' } }, { etiqueta: titulo }] : [
       { etiqueta: 'Conocimiento', accion: { tipo: 'verCerebro' } },
       desde === 'buscar' ? { etiqueta: `Buscando "${ultimaBusqueda}"`, accion: { tipo: 'buscar', texto: ultimaBusqueda } } : null,
-      tema && desde !== 'buscar' ? { etiqueta: tema, accion: { tipo: 'verTema', tema } } : null,
+      tema && desde !== 'buscar' ? { etiqueta: nombreDelTema || tema, accion: { tipo: 'verTema', tema } } : null,
       { etiqueta: titulo },
     ]);
 

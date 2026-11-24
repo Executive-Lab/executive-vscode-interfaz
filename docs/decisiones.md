@@ -9996,7 +9996,7 @@ apunta: panel de tres lentes, tres rondas, y ningún hallazgo abierto.
 
 ## 202. La 0.62: cinco arreglos tras usar la 0.61
 
-**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+**Fecha:** 16 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.62.0 · FTD
 `02-DOCS/wiki/ftd/la-0.62.md`
 
 Jose, 16-11, usando la 0.61 en su monorepo: *«haz la versión 62 con esos 5 puntos»*. La barra que se usa es la
@@ -10039,3 +10039,67 @@ lo que evita ofrecer otra vez algo que ya tiene carpeta.
 **Pruebas.** Cinco nuevas en `humo.js`, una por punto, vistas caer antes de escribir el arreglo. Cambian tres que ya
 estaban: la tabla de piezas, el orden de Ayuda y los botones de cada proyecto. En `empresas-distintas.js`, el tope de
 cosas a la vista pasa de cinco a seis (`TOPE`).
+
+## 203. La 0.63: la barra pasa a la 4.1.9, y un repaso entero antes de enseñarla
+
+**Fecha:** 24 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+`02-DOCS/wiki/ftd/la-0.63.md`
+
+Jose, 24-11: *«adapta la barra a la última versión de RSC y audita, revisa, corrige, mejora y optimiza todo que la
+vamos a enseñar la semana que viene en comunidad»*. Como en la 200, carril FTD. El repaso se hizo como lo verá la
+comunidad: la barra sencilla sobre una carpeta de alumno montada de verdad, pintada en un navegador con la seguridad
+de la página puesta, con nuestra marca, con la de una empresa clara y con la de una oscura, y con el editor en claro
+y en oscuro.
+
+**1. RSC 4.1.9.** De la 4.1.7 a la 4.1.9 hay dos arreglos internos de RSC (dónde para de buscar un `AGENTS.md` que
+tapa a otro, y dónde busca las pruebas de una revisión cuando se trabaja en un worktree) y una conexión nueva con un
+proveedor de modelos. Las habilidades, el freno y las salidas que lee la barra no cambian. La versión cambia en sus
+seis sitios, la copia del freno pasa a llamarse `freno-rsc-4.1.9.mjs` y `.rsc.json` se pone al día con el `sync` de
+la propia barra. El vigía avisó de la 4.1.8 (#113); la 4.1.9 salió después, y es la que entra.
+
+**2. Los colores de la empresa no llegaban a la barra.** Era el fallo más grave, y ninguna prueba lo veía. La
+seguridad de la página (`Content-Security-Policy`) solo dejaba pasar los estilos del fichero de la barra. La marca de
+la empresa va en un `<style>` dentro de la página, y la página lo bloqueaba: con la web de su empresa puesta, el
+alumno seguía viendo nuestra marca. Las pruebas leían el texto de la página, donde la marca sí estaba, y no lo que
+pinta un navegador. Ahora ese `<style>` lleva la contraseña de un solo uso de la página (`nonce`), y la seguridad deja
+pasar ese estilo y ningún otro: nada de `'unsafe-inline'`. Comprobado en Chromium, el mismo motor que VS Code, con la
+seguridad intacta: antes, nuestra marca; ahora, la de la empresa.
+
+**3. Con el editor en oscuro y una marca clara, al pasar por encima no se leía.** La marca manda también con el
+editor en oscuro, pero el botón al pasar por encima, los campos y los bloques de código seguían tomando el gris de VS
+Code. Con una marca clara, su texto oscuro caía sobre ese gris: contraste de 1,23, cuando lo mínimo es 4,5. Ahora son
+cuatro fichas (`--encima`, `--campo`, `--campo-texto`, `--codigo`). La marca las fija con sus colores; sin marca, son
+las de VS Code, como antes. Con la marca clara, el contraste pasa a 14,3. En alto contraste no cambia nada.
+
+**4. Los temas de la wiki recuperan la tilde.** Las carpetas no llevan tildes, y la barra enseñaba «Facturacion» o
+«Gestion de clientes». Ahora, si el nombre no trae ninguna letra con tilde, se la pone a las terminaciones en «-ción»
+y «-sión», y a «gestión» y «cuestión». Si el nombre ya trae alguna tilde, se respeta tal cual. Vale para los temas de
+`02-DOCS`, en el cerebro, en la tarjeta y en la foto. No se toca el nombre de las conexiones de `01-TOOLS`, que son
+nombres de programas.
+
+**5. Las migas de un artículo nombran su tema por su rótulo.** Encima de un artículo salía el nombre de la carpeta
+(«facturacion»), y ahora sale el del tema («Facturación»).
+
+**6. Un hueco en blanco dentro de la tarjeta.** Cuando un título de sección abría la tarjeta, se quedaba con el
+margen de arriba de los demás títulos. Pasaba encima de «Ayuda», «Las reglas» y diez más.
+
+**7. Código que no usaba nadie.** Fuera `apagadoSobre` (`color.js`) y `masApagadoQueSeLea` (`marca.js`).
+
+**8. Los README dicen lo que hay.** La barra no está en la tienda de extensiones: se instala desde su `.vsix` y luego
+se pone al día sola. El README decía que se buscaba en el editor. El nombre de la orden para quitar el aspecto es el
+de verdad («de todo el editor»). La parte de Proyectos cuenta la ficha de la (i), de las decisiones 195 y 202. Las
+cuatro capturas son de la barra de ahora, a doble resolución, y la de la marca enseña tres: la nuestra, una empresa
+clara y una oscura.
+
+**9. Rendimiento, medido.** Se cronometró cada paso de `refrescar` sobre la carpeta de alumno: el primer refresco
+tarda 1,4 s, y los siguientes, unos 0,3 s. Lo más lento es mirar la versión de RSC de la carpeta, que solo pesa la
+primera vez. No hay nada que optimizar que se note.
+
+**10. Cierre de la 202:** publicada en la 0.62.0, y su documento FTD, hecho.
+
+**Queda para el kit de marca:** un acento amarillo se oscurece hasta parecer mostaza, para que se lea sobre blanco.
+Se lee bien, pero no es el color de la empresa. Va con el trabajo del kit de marca, aparte.
+
+**Pruebas.** Cuatro nuevas en `humo.js`, con «203:» en el nombre: la seguridad deja pasar el estilo de la marca y
+solo ese; las tildes de los temas, en catorce casos; las migas con el rótulo, y el contraste de lo de encima, los
+campos y el código con tres marcas y el editor en oscuro. Cambian seis que esperaban «Facturacion» sin tilde.

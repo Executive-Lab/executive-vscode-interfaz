@@ -49,15 +49,6 @@ function hastaQueSeLea(color, encima, minimo = 4.5) {
   return null;
 }
 
-// Un gris apagado que se lea sobre el fondo: se acerca al texto hasta cumplir.
-function apagadoSobre(texto, fondo, minimo = 4.5) {
-  for (let parte = 60; parte >= 0; parte -= 5) {
-    const candidato = mezclar(texto, fondo, parte / 100);
-    if (contraste(candidato, fondo) >= minimo) return candidato;
-  }
-  return texto;
-}
-
 // ─────────────────────────────────────────────────── paletas tonales (M3)
 //
 // Jose pidió que la marca se adapte siguiendo Material Design. Esto es lo que
@@ -238,6 +229,6 @@ const ROJO = '#c62828';
 const deAviso = (base, oscura) => paletaTonal(base, 0.12)(oscura ? 75 : 40);
 
 module.exports = {
-  esColor, luz, contraste, mezclar, hastaQueSeLea, apagadoSobre, aHex, conAlfa, deAviso, VERDE, ROJO,
+  esColor, luz, contraste, mezclar, hastaQueSeLea, aHex, conAlfa, deAviso, VERDE, ROJO,
   aOklab, deOklab, paletaTonal, esquemaMaterial,
 };

@@ -172,7 +172,7 @@ const comoSeEscribe = (partes) => partes.join('/');
 // asistentes, y Codex no es uno. No es que estén en otro sitio — con Codex no
 // hay ninguno que leer, nunca. Así que se dice, en vez de dejarlos en una
 // carpeta muerta. La barra ya sabe explicar ese hueco (`donde.puedeTenerBotones`).
-// La copia del freno de RSC se llama por su versión (`freno-rsc-4.1.7.mjs`), y
+// La copia del freno de RSC se llama por su versión (`freno-rsc-4.1.9.mjs`), y
 // copiar la habilidad no borra nada: al subir de versión, la de antes se quedaba
 // en la carpeta sin que nadie la cargara (decisión 200). Se quita solo eso: un
 // `freno-rsc-<versión>.mjs` que ya no viaja con la habilidad, y que es un fichero,
@@ -558,7 +558,7 @@ hechos.push(callarLosAvisos());
 //
 // RSC solo engancha el suyo cuando el plan practica la cadena SDD, y en el resto
 // de carpetas de alumno nada paraba un `rm -rf`. La habilidad trae el
-// envoltorio y la copia fijada del de RSC (`freno.mjs` y `freno-rsc-4.1.7.mjs`,
+// envoltorio y la copia fijada del de RSC (`freno.mjs` y `freno-rsc-4.1.9.mjs`,
 // copiados en el paso 1); aquí se engancha antes de cada orden.
 //
 // La orden no lleva `.rsc/`: RSC quita todo enganche con esa aguja cuando

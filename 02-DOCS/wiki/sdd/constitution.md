@@ -96,6 +96,9 @@ Ahora:
 **16-11-2026, decisión 200.** La serie pasa a la 4: la barra trae la 4.1.7. Una 3 va por detrás y se pone
 al día sola, probado con una carpeta montada con la 3.0.22 de verdad.
 
+**24-11-2026, decisión 203.** La barra trae la 4.1.9. De la 4.1.7 a la 4.1.9 no cambian ni las habilidades,
+ni el freno, ni las salidas que lee la barra.
+
 **Se comprueba**: la versión tiene que decir lo mismo en todos los sitios donde está escrita. Además,
 una carpeta que va por delante se corre con su versión y no con la de la barra, y no sale ningún botón
 para bajarla.

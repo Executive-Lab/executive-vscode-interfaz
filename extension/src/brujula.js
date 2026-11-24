@@ -26,6 +26,7 @@ const cerebro = require('./cerebro');
 const asistentes = require('./asistentes');
 const porDondeIbas = require('./por-donde-ibas');
 const ultimaConversacion = require('./ultima-conversacion');
+const { tildesDeTema } = require('./limpio');
 
 // Git, para la pantalla sin arnés (decisión 165): si falta; si se puede poner al
 // pulsar Preparar, la línea que lo dice; si se está poniendo, y si sigue el
@@ -91,7 +92,7 @@ function zonasTocadas(rutas) {
       // El andamio del arnés no es un tema: tocar un documento de trabajo salía
       // «Conocimiento (Ftd)», y desde la decisión 160 eso se ve en la tarjeta del día.
       const tema = partes[1] === 'wiki' && partes[2] && !partes[2].includes('.') && !cerebro.esAndamio(partes[2]);
-      zonas.add(tema ? `${ZONAS['02-DOCS']} (${humanizar(partes[2])})` : ZONAS['02-DOCS']);
+      zonas.add(tema ? `${ZONAS['02-DOCS']} (${tildesDeTema(humanizar(partes[2]))})` : ZONAS['02-DOCS']);
     } else if (partes[0] === '01-TOOLS') {
       // Un fichero suelto en 01-TOOLS no es una herramienta. Sin esto, tocar
       // `01-TOOLS/README.md` salía como "Conexiones (Readme.md)", que no

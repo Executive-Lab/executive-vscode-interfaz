@@ -62,7 +62,7 @@ console.log('  media/railes/sitios.js (la tabla de cada asistente)');
 const arnes = path.join(AQUI, 'media', 'harness', 'node_modules', '@ericrisco', 'rsc', 'scripts', 'rsc.js');
 if (!fs.existsSync(arnes)) {
   console.error('\nFalta el arnés dentro de la extensión. Ponlo antes de empaquetar:');
-  console.error('  npm install --prefix extension/media/harness @ericrisco/rsc@4.1.7');
+  console.error('  npm install --prefix extension/media/harness @ericrisco/rsc@4.1.9');
   process.exit(1);
 }
 console.log('  media/harness/ (el arnés está)');

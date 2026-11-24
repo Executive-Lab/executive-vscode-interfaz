@@ -4,7 +4,7 @@ title: La 0.62
 date: 2026-11-16
 author: Jose Sanchis
 branch: la-0.62
-status: in-progress
+status: done
 ---
 
 # La 0.62
@@ -84,8 +84,11 @@ la sencilla. La completa sigue apagada, como copia de reserva (decisión 138).
   sin hallazgos. Jose eligió no lanzar un revisor independiente. La prueba de conexiones cae con tres roturas a mano
   (sin fichero de acceso, sin `.env`, sin filtrar).
 
+- **Publicada.** GitHub en verde en la PR #112: Windows, el `.exe`, el `.dmg` y la barra en un VS Code de verdad.
+  Jose: *«Fusiona tu»*, y la PR se fusionó (4c08c20). Jose: *«si, publica de una vez.»*, y salió la release
+  `v0.62.0` el 16-11-2026, con el `.vsix` y su huella. En el Mac, la prueba en un VS Code de verdad cayó dos
+  veces por tiempo en `refrescar` (más de 8 s) y pasó a la tercera, 9 de 9; la 0.61 tardaba lo mismo.
+
 ## Next
 
-- GitHub en verde en la PR #112 (Windows, el `.exe`, el `.dmg` y la barra en un VS Code de verdad).
-- Que Jose fusione la PR, o diga que la fusione yo.
-- Publicar la 0.62.0, con el sí de Jose.
+- Nada. Lo siguiente va en la 0.63 (`la-0.63.md`).

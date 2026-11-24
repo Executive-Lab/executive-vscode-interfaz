@@ -42,4 +42,19 @@ const invocacion = (declarado, id) => {
   return invocable(id) ? id : null;
 };
 
-module.exports = { INVOCABLE, invocable, etiqueta, invocacion };
+// El nombre de un tema de la wiki, con las tildes que le quitó ser carpeta
+// (decisión 203). RSC escribe los temas como `facturacion`, y la barra los
+// enseñaba así en Conocimiento, en la brújula y en la foto. Solo se toca un
+// nombre sin ninguna letra fuera del ASCII (si alguien escribió «Facturación»,
+// se queda), y solo lo que en español siempre lleva tilde: «-ción», «-sión»
+// (no «-ssion», que es inglés) y gestión y cuestión. Las herramientas no pasan
+// por aquí: un programa que se llame «Fusion» no pasa a «Fusión».
+function tildesDeTema(texto) {
+  const nombre = String(texto ?? '');
+  if (/[^\x00-\x7f]/.test(nombre)) return nombre;
+  return nombre
+    .replace(/(?<=[A-Za-z])(c|(?<!s)s)ion\b/g, '$1ión')
+    .replace(/\b([Gg]es|[Cc]ues)tion\b/g, '$1tión');
+}
+
+module.exports = { INVOCABLE, invocable, etiqueta, invocacion, tildesDeTema };
