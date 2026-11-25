@@ -79,7 +79,7 @@ Y con la 0.65 en marcha, tres peticiones más de Jose (decisión 206):
 - [x] 7. Las tres specs, con su estado de verdad.
 - [x] 8. Diccionario, decisiones 205 y 206, versión 0.65.0.
 - [x] 9. Batería entera, contrato, empresas, `--con-arnes`, mapeos, PowerShell y VS Code de verdad.
-- [ ] 10. PR abierta, con GitHub en verde.
+- [x] 10. PR abierta, con GitHub en verde.
 - [x] 11. Con tus palabras, en cada pregunta del montaje, hasta el asistente.
 - [x] 12. Claude y Codex al montar, con uno, con los dos y sin ninguno.
 - [x] 13. Con Codex, el encargo lo empieza él en su pestaña; uno por encargo; sin programa, como antes.
@@ -130,8 +130,8 @@ Y con la 0.65 en marcha, tres peticiones más de Jose (decisión 206):
   Las cifras del 9 son de una pasada entera después de este cambio, VS Code de verdad incluido.
 - **No se corrió aquí.** `windows.js`, el `.exe` y el `.dmg`: los corre GitHub en la PR. La pestaña con el Codex de
   verdad dentro del editor, y si el encargo sigue solo después de contestar la revisión de enganches: lo verá Jose.
-- **10.** PR #116. Con `4015f53`, GitHub en verde: `windows`, `el-exe`, `el-dmg` y `vscode-de-verdad`. Con el arreglo
-  del 15, en marcha.
+- **10.** PR #116. GitHub en verde con `4015f53` y otra vez con `6ffcc5f`, el del arreglo del 15: `windows` (7 min 32 s),
+  `el-exe`, `el-dmg` y `vscode-de-verdad` (ejecución 45645985394).
 - **Cómo se deshace.** `git revert` del commit de la fusión. Lo guardado de más (`conSusPalabras` en las respuestas)
   lo ignora una barra anterior.
 
