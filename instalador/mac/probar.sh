@@ -150,12 +150,19 @@ comprobar 'preparar.js tiene al lado lo que necesita' bash -c '
   echo "los cuatro módulos"'
 
 # Sin certificado Developer ID no se puede firmar, y en la máquina macOS de GitHub
-# no lo hay: ahí se anota que no se ha mirado, en vez de darla por mala. Todo lo
-# demás cuenta igual.
+# no lo hay: ahí no se pide la de Apple, pero sí la provisional (ad hoc), y válida.
+# Se reparte así desde el 25-11-2026, y con ella rota el Mac dice que la app está
+# dañada y no hay forma de abrirla: es lo que pasaba con el .dmg de la 0.64.0, y
+# esta comprobación lo daba por bueno porque se saltaba entera. Todo lo demás
+# cuenta igual.
 comprobar 'la app va firmada' bash -c '
   app="'"$AQUI"'/escenario/Instalar Executive Lab.app"
   [ -d "$app" ] || { echo "SALTADA"; exit 0; }
-  [ "'"$SIN_FIRMA"'" = "1" ] && { echo "SALTADA"; exit 0; }
+  if [ "'"$SIN_FIRMA"'" = "1" ]; then
+    codesign --verify --deep --strict "$app" >/dev/null 2>&1 \
+      || { echo "la firma provisional está rota: el Mac dirá que la app está dañada"; exit 1; }
+    echo "con la firma provisional, válida (la de Apple no se ha mirado)"; exit 0
+  fi
   quien="$(codesign -dv "$app" 2>&1 | grep "^Authority=" | head -1 | cut -d= -f2)"
   case "$quien" in
     "Developer ID"*) echo "$quien" ;;
@@ -308,7 +315,7 @@ echo
 # ────────────────────────────────────────────────────────────────── resumen
 
 echo
-[ "$SIN_FIRMA" = "1" ] && echo "  (la firma no se ha mirado: sin certificado en esta máquina)"
+[ "$SIN_FIRMA" = "1" ] && echo "  (la firma de Apple no se ha mirado: sin certificado en esta máquina; la provisional, sí)"
 printf '\033[1m%s bien · %s mal · %s sin venir a cuento\033[0m\n' "$BIEN" "$MAL" "$SALTADAS"
 echo "Informe: $INFORME"
 { echo; echo "$BIEN bien · $MAL mal · $SALTADAS saltadas"; } >> "$INFORME"

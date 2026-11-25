@@ -163,6 +163,15 @@ alumno no técnico eso es el final del recorrido, no un obstáculo. Y en macOS e
 Windows: desde macOS 15 ya no vale el clic derecho para saltárselo, hay que entrar en Ajustes del
 sistema → Privacidad y seguridad → *Abrir igualmente*.
 
+**Decisión del 25-11-2026 (Jose): se reparten sin firmar**, explicando a cada alumno cómo abrirlos la
+primera vez. En macOS eso solo funciona si la app lleva una firma provisional (ad hoc) **válida**:
+`construir.sh` la pone al final y comprueba que lo es. La del `.dmg` de la 0.64.0 estaba rota (osacompile
+firma el applet y lo que se le añade después la invalida): `syspolicy_check distribution` daba *Codesign
+Error, Fatal*, que en un Mac de verdad es «la app está dañada», sin botón para abrirla. Con la firma
+rehecha da *Adhoc Signed App, Warning*: el aviso de siempre, que se salta con *Abrir igualmente*.
+
+Lo de abajo sigue valiendo para el día que se quiera firmar.
+
 ### macOS — qué falta exactamente (17-09-2026)
 
 La cuenta de Apple Developer está, pero **los certificados que hacen falta no**. Lo que hay en este

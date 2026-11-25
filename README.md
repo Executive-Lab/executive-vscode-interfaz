@@ -100,9 +100,13 @@ panel cuando esa persona elige carpeta, igual que por el camino de la extensión
   Inno Setup (ver [instalador/README.md](instalador/README.md)).
 - **macOS:** `Executive Lab <version>.dmg`, **6,8 MB**. Node y el editor se descargan al instalar.
 
-⚠️ **Hoy no se reparten.** Ninguno de los dos está firmado, así que macOS los bloquea con Gatekeeper
-y Windows enseña *«Windows protegió tu PC»*. Antes de repartir cualquiera de los dos hay que
-firmarlo.
+⚠️ **Se reparten sin firmar** (Jose, 25-11-2026: firmarlos no compensa). La primera vez el ordenador
+pregunta, y se le dice a quien lo instala cómo seguir:
+
+- **macOS:** Ajustes del sistema › Privacidad y seguridad › *Abrir igualmente*. Para que salga ese
+  botón, la app lleva la firma provisional de macOS (ad hoc), puesta al final de `construir.sh`: sin
+  ella, el Mac dice que la app está dañada y no hay forma de abrirla.
+- **Windows:** *«Windows protegió tu PC»* › *Más información* › *Ejecutar de todas formas*.
 
 ### 3. Solo los raíles — sobre un RSC que ya existe
 
@@ -288,7 +292,7 @@ Las tres llevan lo mismo, porque el arnés viaja en un solo sitio: dentro del `.
 | Node | El que trae VS Code | Se descarga al instalar | `runtime/` dentro |
 | Instala VS Code | ❌ | ✅ (lo descarga) | ✅ (lo lleva dentro) |
 | Monta el arnés | El panel | El panel | El panel |
-| Firmado | No hace falta | ❌ pendiente | ❌ pendiente |
+| Firmado | No hace falta | Sin firmar, a propósito (firma provisional ad hoc) | Sin firmar, a propósito |
 
 Las tres se ponen al día igual, porque las tres acaban siendo el mismo `.vsix` instalado en el editor.
 Cuando hay una release más nueva, la barra lo dice arriba y **Actualizar ahora** la baja de GitHub,
