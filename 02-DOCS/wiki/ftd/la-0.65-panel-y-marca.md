@@ -56,7 +56,7 @@ Lo que se vio al mirarlo:
 - [x] 7. Diccionario y decisión 207.
 - [x] 8. Batería entera, `--con-arnes`, mapeos y VS Code de verdad, sobre el código final.
 - [ ] 9. Jose lo prueba en la ventana de prueba: la marca, y si el panel de Codex va enseñando lo que hace.
-- [ ] 10. PR abierta, con GitHub en verde.
+- [x] 10. PR abierta, con GitHub en verde.
 
 ## Evidence
 
@@ -85,8 +85,9 @@ Lo que se vio al mirarlo:
   de 31, `humo.js --con-arnes` 612 de 612, el diccionario y `revisar-powershell.js` (5 ficheros, sin pegas) y, en un
   VS Code de verdad (1.148.0, en el Mac), «todo bien», con la prueba de Codex en sus tres caminos (con número, sin
   número, sin su panel). Es la batería de `02-DOCS/wiki/sdd/config.yaml` entera, más la manual.
-- **No se corrió aquí.** `windows.js`, el `.exe` y el `.dmg`: los corre GitHub en la PR. El panel de Codex con un
-  encargo lanzado por la barra: lo verá Jose.
+- **No se corrió aquí.** El panel de Codex con un encargo lanzado por la barra: lo verá Jose.
+- **10.** PR #118. GitHub en verde con `5cde287`: `windows` (7 min 22 s), `el-exe`, `el-dmg` y `vscode-de-verdad`
+  (ejecución 45675074156).
 - **Revisión.** `rsc risk --base origin/main`: nivel 1, un revisor. Hecha en línea, fichero por fichero, sin
   revisores en segundo plano. Dejó los dos arreglos de arriba (el icono atado a su fichero, y lo de la web en el aviso
   del final del montaje). Sin arreglar, por menor: si dos partes del título contienen el dominio, gana la primera,
