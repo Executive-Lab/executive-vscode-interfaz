@@ -93,7 +93,7 @@ Lo que se vio al revisarla, con cinco marcas de prueba en claro y en oscuro:
   y una oscura con cian.
 - **8.** `node docs/comprobar-diccionario.js`: en verde. 0.64.0 en `extension/package.json` y en el instalador.
   Decisión 204 escrita; la 203, «publicado en la 0.63.0», y `la-0.63.md`, hecho.
-- **9.** Sobre el código final: `humo.js` HUMO_FINAL, `humo.js --con-arnes` 600 de 600, `contrato.js` 15 de 15, las tres
+- **9.** Sobre el código final: `humo.js` 590 de 590, `humo.js --con-arnes` 600 de 600, `contrato.js` 15 de 15, las tres
   empresas y la recién montada enteras, `mapeos-codex.js` 30 de 30, PowerShell sin pegas. En un VS Code de verdad
   (1.148.0, en el Mac), 9 de 9 a la primera, con la 0.64.0.
 - **Riesgo.** `rsc risk --base origin/main`: nivel 2, solo por `.claude/skills/executive-lab/SKILL.md`, una de las
