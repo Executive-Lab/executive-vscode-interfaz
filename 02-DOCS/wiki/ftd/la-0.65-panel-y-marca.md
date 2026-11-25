@@ -60,7 +60,10 @@ Lo que se vio al mirarlo:
 
 ## Evidence
 
-- **1.** En «al terminar de preparar la carpeta, la principal…», el orden marca → primer mensaje → GitHub.
+- **1.** En «al terminar de preparar la carpeta, la principal…», el orden marca → primer mensaje → GitHub. La
+  primera pasada entera dio un fallo: «al montar, las copias solas se dicen…» pide que el aviso acabe en «Dale a
+  enviar», y con la pregunta movida acababa en «Cuando quieras preparar la cuenta de GitHub…». Ahora lo que hay que
+  hacer se dice lo último (`mandarElPrimero(…, { sinDecirlo: true })`), y la prueba pasa.
 - **2.** «207: una web que no se abre se dice…»: el aviso exacto y su botón.
 - **3 y 4.** «207: el nombre de la marca es la parte del título que dice el dominio…»: «Stratton Apps», no su lema; el
   icono para móvil, sin placa.
