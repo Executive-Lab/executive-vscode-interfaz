@@ -63,7 +63,7 @@ Lo que se vio al revisarla, con cinco marcas de prueba en claro y en oscuro:
 - [x] 7. Las marcas de prueba (cinco, y una sexta con su tipografía), fotografiadas antes y después.
 - [x] 8. Diccionario, decisión 204, versión 0.64.0, cierre de la 203.
 - [x] 9. Batería entera, contrato, empresas, `--con-arnes`, mapeos, PowerShell y VS Code de verdad.
-- [ ] 10. PR abierta, con GitHub en verde.
+- [x] 10. PR abierta, con GitHub en verde: #115.
 
 ## Evidence
 
@@ -99,13 +99,16 @@ Lo que se vio al revisarla, con cinco marcas de prueba en claro y en oscuro:
 - **8.** `node docs/comprobar-diccionario.js`: en verde. 0.64.0 en `extension/package.json` y en el instalador.
   Decisión 204 escrita; la 203, «publicado en la 0.63.0», y `la-0.63.md`, hecho.
 - **9.** Sobre el código final: `humo.js` 591 de 591, `humo.js --con-arnes` 601 de 601, `contrato.js` 15 de 15, las tres
-  empresas y la recién montada enteras, `mapeos-codex.js` 30 de 30, PowerShell sin pegas. En un VS Code de verdad
-  (1.148.0, en el Mac), 9 de 9 a la primera, con la 0.64.0.
+  empresas y la recién montada enteras, y el diccionario. Antes de acortar el encargo, que no los toca:
+  `mapeos-codex.js` 30 de 30, PowerShell sin pegas y, en un VS Code de verdad (1.148.0, en el Mac), 9 de 9 a la
+  primera, con la 0.64.0. Sobre el código final, la barra en un VS Code de verdad pasó en GitHub.
 - **Riesgo.** `rsc risk --base origin/main`: nivel 2, solo por `.claude/skills/executive-lab/SKILL.md`, una de las
   tres copias de las reglas del asistente, que tiene que decir lo mismo que las otras dos. Revisión en línea, fichero
   por fichero: dos arreglos (el grosor con solo el nombre, y `cromaDe` en medio del comentario de otra función).
   Ningún nombre privado en lo añadido. La PR la fusiona Jose.
 - **No se corrió aquí.** `windows.js`, el `.exe` y el `.dmg`: en un Mac no se pueden probar, y los corre GitHub en la PR.
+- **10.** PR #115. La primera pasada cayó en Windows (punto 4b). La segunda, en verde: Windows (5 min 54 s), el `.exe`,
+  el `.dmg` y la barra en un VS Code de verdad.
 - **Cómo se deshace.** `git revert` del commit de la fusión. No hay datos que migrar: los campos nuevos del récord
   (`tipografia` con un nombre, `fuente`) los ignora una barra anterior, que pinta la marca como antes.
 
