@@ -139,7 +139,7 @@ function comoLoVeLaVista(hex) {
 // Los tres matices que Material saca de una marca: el del acento, y dos casi
 // grises que se tiñen de él lo justo para que todo parezca de la misma familia.
 // El croma de los neutros es más alto que el de Material a propósito: con el
-// suyo, el azul marino de Nexus Consulting salía negro, y eso no es adaptar los
+// suyo, el azul marino de Asesoría Norte salía negro, y eso no es adaptar los
 // colores de alguien, es perderlos.
 const CROMA_NEUTRO = 0.016;
 const CROMA_NEUTRO_VARIANTE = 0.035;
@@ -220,7 +220,7 @@ function esquemaMaterial({ acento, fondo, oscura }) {
     ? {
       superficie: fondo,
       // Las tarjetas suben, no bajan: en oscuro una tarjeta más oscura que la
-      // página se hunde en ella. Lo vio Jose con la marca de Nexus.
+      // página se hunde en ella. Lo vio Jose con la marca de Norte.
       tarjeta: N(apartado(7)),
       texto: queSeLea(N, [90, 94, 97, 100], [fondo, N(apartado(7))]),
       apagado: queSeLea(NV, [78, 84, 90, 95, 100], [fondo, N(apartado(7))]),

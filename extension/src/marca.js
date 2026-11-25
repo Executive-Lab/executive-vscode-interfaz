@@ -69,7 +69,7 @@ function nombreDeTipografia(valor) {
 // ¿El logotipo lleva el nombre de la empresa dentro, o es solo el símbolo?
 //
 // Importa porque un símbolo suelto en lo alto de la barra no dice de quién es
-// esto. El de Nexus Consulting es una ene de puntos: preciosa, y no se sabe de
+// esto. El de Asesoría Norte es una ene de puntos: preciosa, y no se sabe de
 // quién es. Si el logotipo no trae el nombre, el nombre se escribe al lado.
 //
 // Dos maneras de saberlo, en este orden:
@@ -110,7 +110,7 @@ function llevaElNombre(campos, fichero) {
 // Tres casos, y el tercero importa:
 //
 //   · Es un SVG y alguno de sus colores contrasta con el fondo → se ve, nada
-//     que hacer. Es el caso de la ene de Nexus Consulting sobre su azul marino.
+//     que hacer. Es el caso de la ene de Asesoría Norte sobre su azul marino.
 //   · Es un SVG y ninguno contrasta → plaquita.
 //   · No se puede medir (un PNG, un JPG) → plaquita **solo si el fondo es
 //     oscuro**. Un logotipo se diseña para papel y para webs blancas, así que
@@ -269,7 +269,7 @@ const GRUPOS_EN_OSCURO = { '--grupo-1': '#ec4429', '--grupo-2': '#3987e5', '--gr
 // marca el fondo y se queda solo con los acentos. Se puso por una razón buena:
 // una isla color crema dentro de un editor negro queda fatal.
 //
-// Pero esa razón no vale cuando **la marca ya es oscura**. La de Nexus
+// Pero esa razón no vale cuando **la marca ya es oscura**. La de Norte
 // Consulting es azul marino con cian: ahí la regla estaba tirando a la basura
 // justo los colores que encajaban. Así que si el fondo de la empresa es oscuro,
 // manda su fondo también con tema oscuro.

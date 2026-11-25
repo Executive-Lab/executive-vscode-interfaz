@@ -65,8 +65,8 @@ const TOPE = 128 * 1024;
 
 // ── Lo de una aplicación está en su sitio ────────────────────────────────
 //
-// Jose, 29-09-2026, con una captura de nexus-presupuestos: «Hay 9 claves fuera
-// de sitio» — Resend, Supabase, y NEXUS y USE «por montar», que no son nadie.
+// Jose, 29-09-2026, con una captura de norte-presupuestos: «Hay 9 claves fuera
+// de sitio» — Resend, Supabase, y NORTE y USE «por montar», que no son nadie.
 // Estaban en `03-APP/.env.local`, que es donde las lee la aplicación de esa
 // carpeta: Next.js carga los `.env*` de su propia carpeta y de ningún otro
 // sitio. Llevarlas a `01-TOOLS` la dejaba sin arrancar.

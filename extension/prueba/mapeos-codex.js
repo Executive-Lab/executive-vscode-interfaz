@@ -33,6 +33,9 @@ beforeEach(() => {
   vscode.registrado.ejecutados.length = 0;
   vscode.registrado.mensajes.length = 0;
   cargar('asistentes').saberDondeGuardar(null);
+  // El codex del ordenador de quien corre esto no cuenta (decisión 206): sin
+  // programa, con Codex se va al portapapeles, que es lo que miran estas pruebas.
+  cargar('asistentes').terminal.programaEnElPath = () => null;
   declaracion();
 });
 afterEach(() => { fs.rmSync(raiz, { recursive: true, force: true }); });
@@ -183,7 +186,8 @@ test('los raíles respetan el override de otra persona y se apuntan allí con su
   assert.ok(!cargar('terreno').loQueFaltaPorPoner().includes('Cómo se trabaja aquí'));
 });
 
-test('Codex recibe el texto entero por el portapapeles y el atajo de cada sistema', async () => {
+// Sin su programa (decisión 206), por el portapapeles.
+test('Codex, sin su programa, recibe el texto entero por el portapapeles y el atajo de cada sistema', async () => {
   const puente = cargar('puente');
   for (const [plataforma, atajo] of [['darwin', 'Cmd+V'], ['win32', 'Ctrl+V'], ['linux', 'Ctrl+V']]) {
     const texto = 'Prepara el informe con sus tildes.\n'.repeat(300);
@@ -240,18 +244,55 @@ test('los raíles no escriben a través de un override enlazado', { skip: proces
   } finally { fs.rmSync(fuera, { recursive: true, force: true }); }
 });
 
+// Decisión 206: con su programa, Codex se pone a trabajar con el encargo, en su
+// pestaña. Uno que no cabe va a un fichero, como siempre, y se le da la línea que lo
+// nombra: nada al portapapeles.
+test('con su programa, Codex trabaja el encargo en su pestaña, y uno largo le llega por su fichero', async () => {
+  const puente = cargar('puente');
+  const pedidos = cargar('pedidos');
+  const suya = fs.mkdtempSync(path.join(os.tmpdir(), 'extension-de-codex-'));
+  const sistema = { darwin: 'macos', win32: 'windows', linux: 'linux' }[process.platform];
+  const procesador = { x64: 'x86_64', arm64: 'aarch64' }[process.arch];
+  const programa = path.join(suya, 'bin', `${sistema}-${procesador}`, process.platform === 'win32' ? 'codex.exe' : 'codex');
+  fs.mkdirSync(path.dirname(programa), { recursive: true });
+  fs.writeFileSync(programa, '');
+  vscode.guion.rutasDeExtensiones = { 'openai.chatgpt': suya };
+  poner('.gitignore', `${require(path.join(extension, 'media', 'railes', 'no-entra-en-git.js')).elBloque()}\n`);
+  poner('02-DOCS/wiki/index.md', '# Índice\n');
+  try {
+    vscode.registrado.terminales.length = 0;
+    vscode.registrado.portapapeles = '';
+    const texto = 'Prepara el informe con sus tildes.\n'.repeat(300);
+    assert.equal(await puente.enviar(texto, null, { plataforma: 'win32' }), 'trabajando');
+    const [pestana] = vscode.registrado.terminales;
+    assert.equal(pestana.opciones.shellPath, programa);
+    const [sinServidor, guiones, linea] = pestana.opciones.shellArgs;
+    assert.equal(sinServidor, '--no-daemon', 'el de su extensión se cae sin esa opción');
+    assert.equal(guiones, '--');
+    const ruta = (linea.match(/02-DOCS\/raw\/pedidos\/\S+?\.md/) || [])[0];
+    assert.ok(ruta, `no le da la línea del fichero: ${linea}`);
+    assert.equal(linea, pedidos.laLinea(ruta));
+    assert.equal(fs.readFileSync(path.join(raiz, ...ruta.split('/')), 'utf8'), `${texto.trim()}\n`, 'el fichero no lleva el encargo');
+    assert.equal(vscode.registrado.portapapeles, '', 'lo copia igual');
+  } finally {
+    vscode.guion.rutasDeExtensiones = {};
+    fs.rmSync(suya, { recursive: true, force: true });
+  }
+});
+
+// Decisión 206: primero «New Codex Agent», un panel nuevo cada vez, para tener varias a la vez.
 test('conversación nueva usa los comandos reales de Codex y prueba el repuesto si falla', async () => {
   const puente = cargar('puente');
   assert.equal(await puente.conversacionNueva(), true);
-  assert.deepEqual(vscode.registrado.ejecutados.map((e) => e.id), ['chatgpt.newChat']);
+  assert.deepEqual(vscode.registrado.ejecutados.map((e) => e.id), ['chatgpt.newCodexPanel']);
   const ejecutar = vscode.commands.executeCommand;
   try {
     vscode.commands.executeCommand = async (id, ...args) => {
-      if (id === 'chatgpt.newChat') throw new Error('no está disponible');
+      if (id === 'chatgpt.newCodexPanel') throw new Error('no está disponible');
       return ejecutar(id, ...args);
     };
     assert.equal(await puente.conversacionNueva(), true);
-    assert.equal(vscode.registrado.ejecutados.at(-1).id, 'chatgpt.newCodexPanel');
+    assert.equal(vscode.registrado.ejecutados.at(-1).id, 'chatgpt.newChat');
     vscode.guion.comandosDeCodex = [];
     assert.equal(await puente.conversacionNueva(), false);
   } finally { vscode.commands.executeCommand = ejecutar; }

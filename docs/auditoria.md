@@ -326,7 +326,7 @@ reparto final, que es el que va en el `.exe` de las 17:21:
 | Qué | Dónde se escribe | Por qué |
 |---|---|---|
 | Lo que se ve (28 ajustes) y el interruptor | `.vscode/settings.json` **de la carpeta** | Otra ventana con cualquier otra cosa no se entera |
-| El rótulo | La misma, con los nombres que puso el alumno | «Contabilidad · Nexus Consulting», no un genérico |
+| El rótulo | La misma, con los nombres que puso el alumno | «Contabilidad · Asesoría Norte», no un genérico |
 | Confianza, actualizaciones, telemetría, recomendaciones | Los ajustes del editor | VS Code no admite otro ámbito, y ninguno cambia el aspecto |
 | **El zoom** | **En ningún sitio** | Es de ámbito de programa: agrandaría todas las ventanas. La letra grande la pone el panel en su CSS |
 

@@ -27,12 +27,16 @@
 //     cogerla, abre otra. Llamarlo justo después de mandar el texto era lo que
 //     le dejaba a Jose una conversación vacía encima de la buena.
 //
-//   CODEX (openai.chatgpt 26.1007.21434, contrastado el 15-10-2026)
-//     No expone NINGÚN comando que acepte texto. `chatgpt.addToThread` manda la
-//     selección del editor, no lo que le pases, y `chatgpt.implementTodo`
-//     llega enmarcado como "implementa este TODO". Así que con Codex los
-//     botones abren su barra y dejan el texto en el portapapeles, avisando.
-//     El día que añadan uno, se pone en `envio` y todo lo demás ya funciona.
+//   CODEX (openai.chatgpt 26.1120.50957, leído el 25-11-2026)
+//     Su barra no deja escribirle desde fuera: ningún comando acepta texto
+//     (`chatgpt.addToThread` y `addFileToThread` solo adjuntan ficheros, y
+//     `chatgpt.implementTodo` llega enmarcado como "implementa este TODO"), y su
+//     enlace lleva a su barra y tira lo que se le pasa: la caja de inicio no lee
+//     `prompt` (probado en la máquina de Jose el 25-11-2026: Codex abierto, la caja
+//     vacía). Pero trae su propio programa, y ese sí acepta un encargo al
+//     arrancar. Así que con Codex el encargo se le da a ese programa, en una
+//     pestaña nueva del editor, y se pone a trabajar (decisión 206,
+//     `arranqueDeCodex` y `puente.js`). Sin programa, al portapapeles, avisando.
 
 const vscode = require('vscode');
 const proyecto = require('./proyecto');
@@ -64,10 +68,12 @@ const ASISTENTES = [
     enlace: null,
     parametro: null,
     abrir: ['chatgpt.openSidebar'],
-    // `chatgpt.newChat`, el que documenta Codex para su extensión (decisión 144);
-    // El panel nuevo es el repuesto comprobado en su extensión. Sin ninguno,
-    // se abre su barra y se dice dónde está el «+».
-    nueva: ['chatgpt.newChat', 'chatgpt.newCodexPanel'],
+    // «New Codex Agent» (`chatgpt.newCodexPanel`) abre un panel nuevo cada vez, así
+    // que se pueden tener varias trabajando a la vez (decisión 206, Jose: «el truco
+    // del new agent»). `chatgpt.newChat`, el que documenta Codex (decisión 144),
+    // cambia la de su barra, que es una sola: va de repuesto. Sin ninguno, se abre
+    // su barra y se dice dónde está el «+».
+    nueva: ['chatgpt.newCodexPanel', 'chatgpt.newChat'],
     foco: ['chatgpt.openSidebar'],
   },
 ];
@@ -95,7 +101,59 @@ const terminal = {
     return false;
   },
   haySesion: () => require('./sesion-del-asistente').sesionDeCodex() === 'si',
+  // El `codex` del PATH que se puede abrir tal cual, con su ruta entera, o null
+  // (decisión 206). En Windows solo un `.exe`: un `.cmd` pasa por `cmd.exe`, que
+  // reinterpreta el encargo (`&`, `%`, `"`), y el encargo puede llevar lo que
+  // escribió la persona.
+  programaEnElPath(nombre) {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const sufijo = process.platform === 'win32' ? '.exe' : '';
+    for (const carpeta of String(process.env.PATH || '').split(path.delimiter).filter(Boolean)) {
+      const programa = path.join(carpeta, nombre + sufijo);
+      try {
+        if (!fs.statSync(programa).isFile()) continue;
+        fs.accessSync(programa, fs.constants.X_OK);
+        return programa;
+      } catch { /* ahí no está, o no se puede abrir */ }
+    }
+    return null;
+  },
 };
+
+// ── El programa de Codex (decisión 206) ──────────────────────────────────
+//
+// Su extensión trae el programa entero, el mismo Codex con la misma cuenta
+// (`~/.codex`), en `bin/<sistema>-<procesador>/`. Así lo busca ella misma: leído
+// en openai.chatgpt 26.1120.50957 el 25-11-2026. Ese programa acepta un encargo
+// al arrancar (`codex [PROMPT]`) y se pone a trabajar, que es lo que su barra no
+// deja hacer desde fuera (`puente.js`). Si no está ahí, el `codex` del ordenador
+// (decisión 190). Sin ninguno, null.
+//
+// Devuelve el programa y las opciones con que arranca. El de su extensión, con
+// `--no-daemon`: viene suelto, sin el paquete que pide su servidor de fondo, y sin
+// esa opción se cae nada más abrir («this CLI has no complete local package»).
+// Probado con un encargo de verdad en el Codex de Jose el 25-11-2026 (0.171.0):
+// sin ella, la caja y el error; con ella, el encargo hecho. El del ordenador es un
+// paquete completo y arranca como siempre: ni hace falta, ni se arriesga a que uno
+// antiguo no conozca la opción.
+const SISTEMA_DE_CODEX = { darwin: 'macos', win32: 'windows', linux: 'linux' };
+const PROCESADOR_DE_CODEX = { x64: 'x86_64', arm64: 'aarch64' };
+function arranqueDeCodex({ plataforma = process.platform, arquitectura = process.arch } = {}) {
+  const codex = porId('codex');
+  const suya = vscode.extensions.getExtension(codex.extension);
+  const sistema = SISTEMA_DE_CODEX[plataforma];
+  const procesador = PROCESADOR_DE_CODEX[arquitectura];
+  if (suya && suya.extensionPath && sistema && procesador) {
+    const path = require('node:path');
+    const programa = path.join(suya.extensionPath, 'bin', `${sistema}-${procesador}`, plataforma === 'win32' ? 'codex.exe' : 'codex');
+    try {
+      if (require('node:fs').statSync(programa).isFile()) return { programa, opciones: ['--no-daemon'] };
+    } catch { /* su extensión no lo trae aquí */ }
+  }
+  const delOrdenador = terminal.programaEnElPath('codex');
+  return delOrdenador ? { programa: delOrdenador, opciones: [] } : null;
+}
 const enTerminal = (a) => Boolean(a) && a.id === 'codex' && (terminal.hayEnElPath('codex') || terminal.haySesion());
 
 // Lo tiene puesto en este ordenador, de una forma o de otra. Lo que necesita la
@@ -337,4 +395,4 @@ async function elegir(id, { montar } = {}) {
   return { ok: true, mensaje: `Hecho. A partir de ahora los botones hablan con ${cual.nombre}.${conOtroNombre}${sinFrenos}` };
 }
 
-module.exports = { ASISTENTES, saberDondeGuardar, conQuien, elDeAhora, losDelArnes, estaInstalado, estaPuesto, REABRIR, paraQueLoCoja, enTerminal, terminal, porId, falta, comoEstamos, elegir, AJUSTE, VALORES_DEL_AJUSTE, elAjuste, seguirCon };
+module.exports = { ASISTENTES, saberDondeGuardar, conQuien, elDeAhora, losDelArnes, estaInstalado, estaPuesto, REABRIR, paraQueLoCoja, enTerminal, terminal, arranqueDeCodex, porId, falta, comoEstamos, elegir, AJUSTE, VALORES_DEL_AJUSTE, elAjuste, seguirCon };

@@ -15,7 +15,7 @@ const entorno = require('./entorno');
 // La versión que trae la barra, y el último recurso si .rsc.json no dice ninguna.
 // Se actualiza a mano, a propósito: subir de versión es una decisión, no un
 // efecto secundario.
-const VERSION_DE_RESPALDO = '4.1.9';
+const VERSION_DE_RESPALDO = '4.2.0';
 
 // Cómo es una versión frente a la que trae la barra (P7, decisión 145: la serie
 // de la clase, y la lleva la barra):

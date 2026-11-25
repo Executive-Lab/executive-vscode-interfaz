@@ -363,9 +363,9 @@ Con sus palabras: *«puede ser un arnés para llevar contabilidad, o solo rrhh, 
 solo el dpto de marketing»*. Y una empresa puede tener cuatro.
 
 Ahora el alumno pone **dos nombres** cuando dice para qué va a ser: cómo se llama esto (*Contabilidad*)
-y cómo se llama su empresa (*Nexus Consulting*). Viven en el frontmatter de
+y cómo se llama su empresa (*Asesoría Norte*). Viven en el frontmatter de
 `02-DOCS/wiki/harness/user-profile.md`, junto a los diales, y de ahí salen el rótulo de la ventana
-—«Contabilidad · Nexus Consulting»—, el nombre de la carpeta que crea el instalador y los textos del
+—«Contabilidad · Asesoría Norte»—, el nombre de la carpeta que crea el instalador y los textos del
 panel —«Lo que sabe de Contabilidad»—.
 
 Sin nombre puesto se tira del de la carpeta; sin eso, la interfaz funciona sin nombrar nada. Es
@@ -946,11 +946,11 @@ Hay una prueba que se asegura de que siguen ahí después de tocar el dial.
 
 **Fecha:** 18 de septiembre de 2026 · **Estado:** decidido
 
-Jose, con la barra de Nexus Consulting delante: *«hay alguna forma de ajustar también los colores a
+Jose, con la barra de Asesoría Norte delante: *«hay alguna forma de ajustar también los colores a
 la web, y que el logo si no es logo que incluya el título se ponga el título?»*.
 
 Y tenía delante la prueba: arriba del todo, una ene de puntos preciosa que no dice de quién es eso.
-En su web esa ene nunca va sola — va con «NEXUS CONSULTING» al lado. Nosotros la habíamos recortado.
+En su web esa ene nunca va sola — va con «ASESORÍA NORTE» al lado. Nosotros la habíamos recortado.
 
 ### Cómo se sabe si el logotipo lleva el nombre dentro
 
@@ -977,7 +977,7 @@ dibujo anónimo, que es peor. El default va al lado seguro.
 quedaba solo con los acentos. La razón era buena: una isla color crema dentro de un editor negro
 queda fatal.
 
-Pero esa razón **no vale cuando la marca ya es oscura**. La de Nexus Consulting es azul marino con
+Pero esa razón **no vale cuando la marca ya es oscura**. La de Asesoría Norte es azul marino con
 cian: ahí la regla estaba tirando a la basura justo los colores que encajaban. Así que si el fondo
 de la empresa es oscuro, manda su fondo también con tema oscuro.
 
@@ -1020,7 +1020,7 @@ sabe de X · Lo que aún no sabe · Lo que sabe a medias.*
 
 Ese era el problema, más que lo abstracto: **eran preguntas sobre lo que sabe la máquina, no nombres
 de cosas.** Cuando once rótulos arrancan con "Qué…", ninguno destaca y hay que leer la frase entera
-para distinguirlos. Y un contador al lado no salva nada: "Lo que sabe de Nexus · 7" — ¿siete qué?
+para distinguirlos. Y un contador al lado no salva nada: "Lo que sabe de Norte · 7" — ¿siete qué?
 
 ### La regla
 
@@ -1399,7 +1399,7 @@ que se vea bien»*. Y antes, con su barra delante: *«falta ajustar colores dark
 ### Lo que estaba mal
 
 Cada color se sacaba mezclando a mano, y cada caso raro había que arreglarlo por separado. Con su
-marca de Nexus Consulting salían dos cosas feas a la vez:
+marca de Asesoría Norte salían dos cosas feas a la vez:
 
 - **Las tarjetas se hundían en la página.** Con fondo claro se acercaban al blanco, bien; con fondo
   oscuro se hacía lo simétrico —acercarlas al negro— y ahí lo simétrico es lo contrario de lo
@@ -1418,7 +1418,7 @@ Material. Cabe en cincuenta líneas y no trae ninguna dependencia.
 
 **Una desviación de Material, y conviene saber cuál:** Material fija el fondo en el tono 98 en claro
 y el 6 en oscuro, vengas de donde vengas. Aquí el fondo es **el que eligió la empresa**, y el resto
-se coloca a las distancias de Material contando desde él. Con el suyo, el azul marino de Nexus salía
+se coloca a las distancias de Material contando desde él. Con el suyo, el azul marino de Norte salía
 negro — cumpliría contraste y no sería la marca de nadie.
 
 ### Un fondo que no admite texto se descarta, y se dice
@@ -1519,7 +1519,7 @@ del programa, que es lo último que quiere ver quien acaba de mirar sus facturas
 
 **Fecha:** 18 de septiembre de 2026 · **Estado:** decidido
 
-Jose, con su carpeta de Nexus Consulting: *«he vuelto al modo sencillo y me carga los putos colores
+Jose, con su carpeta de Asesoría Norte: *«he vuelto al modo sencillo y me carga los putos colores
 de executivelab»*.
 
 Y era literal. El disfraz traía dos cosas escritas a fuego:
@@ -1567,7 +1567,7 @@ que ha hecho** (sale).
 
 **Fecha:** 18 de septiembre de 2026 · **Estado:** decidido
 
-Jose, con la barra de Nexus Consulting a medio pintar: *«sigue sin cargar bien algunas cosas de la
+Jose, con la barra de Asesoría Norte a medio pintar: *«sigue sin cargar bien algunas cosas de la
 marca. Botones marrones y rojos»*.
 
 Tres causas, y la tercera es la que da miedo:
@@ -1758,7 +1758,7 @@ detrás. Y solo cuando hace falta:
 
 | El logotipo | Qué se hace |
 |---|---|
-| Es un SVG y alguno de sus colores se distingue del fondo | Nada. Es el caso de la ene de Nexus sobre su azul marino |
+| Es un SVG y alguno de sus colores se distingue del fondo | Nada. Es el caso de la ene de Norte sobre su azul marino |
 | Es un SVG y ninguno se distingue | Plaquita, del lado contrario al logotipo: clara si es oscuro, oscura si es claro |
 | No se puede medir (PNG, JPG) | Plaquita solo sobre fondo oscuro |
 
@@ -4463,7 +4463,7 @@ críticos y cinco importantes, y están todos arreglados con su prueba:
   manda si le parece bien.
 - **Un doble clic abría dos incidencias.** El aviso se coge y se suelta antes de esperar a nada.
 - **«casa» o «Contabilidad» se tapaban en medio de la frase.** El nombre de la carpeta y el de esto
-  solo se tapan si son más de una palabra (`nexus-consulting`, «Proyecto Nexus»). La empresa se tapa
+  solo se tapan si son más de una palabra (`asesoria-norte`, «Proyecto Norte»). La empresa se tapa
   siempre.
 - **Las carpetas de la red de la oficina** (`\\NAS\recurso\…`) y **las claves de Stripe** (`sk_live_…`)
   pasaban tal cual.
@@ -4730,8 +4730,8 @@ Un refutador de seguridad y otro de corrección. No encontraron nada crítico. L
 
 **Fecha:** 29 de septiembre de 2026 · **Estado:** decidido
 
-Jose, con una captura de nexus-presupuestos: *«Hay 9 claves fuera de sitio»*: Resend, Supabase, y
-dos conexiones «por montar» que no eran de nadie, NEXUS y USE. Y su diagnóstico: *«creo que es
+Jose, con una captura de norte-presupuestos: *«Hay 9 claves fuera de sitio»*: Resend, Supabase, y
+dos conexiones «por montar» que no eran de nadie, NORTE y USE. Y su diagnóstico: *«creo que es
 porque al ser una app y tener una app se guarda también ahí en el .env.local»*. Era eso. Estaban en
 `03-APP/.env.local`, que es donde las lee la aplicación de esa carpeta: Next.js carga los `.env*` de
 su propia carpeta y de ningún otro sitio. «Que las ordene» mandaba al asistente a llevarlas a
@@ -4746,7 +4746,7 @@ regla.
 ### Lo que cambia
 
 - `sueltas.js` salta las carpetas de primer nivel que son una aplicación, para las claves y para
-  los ficheros de acceso. En nexus-presupuestos, el aviso desaparece entero.
+  los ficheros de acceso. En norte-presupuestos, el aviso desaparece entero.
 - Una herramienta que espera una clave que la aplicación también tiene ya no sale «puesta, pero
   fuera de su sitio»: le falta la suya. Es la misma clave con dos sitios que la leen, y cada uno la
   lleva donde la lee.
@@ -10106,7 +10106,7 @@ campos y el código con tres marcas y el editor en oscuro. Cambian seis que espe
 
 ## 204. La 0.64: la marca de la empresa entera, y una barra de la que partir
 
-**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.64.0 · FTD
 `02-DOCS/wiki/ftd/la-0.64.md`
 
 Jose, 16-11: *«asegurar que lo del kit de marca funciona y funciona bien. Para que se ponga con el logo, y con los
@@ -10191,3 +10191,133 @@ lee, no en el amarillo: es a propósito.
 página; los campos que se le piden al asistente y las tres copias de sus reglas; que ese encargo cabe en el enlace;
 la tipografía desde la web, con Google Fonts de mentira, y la barra con otro nombre. Cambian dos: la de la lista de tipografías ya no admite la
 nuestra en `--sans`, y la de los colores de la marca no cuenta `--peso-titulo` como color.
+
+## 205. La 0.65: la barra pasa a RSC 4.2.0, y el freno se dice como es
+
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+`02-DOCS/wiki/ftd/la-0.65.md`
+
+Jose, 25-11, tras publicar la 0.64.0: *«sigue dándole a la barra. Qué queda pendiente? está actualizada a la ultima
+versión de rsc?»*. No lo estaba: la barra llevaba RSC 4.1.9, y el 24 y el 25 salieron la 4.1.10, la 4.1.11 y la 4.2.0.
+Una carpeta que se pone sola en una versión más nueva va por delante de la barra, y entonces «Añadir», «Arreglar» y
+«Poner al día» dejan de actuar en ella (decisión 201). El vigía pasa los lunes, y el último fue el 23. Carril FTD.
+
+**1. RSC 4.2.0.** Comparada con la 4.1.9, las órdenes no cambian: las mismas 273 habilidades y 53 atajos. Cambian
+los textos de unas 145 habilidades, los modelos de los agentes de Cursor y Copilot, el texto de cuatro atajos, una
+orden nueva para auditar encargos (`prompt-audit`) y el freno. La barra la lleva en todos sus sitios: el paquete, la
+versión de repuesto, los README, `demo.sh`, las tres copias de `siempre.md`, `.rsc.json` (con el `sync` de la propia
+barra) y la copia fijada del freno, ahora `freno-rsc-4.2.0.mjs`, byte a byte la de la 4.2.0, con su licencia.
+
+**2. El freno, también para PowerShell.** RSC 4.2.0 engancha su freno a `Bash|PowerShell`: en Windows, Claude corre
+órdenes con PowerShell, y un `Remove-Item -Recurse -Force` no pasaba por ningún freno, ni el suyo ni el de la barra.
+El de la barra se engancha igual (`ENTRADA_DEL_FRENO` en `aplicar.js`), y una carpeta con el enganche de antes, solo
+a `Bash`, se pone al día al reponer los raíles, sin duplicarlo. La barra lo da por enganchado con la misma regla que
+el envoltorio (`alcanzaABash`: el `matcher` es una expresión, no un nombre).
+
+**3. Con un perfil técnico, el freno actúa: pregunta.** La barra decía «Contigo no actúa», le decía al asistente que
+no había freno y no ofrecía ponerlo. No era verdad, y no lo era desde la serie 3 (la 3.0.22 ya lo hace): a un técnico
+el freno de RSC no le bloquea nada, pero le pide confirmación antes de lo que no tiene vuelta atrás (forzar una
+subida, `reset --hard`, `clean`, borrar la raíz, formatear un disco). Ahora, en «Las reglas», sale puesto, con «Contigo
+no bloquea: te pregunta antes de lo que no tiene vuelta atrás, porque tu perfil dice que eres técnico»; el primer
+mensaje dice que hay freno, y «Qué falta por montar» lo ofrece si falta. Comprobado con el freno de verdad: tres
+órdenes preguntadas y dos que pasan en silencio.
+
+**4. Cierre de la 204:** publicada en la 0.64.0, y su documento FTD, hecho.
+
+**5. El nombre de un cliente, fuera.** Salía en decisiones, comentarios, pruebas y en dos textos de ejemplo de
+pantalla. El repositorio es público. En su lugar, uno inventado, «Asesoría Norte»; el ejemplo de web, `tuempresa.com`.
+El historial de git no se reescribe: rompería todas las copias.
+
+**6. La copia de las reglas de `.claude/skills/executive-lab/`**, igual que la de `skills/`. Llevaba los frenos de la
+2.0.15 y la 3.0.22, que no cargaba nadie, y le faltaba `avisar.mjs`.
+
+**7. Tres specs, con su estado de verdad:** `credenciales-que-no-son-variables` (0.27.0), `todo-cuadra` (0.41.0; lo que
+quedaba de Windows se midió en la 129) y `mejoras-tras-la-4` (0.61.0) decían `approved` y estaban hechas.
+
+**Pruebas.** Dos nuevas en `humo.js`, con «205:» en el nombre: el freno enganchado a Bash y a PowerShell, con un
+`Remove-Item` denegado y el enganche de antes puesto al día; y el freno con un perfil técnico, comprobado con el de
+verdad. Cambian tres: «Las reglas» con un técnico, el freno que se ofrece, y la versión que va por delante (ahora la
+4.10.0, que como texto saldría más vieja que la 4.2.0).
+
+## 206. Con tus palabras, los dos asistentes, y Codex que trabaja él
+
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, en la PR #116 · FTD `02-DOCS/wiki/ftd/la-0.65.md`
+
+Jose, 25-11, con la 0.65 en marcha, tres peticiones seguidas:
+
+- *«Quiero que aquí en estos onboarding puedas meter tu propia respuesta personalizada, que puedas escribir y puedas
+  decirle tú tus cosas.»*
+- *«Quiero también que se puedan añadir los dos agentes. Tanto Claude como Codex en el onboarding. Quiero que revises
+  cómo se abre una sesión nueva, que se puedan abrir en paralelo. En Codex, por ejemplo, hacer el truco del new agent
+  para que puedas abrir al menos 2 versiones en paralelo.»*
+- *«Quiero que en codex también lo puedas ejecutar tú y abrirlo tú, no que copies un mensaje en el portapapeles. Que
+  sea más interesante. Cúrratelo, mira cómo puedes abrirlo en codex tú.»*
+
+**1. Cada pregunta del montaje se contesta también con tus palabras.** La última opción de «¿De qué va esto?», «¿Qué
+vas a llevar en esta carpeta?», «¿Cuántas personas están metidas en esto?», «¿Qué vas a construir?» y «¿Qué tal te
+manejas con el ordenador?» es «Te lo cuento con mis palabras». Abre una caja; cerrarla sin escribir vuelve a la lista.
+Lo escrito va entero al asistente en el primer mensaje, con su pregunta delante. A RSC, que solo acepta los valores
+de su lista, va lo más prudente: un poco de todo, empezar sencillo y el nivel de quien no es técnico, que lleva el
+freno puesto. Lo contestado así cuenta como contestado: no se vuelve a preguntar.
+
+**2. Al montar se puede elegir trabajar con los dos.** Con el ajuste en automático, «Con quién vas a trabajar» se
+pregunta siempre. Con uno puesto: ese, o «Claude y Codex», que pone el otro. Con los dos: uno, el otro, o los dos.
+Sin ninguno, el aviso suma «Poner los dos». Lo que falta se pone como con el ajuste de la 158 y se dice al terminar
+(decisión 181). Antes, con uno solo puesto, ni se preguntaba, y la única forma de tener los dos era el ajuste. RSC
+recibe `--target claude,codex`, que ya aceptaba.
+
+**3. Con Codex, el encargo lo empieza él.** Leída su extensión (openai.chatgpt 26.1120.50957): ningún comando
+acepta texto (`addToThread` y `addFileToThread` solo adjuntan ficheros) y su enlace lleva a su barra y tira lo que se
+le pasa, porque la caja de inicio no lee `prompt`. Se probó en la máquina de Jose: Codex abierto, la caja vacía. Pero
+la extensión trae su propio programa, en `bin/<sistema>-<procesador>/codex`, que es el mismo Codex con la misma
+cuenta (`~/.codex`), y ese acepta un encargo al arrancar. Así que ahora un botón, darle documentos, el foro, el
+primer mensaje y la puesta al día abren ese programa en una pestaña del editor que se llama Codex, en la carpeta, con
+el encargo, y Codex se pone a trabajar. La barra dice: «Codex ya está con ello, en una pestaña nueva. Ahí ves lo que
+hace, y le contestas si te pregunta algo.» Nada de portapapeles ni de «Dale a enviar».
+
+- **Un encargo, una pestaña.** Varios trabajan a la vez.
+- **El encargo va detrás de `--`**, para que uno que empiece por guiones no se tome por una opción suya, y como
+  argumento, sin pasar por ningún intérprete de órdenes: puede llevar lo que escribió la persona.
+- **Sin el programa en su extensión**, el `codex` del ordenador (decisión 190); en Windows, solo un `.exe`, porque un
+  `.cmd` pasaría por `cmd.exe`, que reinterpreta `&`, `%` y las comillas. Sin ninguno, el portapapeles, como antes.
+- **Un encargo largo** sigue yendo a un fichero de la carpeta (decisión 166), y a Codex se le da la línea que lo nombra.
+- **La pestaña no se recupera** al volver a abrir el editor: el programa ya no estaría.
+- **El de su extensión arranca con `--no-daemon`.** Viene suelto, sin el paquete que pide su servidor de fondo, y sin
+  esa opción se cae nada más abrir: «this CLI has no complete local package». El del ordenador es un paquete completo
+  y arranca como siempre, sin opciones nuestras: uno antiguo podría no conocerla.
+
+**4. Conversaciones en paralelo.** Con Codex, «Conversación nueva» usa primero «New Codex Agent»
+(`chatgpt.newCodexPanel`), que abre un panel nuevo cada vez; `chatgpt.newChat`, que cambia la de su barra, va de
+repuesto. Con Claude ya era así (`primaryEditor.open`, una pestaña nueva cada vez). Con la carpeta montada para los
+dos y los dos puestos, «Conversación nueva» pregunta «¿Con quién?».
+
+**Pruebas.** Seis nuevas en `humo.js`, con «206:» en el nombre: con tus palabras en las cinco preguntas; Codex con su
+programa (pestaña, `--no-daemon` en el de su extensión, encargo tras `--`, carpeta, uno por encargo, el del ordenador
+sin opciones y el portapapeles); dónde se busca su programa en seis sistemas, y con qué opciones arranca; lo que dice la barra en los cinco sitios que mandan algo; la conversación nueva en
+paralelo y con cuál; y los dos asistentes al montar. Una más en `mapeos-codex.js`: un encargo largo, por su fichero.
+Y una en el VS Code de verdad, con un Codex de mentira que apunta lo que recibe: la pestaña va en el editor, en la
+carpeta, y el encargo llega tal cual, con comillas, `&`, `$` y acentos. Se vio fallar dos veces a propósito: sin el
+`--` y con la pestaña abajo. Cambian las pruebas que contestaban el montaje con un guion, porque la primera pregunta
+es ahora con quién, y `ponerGit` arranca antes de la primera pregunta, no después.
+
+**Un encargo de verdad en el Codex de Jose** (25-11, con su sí). Codex 0.171.0-alpha.13.2, el de su extensión, en
+una terminal propia como la de la pestaña, con un encargo inofensivo en una carpeta de pruebas:
+
+1. **Como lo abría la barra** (`-- encargo`): la caja de Codex y, al momento, el error de arriba. La 0.65 se habría
+   caído con todo el que usa el programa de su extensión. Las pruebas no lo veían: miran con qué se abre la pestaña.
+2. **Con `--no-daemon`**: arranca, y antes de nada pide revisar los enganches de Jose («Hooks need review: 12 hooks
+   are new or changed»). No se contestó: elegir cambia su configuración.
+3. **Con `--no-daemon` y los enganches apagados solo en esa ejecución** (`--disable hooks`): el encargo entra solo,
+   Codex trabaja 7 segundos, crea `hola.txt` con «hola» y dice «Hecho.». El `config.toml` de Jose tiene la misma
+   fecha antes y después.
+
+Con eso se añadió `--no-daemon`, primero en las pruebas (fallaron) y luego en `arranqueDeCodex`.
+
+**La revisión de enganches sale en la pestaña.** En una carpeta con el arnés, la primera vez Codex pide confiar en sus
+enganches (decisión 178) ahí mismo, en inglés, antes del encargo. Si se sigue sin confiar, los enganches del arnés no
+corren en esa conversación. Queda para Jose si la barra lo avisa antes, o si «Dejarlo listo en Codex» pasa a abrir
+esa pestaña.
+
+**Lo que no se ha probado:** si el encargo sigue solo después de contestar a esa revisión (en el paso 2 se dejó sin
+contestar), y la barra abriendo la pestaña con el Codex de verdad dentro del editor: el paso 3 usa el mismo programa
+con las mismas opciones, pero fuera del editor.

@@ -287,6 +287,49 @@ async function run() {
     return `instalada: ${puestas[0]}`;
   });
 
+  // Con Codex, el encargo lo empieza su programa en una pestaña (decisión 206). Lo
+  // que solo se sabe con un editor de verdad: que la pestaña va en el editor, no
+  // abajo, y que el programa recibe el encargo tal cual, sin que nadie lo
+  // reinterprete. Con un Codex de mentira que apunta lo que le llega. En Windows
+  // no: sin un `.exe` propio, el de mentira pasaría por `cmd.exe`, que es
+  // justo lo que la barra evita.
+  await comprobar('con Codex, el encargo abre su programa en una pestaña del editor, y le llega tal cual', async () => {
+    if (process.platform === 'win32') return 'en Windows no se mira: haría falta un .exe de mentira';
+    const fs = require('node:fs');
+    const os = require('node:os');
+    const raiz = vscode.extensions.getExtension(ID).extensionPath;
+    const asistentes = elQueCargo(raiz, 'asistentes.js');
+    const puente = elQueCargo(raiz, 'puente.js');
+    const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-de-mentira-'));
+    const apunte = path.join(carpeta, 'lo-que-le-llega');
+    const programa = path.join(carpeta, 'codex');
+    fs.writeFileSync(programa, `#!/bin/sh\npwd > "${apunte}.donde"\nfor a in "$@"; do printf '%s\\n--\\n' "$a"; done > "${apunte}.tmp"\nmv "${apunte}.tmp" "${apunte}"\n`, { mode: 0o755 });
+    const antes = { elDeAhora: asistentes.elDeAhora, delPath: asistentes.terminal.programaEnElPath };
+    asistentes.elDeAhora = () => asistentes.porId('codex');
+    asistentes.terminal.programaEnElPath = (nombre) => (nombre === 'codex' ? programa : null);
+    const habia = vscode.window.terminals.length;
+    const encargo = '--sin-preguntar Haz el resumen de «Ferretería» y "Soler" & $HOME; `ls`';
+    try {
+      assert.equal(await conReloj(puente.enviar(encargo), 'mandarle el encargo a Codex'), 'trabajando');
+      for (let i = 0; i < 50 && !fs.existsSync(apunte); i += 1) await esperar(100);
+      assert.ok(fs.existsSync(apunte), 'el programa no ha arrancado');
+      const llegado = fs.readFileSync(apunte, 'utf8').split('\n--\n').filter(Boolean);
+      assert.deepEqual(llegado, ['--', encargo], 'el encargo no le llega tal cual');
+      const donde = fs.readFileSync(`${apunte}.donde`, 'utf8').trim();
+      assert.equal(fs.realpathSync(donde), fs.realpathSync(vscode.workspace.workspaceFolders[0].uri.fsPath), 'no trabaja en la carpeta');
+      const suya = vscode.window.terminals.slice(habia).find((t) => t.name === 'Codex');
+      assert.ok(suya, 'no hay ninguna pestaña que se llame Codex');
+      const enElEditor = vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.input instanceof vscode.TabInputTerminal);
+      assert.ok(enElEditor, 'la pestaña no va en el editor');
+      return 'en el editor, en la carpeta, y el encargo intacto';
+    } finally {
+      asistentes.elDeAhora = antes.elDeAhora;
+      asistentes.terminal.programaEnElPath = antes.delPath;
+      for (const t of vscode.window.terminals.slice(habia)) t.dispose();
+      fs.rmSync(carpeta, { recursive: true, force: true });
+    }
+  });
+
   console.log(`\n${fallos.length ? `${fallos.length} fallos` : 'todo bien'}\n`);
   if (fallos.length) throw new Error(fallos.join(' | '));
 }

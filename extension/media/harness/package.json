@@ -1,6 +1,6 @@
 {
   "//": "Exacta, sin acento circunflejo: la política de este proyecto es que toda la cohorte corra el mismo catálogo, y subir de versión es una decisión, no un efecto secundario de un `npm install`. Con `^1.4.1` bastaba con que saliera una 1.5 para que el .vsix se empaquetara con otro catálogo sin que nadie lo pidiera. Si se cambia, hay que cambiarla también en `.rsc.json`, en `src/rsc.js` y en el mensaje de `preparar-paquete.js`; la prueba de humo lo comprueba.",
   "dependencies": {
-    "@ericrisco/rsc": "4.1.9"
+    "@ericrisco/rsc": "4.2.0"
   }
 }

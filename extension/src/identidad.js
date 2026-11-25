@@ -5,7 +5,7 @@
 //   · el ARNÉS  — para qué es esta carpeta: Contabilidad, Personal, Marketing,
 //                 Clientes, el proyecto que sea. Un arnés no es "una empresa":
 //                 una empresa puede tener cuatro, cada uno para lo suyo.
-//   · la EMPRESA — de quién es todo esto: Nexus Consulting.
+//   · la EMPRESA — de quién es todo esto: Asesoría Norte.
 //
 // Viven en el frontmatter de `02-DOCS/wiki/harness/user-profile.md`, que es el
 // fichero donde RSC guarda el perfil del arnés y donde ya escribimos los
@@ -57,7 +57,7 @@ function objetivo() {
   }
 }
 
-// El rótulo de la ventana: "Contabilidad · Nexus Consulting", o lo que haya.
+// El rótulo de la ventana: "Contabilidad · Asesoría Norte", o lo que haya.
 // Con «La empresa entera» los dos nombres son el mismo, y se dice una vez.
 function titulo() {
   const { arnes, empresa } = leer();

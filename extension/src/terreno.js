@@ -976,10 +976,11 @@ async function radiografia({ aFondo = null, sigueSinCopias = false } = {}) {
   // El freno propio, pendiente (C1, C-4). En una carpeta cuyo historial no creó
   // la barra, reponer los raíles no lo engancha solo, porque toca sus ajustes:
   // se ofrece aquí, con su botón. Si el de RSC está puesto, ya frena ese.
-  // Si la persona lo apagó, o su perfil dice que es técnica —y entonces no frena—,
-  // no se ofrece (revisión de F3, M3).
-  const apagadoOTecnico = proyecto.existe('.rsc', '.no-danger-guard') || require('./trato').comoEstamos().palabras === 'technical';
-  if (conArnes && donde.puedeTenerFrenos() && parte.railes.habilidadPropia && !apagadoOTecnico) {
+  // Si la persona lo apagó, no se ofrece (revisión de F3, M3). Con un perfil
+  // técnico sí: también le actúa, preguntándole antes de lo irreversible, y no
+  // ofrecerlo dejaba esa carpeta sin nada (decisión 205).
+  const apagado = proyecto.existe('.rsc', '.no-danger-guard');
+  if (conArnes && donde.puedeTenerFrenos() && parte.railes.habilidadPropia && !apagado) {
     const freno = comoEstaElFreno();
     if (!freno.nuestro && !freno.deRsc) {
       piezas.push({

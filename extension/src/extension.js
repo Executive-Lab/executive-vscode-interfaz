@@ -133,6 +133,10 @@ const quitarSoloEsto = (que) => ({ etiqueta: 'Quitarlo', accion: { tipo: 'quitar
 const QUITAR_EL_GUARDADO_SOLO = { etiqueta: 'Quitarlo', etiquetaConVarios: 'Quitar las copias solas', accion: { tipo: 'quitarElGuardadoSolo' } };
 const QUITAR_LO_DE_CLAUDE_DEL_MONTAJE = { ...QUITAR_LO_DE_CLAUDE, etiquetaConVarios: 'Quitar lo de Claude' };
 const DALE_A_ENVIAR = 'Te lo he dejado escrito en la conversación. Dale a enviar.';
+// Y cuando Codex ya está trabajando en su pestaña (decisión 206): no hay nada que
+// enviar ni que pegar. Copiado, lo dice el aviso del portapapeles.
+const YA_ESTA_CON_ELLO = 'Codex ya está con ello, en una pestaña nueva. Ahí ves lo que hace, y le contestas si te pregunta algo.';
+const comoLlego = (como) => ({ directo: DALE_A_ENVIAR, trabajando: YA_ESTA_CON_ELLO })[como] || null;
 
 // Lo que se dice al dejar la cuenta de GitHub para más tarde, al montar: dónde
 // queda, con su botón (decisión 164).
@@ -1795,7 +1799,7 @@ ${cabecera}
     // escrito en su caja y no lo envían (asistentes.js lo documenta). Decir que
     // ya se lo hemos pedido dejaba a la persona esperando una respuesta que no
     // iba a llegar hasta que ella misma le diera a enviar.
-    if (como === 'directo') this.avisarAqui({ texto: DALE_A_ENVIAR });
+    if (comoLlego(como)) this.avisarAqui({ texto: comoLlego(como) });
     return undefined;
   }
 
@@ -1822,17 +1826,30 @@ ${cabecera}
       this.salida.appendLine(`[asistente] el encargo no ha llegado: ${error && error.message}`); // diccionario: interno
       return { texto: `${hecho} No he podido pasarle el encargo a ${quien.nombre}. Pulsa «Algo va mal» y pásale el código a tu tutor.`, malo: true };
     }
-    if (como === 'directo') return { texto: `${hecho} ${DALE_A_ENVIAR}`, malo: false };
+    if (comoLlego(como)) return { texto: `${hecho} ${comoLlego(como)}`, malo: false };
     return { texto: hecho, malo: false };
   }
 
-  // Ayuda › Conversación nueva. Con Codex no hay comando para eso: se abre su
-  // barra y se dice dónde está el botón.
+  // Ayuda › Conversación nueva. Cada una en su pestaña, así que se pueden tener
+  // varias trabajando a la vez (decisión 206). Con la carpeta montada para los dos
+  // y los dos en el ordenador, se elige con cuál. Sin su comando, se abre su barra
+  // y se dice dónde está el botón.
   async conversacionNueva() {
-    const quien = asistentes.elDeAhora();
+    const losDos = asistentes.losDelArnes().filter(asistentes.estaInstalado);
+    let quien = asistentes.elDeAhora();
+    if (losDos.length > 1) {
+      const elegido = await vscode.window.showQuickPick(
+        losDos.map((a) => ({ label: a.nombre, id: a.id })),
+        { title: 'Conversación nueva', placeHolder: '¿Con quién?' },
+      );
+      if (!elegido) return undefined;
+      quien = asistentes.porId(elegido.id);
+    }
     if (!asistentes.estaInstalado(quien)) return this.sinAsistente(quien);
-    if (await puente.conversacionNueva()) return this.enviar({ tipo: 'aviso', texto: 'Te he abierto una conversación nueva.' });
-    if (!await puente.abrirConversacion()) {
+    if (await puente.conversacionNueva(quien)) {
+      return this.enviar({ tipo: 'aviso', texto: `Te he abierto una conversación nueva${losDos.length > 1 ? ` con ${quien.nombre}` : ''}.` });
+    }
+    if (!await puente.abrirEste(quien)) {
       return this.enviar({ tipo: 'aviso', texto: `No he podido abrir ${quien.nombre}. Pulsa «Algo va mal» y pásale el código a tu tutor.`, malo: true });
     }
     return this.enviar({ tipo: 'aviso', texto: `Te he abierto ${quien.nombre}. Para empezar una conversación nueva, pulsa el «+» de arriba de su ventana.` });
@@ -1901,6 +1918,7 @@ ${cabecera}
     const como = await puente.enviar(PEDIR_AYUDA_EN_EL_FORO, this.salida);
     const donde = 'Cuando te conteste, copia el mensaje y pégalo en «Resolver dudas», en Circle.';
     if (como === 'directo') return this.enviar({ tipo: 'aviso', texto: `Te lo he dejado escrito en la conversación: dale a enviar. ${donde}` });
+    if (como === 'trabajando') return this.enviar({ tipo: 'aviso', texto: `${YA_ESTA_CON_ELLO} ${donde}` });
     if (como === 'copiado') return this.enviar({ tipo: 'aviso', texto: donde });
     return this.enviar({ tipo: 'aviso', texto: 'No he podido hablar con el asistente. Pulsa «Algo va mal» y pásale el código a tu tutor.', malo: true });
   }
@@ -3657,7 +3675,7 @@ ${cabecera}
   // aviso del portapapeles.
   async mandarElPrimero(texto) {
     const como = await puente.enviar(texto);
-    if (como === 'directo') this.dejarElAviso(DALE_A_ENVIAR);
+    this.dejarElAviso(comoLlego(como));
     return como;
   }
 
@@ -4381,7 +4399,7 @@ ${cabecera}
       const como = await puente.enviar('He puesto al día el arnés de esta carpeta. Mira qué hay montado y cuéntame en dos líneas por dónde seguimos.');
       this.enviar({
         tipo: 'aviso',
-        texto: [LO_QUE_SE_HIZO[hecho.rama] || hecho.mensaje, puestos, ...dichos, sinCopias, como === 'directo' ? DALE_A_ENVIAR : null].filter(Boolean).join(' '),
+        texto: [LO_QUE_SE_HIZO[hecho.rama] || hecho.mensaje, puestos, ...dichos, sinCopias, comoLlego(como)].filter(Boolean).join(' '),
         ...(dichos.length ? { boton: QUITAR_LO_DE_CLAUDE } : {}),
       });
       await this.siFaltaAlgoDecirlo(true);
@@ -4496,7 +4514,7 @@ ${cabecera}
     const escrito = await vscode.window.showInputBox({
       title: 'Ponerle la cara de tu empresa',
       prompt: '¿Cuál es la web de tu empresa? De ahí saco los colores, el logotipo y la letra.',
-      placeHolder: 'nexusconsulting.com',
+      placeHolder: 'tuempresa.com',
       ignoreFocusOut: true,
     });
     const limpio = (escrito || '').trim();

@@ -3,6 +3,7 @@
 // Qué asistente es y qué permite cada uno está en `asistentes.js`. Aquí solo
 // está el orden en que se intenta hablarle:
 //
+//   0. Con Codex, su programa, con el encargo, en una pestaña (decisión 206).
 //   1. Su enlace profundo, si la extensión que lo recoge está instalada.
 //   2. Un comando suyo que acepte texto.
 //   3. El portapapeles, avisando de que ha hecho falta.
@@ -54,11 +55,49 @@ const abrirConversacion = () => ejecutarSiExiste(asistentes.elDeAhora().abrir);
 const abrirEste = (asistente) => ejecutarSiExiste(asistente.abrir);
 
 // Una conversación vacía, para empezar otra cosa (decisión 139). Devuelve si se
-// ha podido abrir así; si no, quien llama abre la de siempre y lo explica.
-const conversacionNueva = () => ejecutarSiExiste(asistentes.elDeAhora().nueva);
+// ha podido abrir así; si no, quien llama abre la de siempre y lo explica. Con
+// los dos en la carpeta, quien llama dice con cuál (decisión 206).
+const conversacionNueva = (quien = asistentes.elDeAhora()) => ejecutarSiExiste(quien.nueva);
 
-// Manda un texto. Devuelve 'directo' si ha llegado, 'copiado' si hubo que
-// dejarlo en el portapapeles.
+// ── Con Codex, que se ponga a trabajar (decisión 206) ────────────────────
+//
+// Jose, 25-11-2026: «Quiero que en codex también lo puedas ejecutar tú y abrirlo
+// tú, no que copies un mensaje en el portapapeles». Su barra no deja escribirle
+// (`asistentes.js`), pero su programa acepta el encargo al arrancar. Se abre en
+// una pestaña del editor, en la carpeta, y empieza a trabajar; ahí se ve lo que
+// hace y se le contesta. Un encargo, una pestaña: varios van a la vez.
+//
+// El encargo va detrás de `--`: así uno que empiece por guiones no se toma por
+// una opción suya. Delante, las opciones con que ese programa arranca
+// (`asistentes.arranqueDeCodex` dice por qué el de su extensión lleva una). Se
+// le pasa como argumento, sin pasar por ningún intérprete de órdenes
+// (`programaEnElPath` lo explica para Windows). Al volver a abrir el
+// editor la pestaña no se recupera: el programa ya no estaría.
+async function ponerACodex(texto, salida) {
+  const arranque = asistentes.arranqueDeCodex();
+  if (!arranque) return null;
+  const { programa, opciones } = arranque;
+  try {
+    const pestana = vscode.window.createTerminal({
+      name: 'Codex',
+      shellPath: programa,
+      shellArgs: [...opciones, '--', texto],
+      cwd: require('./proyecto').raiz(),
+      location: vscode.TerminalLocation.Editor,
+      isTransient: true,
+    });
+    pestana.show();
+    if (salida) salida.appendLine(`[puente] Codex trabaja en una pestaña: ${programa}`); // diccionario: interno
+    return 'trabajando';
+  } catch (error) {
+    if (salida) salida.appendLine(`[puente] Codex no se ha podido abrir en una pestaña: ${error.message}`); // diccionario: interno
+    return null;
+  }
+}
+
+// Manda un texto. Devuelve 'directo' si ha llegado a su caja, 'trabajando' si
+// Codex ya está con ello en una pestaña, y 'copiado' si hubo que dejarlo en el
+// portapapeles.
 //
 // «Directo» quiere decir que el texto está escrito en su caja, no que se haya
 // enviado: Claude lo deja puesto y ya (`setInputText`). Lo manda la persona.
@@ -169,6 +208,12 @@ async function enviar(texto, salida, { plataforma = process.platform } = {}) {
   if (!cabeEntero(texto)) texto = await dejarloEnUnFichero(texto, salida) || texto;
 
   const quien = asistentes.elDeAhora();
+
+  // Con Codex, su programa, ya trabajando (arriba).
+  if (quien.id === 'codex') {
+    const trabajando = await ponerACodex(texto, salida);
+    if (trabajando) return trabajando;
+  }
 
   // openExternal dice que sí en cuanto entrega la URI, sin mirar si alguien la
   // recoge: por eso se comprueba antes que su extensión está instalada.
