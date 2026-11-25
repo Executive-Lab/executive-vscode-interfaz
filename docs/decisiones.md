@@ -10173,13 +10173,21 @@ las cuatro cosas que hay que cambiar: el nombre, dónde busca sus versiones, su 
 tipografía en el título, y una oscura con su cian. El clon va por `https`, que funciona sin llaves. Las pruebas son
 unas 600, no 80.
 
-**8. Cierre de la 203:** publicada en la 0.63.0, y su documento FTD, hecho.
+**8. El encargo, corto otra vez.** Con la tipografía, lo que se le pide al asistente pasó de unos 1.400 caracteres
+a más de 2.000 dentro del enlace con el que se le pasa, y dejó de caber (decisión 129: en Windows, a partir de
+2.000 se corta). Desde la 166, lo que no cabe se deja en un fichero y se le manda una línea que lo nombra; en
+Windows, si eso no se puede, va al portapapeles. Funcionaba, pero peor que antes. Lo vio GitHub en Windows, no el
+Mac: una prueba de la 166 esperaba «Dale a enviar» y recibía solo «Guardado 1.». Ahora el encargo dice lo mismo en
+menos palabras: entre 1.308 y 1.439 caracteres en los cuatro casos, con el logotipo y un manual al lado. Una prueba
+nueva lo vigila.
+
+**9. Cierre de la 203:** publicada en la 0.63.0, y su documento FTD, hecho.
 
 **Queda:** con el amarillo, el ✨ del botón casi no se ve. El borde de la tarjeta y los enlaces van en el tono que se
 lee, no en el amarillo: es a propósito.
 
-**Pruebas.** Seis nuevas en `humo.js`, con «204:» en el nombre: el color del botón con seis marcas; la tipografía
+**Pruebas.** Siete nuevas en `humo.js`, con «204:» en el nombre: el color del botón con seis marcas; la tipografía
 (fichero, nombre, de la lista, grosor, ficheros malos y nombres raros); la dirección del fichero y la seguridad de la
-página; los campos que se le piden al asistente y las tres copias de sus reglas; la tipografía desde la web, con
-Google Fonts de mentira, y la barra con otro nombre. Cambian dos: la de la lista de tipografías ya no admite la
+página; los campos que se le piden al asistente y las tres copias de sus reglas; que ese encargo cabe en el enlace;
+la tipografía desde la web, con Google Fonts de mentira, y la barra con otro nombre. Cambian dos: la de la lista de tipografías ya no admite la
 nuestra en `--sans`, y la de los colores de la marca no cuenta `--peso-titulo` como color.

@@ -84,6 +84,11 @@ Lo que se vio al revisarla, con cinco marcas de prueba en claro y en oscuro:
 - **4, 5.** «204: al asistente se le piden los campos que la barra lee…»: los ocho campos en `queLePedimos`, en
   «Contárselo con mis palabras» y en las tres copias del `SKILL.md`, sin `superficie` ni «No toques la tipografía».
   El botón manda `contarLaCara`, y lo que llega al asistente es el encargo entero.
+- **4b. El encargo cabe.** La primera pasada de GitHub cayó en Windows en dos pruebas. Una era de la 166: el encargo
+  de la marca, con la tipografía, medía más de 2.000 caracteres en el enlace (1.350–1.500 en la 0.63) y ya no cabía;
+  en Windows iba al portapapeles y no se decía «Dale a enviar». Se acortó: 1.308–1.439 en los cuatro casos. «204:
+  el encargo de la marca cabe entero en el enlace del asistente» cayó antes (2.191) y pasa después. La otra era de la
+  204: la `asWebviewUri` de mentira devolvía la ruta con `\`, que la de verdad nunca lleva; ahora va con `/`.
 - **6.** «204: una barra con otro nombre no busca versiones en nuestro sitio»: `sitio.ID` es el `publisher.name` del
   `package.json`; con otro nombre, cero peticiones a GitHub; con el nuestro, una. El README tiene «Hazte tu propia
   barra».
@@ -93,7 +98,7 @@ Lo que se vio al revisarla, con cinco marcas de prueba en claro y en oscuro:
   y una oscura con cian.
 - **8.** `node docs/comprobar-diccionario.js`: en verde. 0.64.0 en `extension/package.json` y en el instalador.
   Decisión 204 escrita; la 203, «publicado en la 0.63.0», y `la-0.63.md`, hecho.
-- **9.** Sobre el código final: `humo.js` 590 de 590, `humo.js --con-arnes` 600 de 600, `contrato.js` 15 de 15, las tres
+- **9.** Sobre el código final: `humo.js` 591 de 591, `humo.js --con-arnes` 601 de 601, `contrato.js` 15 de 15, las tres
   empresas y la recién montada enteras, `mapeos-codex.js` 30 de 30, PowerShell sin pegas. En un VS Code de verdad
   (1.148.0, en el Mac), 9 de 9 a la primera, con la 0.64.0.
 - **Riesgo.** `rsc risk --base origin/main`: nivel 2, solo por `.claude/skills/executive-lab/SKILL.md`, una de las

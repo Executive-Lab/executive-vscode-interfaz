@@ -357,31 +357,26 @@ function tipografiaDe(marca, fuente) {
 // `sinMaterial`: lo va a contar con sus palabras (decisión 204). Antes ese
 // botón le pedía «déjalo montado» sin decirle ni dónde ni con qué campos.
 function queLePedimos(web, yaHayPrimerIntento = false, { sinMaterial = false } = {}) {
+  const donde = `\`${CARPETA.join('/')}/${FICHERO}\``;
   return [
     sinMaterial
-      ? 'Quiero ponerle a esto la cara de mi empresa y no tengo web ni logotipo a mano. Pregúntame cómo es, de una cosa en una: el nombre, los colores, el tipo de letra y el aire que tiene. Después déjalo montado.'
+      ? 'Quiero ponerle a esto la cara de mi empresa y no tengo web ni logotipo a mano. Pregúntame cómo es, una cosa cada vez: el nombre, los colores, la letra y el estilo. Luego déjalo montado.'
       : yaHayPrimerIntento && web
-        ? `Ya he sacado un primer intento de la cara de mi empresa desde ${web} y lo he dejado en \`${CARPETA.join('/')}/${FICHERO}\` marcado como provisional. Mira la web con calma y corrige lo que no sea de verdad —colores, logotipo, nombre, tipografía—; al reescribirlo, quita la línea \`provisional\`.`
+        ? `Ya saqué un primer intento de la cara de mi empresa desde ${web}, en ${donde}, marcado como provisional. Mira la web y corrige lo que no sea de verdad; al reescribirlo, quita la línea \`provisional\`.`
         : web
           ? `Mira ${web} y ponle a esto la cara de mi empresa.`
           : 'Ponle a esto la cara de mi empresa, con el material que te he dejado.',
     '',
-    `Déjalo en \`${CARPETA.join('/')}/${FICHERO}\`, con estos campos en la cabecera y escritos así:`,
+    `Déjalo en ${donde}, con esta cabecera:`,
     '',
-    '- `empresa:` cómo se llama.',
-    '- `fondo:`, `texto:` y `acento:` en formato `#rrggbb`.',
-    web
-      ? '  El `fondo` y el `acento` son los de su web de verdad: si la web es oscura, el fondo va oscuro.'
-      : `  Sácalos ${sinMaterial ? 'de lo que te cuente' : 'del material'}. Si su marca es oscura, el fondo va oscuro: esto se pinta igual de bien de las dos maneras.`,
-    '  El `texto` solo se usa para saber si la marca es clara u oscura; las letras las calculo yo.',
-    '  Evita un fondo a media luz (un gris medio): encima de eso no se lee nada y tendría que descartarlo.',
-    '- `logo:` el nombre del fichero del logotipo, guardado en esa misma carpeta.',
-    '- `logo_lleva_el_nombre:` `si` si el logotipo trae dentro el nombre escrito, `no` si es solo el símbolo.',
-    '- `tipografia:` el nombre de la tipografía de sus títulos, tal cual (por ejemplo, `Montserrat`). Si no la sabes, no lo pongas.',
-    '- `fuente:` si esa tipografía es libre (las de Google Fonts lo son), baja su fichero `.woff2` o `.ttf` a esa misma carpeta y pon aquí su nombre. Si es de pago, no la bajes: con el nombre basta.',
+    '- `empresa:` su nombre.',
+    `- \`fondo:\`, \`texto:\` y \`acento:\`, en \`#rrggbb\`, ${web ? 'los de su web de verdad' : sinMaterial ? 'de lo que te cuente' : 'del material'}. Si es oscura, fondo oscuro; nunca un gris medio. \`texto\` solo dice si es clara u oscura.`,
+    '- `logo:` el fichero del logotipo, en esa carpeta, y `logo_lleva_el_nombre:` `si` o `no`.',
+    '- `tipografia:` la de sus títulos (por ejemplo, `Montserrat`), si la sabes.',
+    '- `fuente:` su fichero `.woff2` o `.ttf`, bajado a esa carpeta, solo si es libre (las de Google Fonts lo son).',
     web ? '- `resource:` la web.' : null,
     '',
-    'Con esos tres colores construyo la paleta entera siguiendo Material Design, así que no hace falta que me des más. El botón principal lleva su acento tal cual, si se lee; y su tipografía va en los títulos y en el nombre.',
+    'Con esos colores hago la paleta entera. El botón lleva el acento tal cual si se lee, y la tipografía va en los títulos.',
   ].filter((l) => l !== null).join('\n');
 }
 

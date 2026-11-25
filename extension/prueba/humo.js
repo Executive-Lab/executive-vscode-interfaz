@@ -3902,11 +3902,14 @@ exec git "$@"
   await comprobar('204: la página le da a su tipografía la dirección de su carpeta, y la seguridad la deja cargar', () => {
     const proveedor = vscode.registrado.proveedor;
     const medios = vscode.Uri.joinPath(contexto.extensionUri, 'media');
-    const webview = { cspSource: 'vscode-resource:', asWebviewUri: (u) => ({ toString: () => `vscode-resource:${u.fsPath || u.path}` }) };
+    // Como el de verdad: una dirección con «/», también en Windows. Con «\\»,
+    // la hoja de estilo la codifica y la prueba caía en Windows sin motivo.
+    const comoDireccion = (u) => `vscode-resource:/${String(u.fsPath || u.path).replace(/\\/g, '/').replace(/^\/+/, '')}`;
+    const webview = { cspSource: 'vscode-resource:', asWebviewUri: (u) => ({ toString: () => comoDireccion(u) }) };
     montarMarca(empresa, { tipografia: 'Montserrat', fuente: 'montserrat.woff2' });
     const pagina = proveedor.html(webview, medios, marca.leer());
     const fichero = path.join(empresa, '02-DOCS', 'wiki', 'brand', 'montserrat.woff2');
-    assert.ok(pagina.includes(`url('vscode-resource:${fichero}')`), 'la página no apunta al fichero de su tipografía');
+    assert.ok(pagina.includes(`url('${comoDireccion({ fsPath: fichero })}')`), 'la página no apunta al fichero de su tipografía');
     const csp = (pagina.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1] || '';
     assert.match(csp, /font-src vscode-resource:/, 'la seguridad no deja cargar la tipografía');
     montarMarca(empresa);
@@ -3945,6 +3948,25 @@ exec git "$@"
     const laCara = panel.slice(panel.indexOf('function pantallaLaCara'), panel.indexOf('function pantallaComoTrabaja'));
     assert.match(laCara, /tipo: 'contarLaCara'/, 'el botón de contarlo no pasa por la barra');
     return 'ocho campos, en las tres copias de las reglas y en los tres botones';
+  });
+
+  await comprobar('204: el encargo de la marca cabe entero en el enlace del asistente', () => {
+    // Con la tipografía, el encargo pasó de unos 1.400 caracteres a más de 2.000
+    // en el enlace, y dejó de caber: iba a un fichero, y en Windows, si no se
+    // podía, al portapapeles. Lo vio GitHub en Windows, no el Mac. Tiene que
+    // caber con el material típico al lado: el logotipo y un manual.
+    const puente = cargar('puente');
+    const tema = cargar('tema');
+    const puestos = ['logo.svg', 'manual-de-marca.pdf'];
+    const casos = {
+      'desde su web': tema.queLePedimos({ web: 'https://ferreteriasoler.es', puestos }),
+      'sin web': tema.queLePedimos({ puestos }),
+      'tras el primer intento': marca.queLePedimos('https://ferreteriasoler.es', true),
+      'contado con sus palabras': marca.queLePedimos(null, false, { sinMaterial: true }),
+    };
+    const largo = (t) => `vscode://anthropic.claude-code/open?prompt=${encodeURIComponent(t)}`.length;
+    for (const [caso, texto] of Object.entries(casos)) assert.ok(puente.cabeEntero(texto), `${caso}: no cabe (${largo(texto)})`);
+    return Object.values(casos).map(largo).join(' · ');
   });
 
   await comprobar('204: el primer intento desde la web apunta su tipografía, y si es de Google Fonts, se baja', async () => {
