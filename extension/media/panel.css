@@ -234,7 +234,7 @@ body {
   min-width: 0;
   font-size: 17px;
   /* Un nombre largo se parte en dos líneas antes que salirse o recortarse:
-     "Nexus Consulting Operaciones" no cabe de una. */
+     "Asesoría Norte Operaciones" no cabe de una. */
   overflow-wrap: anywhere;
 }
 

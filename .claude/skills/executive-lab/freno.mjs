@@ -7,7 +7,7 @@
 // prometiera por nivel técnico. Desde la 2.0.16 lo pone a los no técnicos
 // (#273), y entonces este deja pasar sin decir nada (abajo).
 //
-// Esto no es un freno nuevo: es el suyo. `freno-rsc-3.0.22.mjs`, aquí al lado,
+// Esto no es un freno nuevo: es el suyo. `freno-rsc-4.2.0.mjs`, aquí al lado,
 // es su `targets/danger-guard.mjs` copiado byte a byte, con el `shell-unwrap.mjs`
 // que carga para mirar dentro de `bash -c` (MIT, con la licencia al lado), con su misma lista, su mismo interruptor (`.rsc/.no-danger-guard`)
 // y su misma regla de nivel técnico. Una prueba lo compara con el del paquete.
@@ -55,7 +55,7 @@ function elDeRscEstaPuesto() {
 if (elDeRscEstaPuesto()) process.exit(0);
 
 try {
-  await import('./freno-rsc-3.0.22.mjs');
+  await import('./freno-rsc-4.2.0.mjs');
 } catch {
   // Como el de RSC: un fallo por dentro nunca bloquea una orden.
   process.exit(0);

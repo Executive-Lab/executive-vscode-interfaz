@@ -9,8 +9,8 @@ status: hecho
 
 ## Intent
 
-Jose, con una captura de nexus-presupuestos: la barra decía *«Hay 9 claves fuera de sitio»* (Resend
-2, Supabase 5, y NEXUS y USE «por montar») y ofrecía «Que las ordene». Estaban en
+Jose, con una captura de norte-presupuestos: la barra decía *«Hay 9 claves fuera de sitio»* (Resend
+2, Supabase 5, y NORTE y USE «por montar») y ofrecía «Que las ordene». Estaban en
 `03-APP/.env.local`, junto al `package.json` de una aplicación Next.js, que es de donde ella las
 lee. Su diagnóstico: *«creo que es porque al ser una app y tener una app se guarda también ahí en el
 .env.local»*. Era eso: `sueltas.js` contaba los `.env*` de cualquier carpeta de primer nivel, sin
@@ -96,4 +96,4 @@ Un hueco que ya había y no abre esto, apuntado por el revisor de seguridad: la 
 primer nivel. Un monorepo con `03-APP/apps/web/.env.local` no se deja fuera de las copias ni se
 avisa; lo cubre el `.gitignore` de la aplicación, si lo tiene.
 
-Y publicar, que es decisión de Jose: hasta entonces, nexus-presupuestos sigue viendo el aviso.
+Y publicar, que es decisión de Jose: hasta entonces, norte-presupuestos sigue viendo el aviso.

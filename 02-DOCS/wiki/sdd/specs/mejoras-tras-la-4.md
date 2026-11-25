@@ -4,7 +4,8 @@ title: Tres mejoras tras la 4 — el vigía de RSC, los dibujos a un clic y las 
 description: Un aviso en GitHub en cuanto sale una RSC más nueva que la de la barra, un interruptor para los emoji en Las reglas y las habilidades de venta de la 4 en los objetivos del montaje.
 timestamp: 2026-11-16T12:00:00Z
 topic: sdd
-status: approved
+status: shipped
+shipped_in: 0.61.0 (decisión 201)
 branch: mejoras-tras-la-4
 ---
 

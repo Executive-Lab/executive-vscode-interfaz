@@ -19,6 +19,8 @@ const registrado = {
   alConfiar: [],
   // Las pestañas con una página que abre la barra: la foto en grande (decisión 197).
   pestanas: [],
+  // Las pestañas con un programa dentro: Codex trabajando en un encargo (decisión 206).
+  terminales: [],
 };
 
 // Lo que las pruebas pueden cambiar antes de llamar.
@@ -34,6 +36,8 @@ const guion = {
   ficheros: [],             // qué devuelve showOpenDialog
   rechazaAjuste: () => false,
   extensionesInstaladas: ['anthropic.claude-code'],
+  // Dónde está cada extensión instalada (`extensionPath`), si la prueba lo necesita.
+  rutasDeExtensiones: {},
   comandosDeCodex: ['chatgpt.openSidebar', 'chatgpt.addToThread'],
   raiz: null,
   confianza: false,         // vscode.workspace.isTrusted
@@ -58,6 +62,7 @@ module.exports = {
   ProgressLocation: { Notification: 15 },
   ThemeColor: class { constructor(id) { this.id = id; } },
   ViewColumn: { Active: -1, Beside: -2, One: 1, Two: 2 },
+  TerminalLocation: { Panel: 1, Editor: 2 },
 
   window: {
     createOutputChannel: () => ({
@@ -100,6 +105,12 @@ module.exports = {
       const item = { text: '', tooltip: '', command: '', visible: false, show() { this.visible = true; }, hide() { this.visible = false; }, dispose() {} };
       registrado.barraEstado.push(item);
       return item;
+    },
+    // Una pestaña con un programa: apunta con qué se abrió y si se enseñó.
+    createTerminal: (opciones) => {
+      const pestana = { opciones, mostrada: false, show() { this.mostrada = true; }, dispose() {} };
+      registrado.terminales.push(pestana);
+      return pestana;
     },
     showInformationMessage: async (m) => { registrado.mensajes.push(`INFO ${m}`); return guion.eleccion; },
     showWarningMessage: async (m) => { registrado.mensajes.push(`WARN ${m}`); return guion.eleccion; },
@@ -191,7 +202,9 @@ module.exports = {
   },
 
   extensions: {
-    getExtension: (id) => (guion.extensionesInstaladas.includes(id) ? { id, isActive: true } : undefined),
+    getExtension: (id) => (guion.extensionesInstaladas.includes(id)
+      ? { id, isActive: true, ...(guion.rutasDeExtensiones[id] ? { extensionPath: guion.rutasDeExtensiones[id] } : {}) }
+      : undefined),
   },
 
   env: {

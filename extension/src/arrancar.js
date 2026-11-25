@@ -102,12 +102,30 @@ const OBJETIVOS_POR_TIPO = {
 
 // Un elegir con descripción debajo de cada opción: en una lista pelada, la
 // mitad de las opciones no se entienden sin un ejemplo.
-async function elegir(titulo, pregunta, opciones, extra = []) {
-  const elegida = await vscode.window.showQuickPick(
-    [...opciones.map((o) => ({ label: o.etiqueta, detail: o.detalle, valor: o })), ...extra],
-    { title: titulo, placeHolder: pregunta, ignoreFocusOut: true, matchOnDetail: true },
-  );
-  return elegida ? (elegida.valor !== undefined ? elegida.valor : elegida) : null;
+//
+// Con `conMisPalabras`, la última opción deja escribirlo (decisión 206). Jose,
+// 25-11: «que puedas meter tu propia respuesta personalizada, que puedas
+// escribir y puedas decirle tú tus cosas». Siempre a la vista, aunque se escriba
+// en la caja de arriba, que filtra la lista. Lo escrito vuelve como
+// `{ conSusPalabras }`; cerrar la caja sin escribir vuelve a la lista, porque no
+// es abandonar el montaje.
+const CON_MIS_PALABRAS = { label: 'Te lo cuento con mis palabras', detail: 'Si ninguna encaja, escríbelo tú', alwaysShow: true, conMisPalabras: true };
+
+async function elegir(titulo, pregunta, opciones, extra = [], { conMisPalabras = false } = {}) {
+  for (;;) {
+    const elegida = await vscode.window.showQuickPick(
+      [...opciones.map((o) => ({ label: o.etiqueta, detail: o.detalle, valor: o })), ...extra, ...(conMisPalabras ? [CON_MIS_PALABRAS] : [])],
+      { title: titulo, placeHolder: pregunta, ignoreFocusOut: true, matchOnDetail: true },
+    );
+    if (!elegida) return null;
+    if (!elegida.conMisPalabras) return elegida.valor !== undefined ? elegida.valor : elegida;
+    const escrito = await vscode.window.showInputBox({
+      title: titulo,
+      prompt: `${pregunta} Cuéntamelo con tus palabras.`,
+      ignoreFocusOut: true,
+    });
+    if (escrito && escrito.trim()) return { conSusPalabras: escrito.trim() };
+  }
 }
 
 // En una carpeta que ya tiene algo, lo primero que se sugiere es seguir con lo
@@ -132,21 +150,36 @@ async function preguntarObjetivo(kind, { empezada = false } = {}) {
   return escrito && escrito.trim() ? escrito.trim() : null;
 }
 
-// Con qué asistente va a trabajar. Solo se pregunta si hay más de uno
-// instalado: si solo tiene uno, preguntarlo es una pantalla de más. Y si ya lo
-// dijo en los ajustes, no se pregunta (decisión 158).
+// Con qué asistente va a trabajar. Si ya lo dijo en los ajustes, no se pregunta
+// (decisión 158). Si no, se pregunta también con uno solo puesto: se puede
+// trabajar con los dos, y el otro se pone como con el ajuste (decisión 181). Jose,
+// 25-11-2026: «que se puedan añadir los dos agentes. Tanto Claude como Codex en el
+// onboarding» (decisión 206). Antes, con uno solo, ni se preguntaba.
+const LOS_DOS = { label: 'Claude y Codex', losDos: true };
 async function preguntarAsistente() {
   const ajuste = asistentes.elAjuste();
   if (ajuste !== 'automatico') return conElAjuste(ajuste);
   const puestos = asistentes.ASISTENTES.filter(asistentes.estaInstalado);
-  if (puestos.length === 1) return puestos[0].id;
   if (!puestos.length) return ponerUnAsistente();
 
-  const elegido = await vscode.window.showQuickPick(
-    puestos.map((a) => ({ label: a.nombre, id: a.id })),
-    { title: 'Con quién vas a trabajar', placeHolder: 'Tienes los dos instalados: elige uno', ignoreFocusOut: true },
-  );
-  return elegido ? elegido.id : null;
+  const [uno] = puestos;
+  const otro = asistentes.ASISTENTES.find((a) => !puestos.includes(a));
+  const opciones = otro
+    ? [
+      { label: uno.nombre, detail: 'El que ya tienes', id: uno.id },
+      { ...LOS_DOS, detail: `Pongo también ${otro.nombre}. Cada uno trabaja en su pestaña, y pueden ir a la vez` },
+    ]
+    : [
+      ...puestos.map((a) => ({ label: a.nombre, id: a.id })),
+      { ...LOS_DOS, detail: 'Cada uno trabaja en su pestaña, y pueden ir a la vez' },
+    ];
+  const elegido = await vscode.window.showQuickPick(opciones, {
+    title: 'Con quién vas a trabajar',
+    placeHolder: otro ? `Tienes ${uno.nombre}. Si quieres, pongo también ${otro.nombre}` : 'Tienes los dos: elige uno, o los dos',
+    ignoreFocusOut: true,
+  });
+  if (!elegido) return null;
+  return elegido.losDos ? conElAjuste('losDos') : elegido.id;
 }
 
 // Sin ningún asistente en el ordenador no se monta para uno que no está: se
@@ -154,11 +187,15 @@ async function preguntarAsistente() {
 // silencio, y después la barra decía «díselo a tu tutor».
 async function ponerUnAsistente() {
   const opciones = asistentes.ASISTENTES.map((a) => ({ boton: `Poner ${a.nombre}`, asistente: a }));
+  const PONER_LOS_DOS = 'Poner los dos';
   const elegido = await vscode.window.showWarningMessage(
     'No tienes ningún asistente en este ordenador. ¿Cuál pongo?',
     { modal: true },
     ...opciones.map((o) => o.boton),
+    PONER_LOS_DOS,
   );
+  // Los dos, como con el ajuste: se ponen, y se dice al terminar (decisión 206).
+  if (elegido === PONER_LOS_DOS) return conElAjuste('losDos');
   const cual = opciones.find((o) => o.boton === elegido);
   if (!cual) return null;
   if (!(await ponerElAsistente(cual.asistente))) return null;
@@ -242,7 +279,7 @@ async function preguntarNombres(objetivo, alcance) {
     const suya = await vscode.window.showInputBox({
       title: 'Ponle nombre',
       prompt: '¿Cómo se llama tu empresa? Es el nombre que verás arriba cada vez que lo abras.',
-      placeHolder: 'Nexus Consulting',
+      placeHolder: 'Asesoría Norte',
       ignoreFocusOut: true,
     });
     if (!suya || !suya.trim()) return null;
@@ -267,7 +304,7 @@ async function preguntarNombres(objetivo, alcance) {
   const empresa = await vscode.window.showInputBox({
     title: 'Ponle nombre',
     prompt: '¿Y cómo se llama tu empresa? Para saber de quién es todo esto.',
-    placeHolder: 'Nexus Consulting — o déjalo en blanco',
+    placeHolder: 'Asesoría Norte — o déjalo en blanco',
     ignoreFocusOut: true,
   });
 
@@ -856,15 +893,17 @@ function deQueVaPorLoQueSeVe(parte) {
   ];
 }
 
+const CON_LO_SUYO = { conMisPalabras: true };
+
 const COMO_SE_PREGUNTA = {
   asistente: () => preguntarAsistente(),
-  deQueVa: (yaDicho, parte) => elegir('Para empezar', '¿De qué va esto?', deQueVaPorLoQueSeVe(parte)),
-  alcance: () => elegir('Para empezar', '¿Qué vas a llevar en esta carpeta?', QUE_LLEVA),
-  personas: () => elegir('Para empezar', '¿Cuántas personas están metidas en esto?', CUANTAS_PERSONAS),
+  deQueVa: (yaDicho, parte) => elegir('Para empezar', '¿De qué va esto?', deQueVaPorLoQueSeVe(parte), [], CON_LO_SUYO),
+  alcance: () => elegir('Para empezar', '¿Qué vas a llevar en esta carpeta?', QUE_LLEVA, [], CON_LO_SUYO),
+  personas: () => elegir('Para empezar', '¿Cuántas personas están metidas en esto?', CUANTAS_PERSONAS, [], CON_LO_SUYO),
   queConstruir: (yaDicho) => elegir('Para empezar', '¿Qué vas a construir?',
-    QUE_VAS_A_CONSTRUIR.filter((o) => !o.soloCon || o.soloCon === yaDicho.kind)),
+    QUE_VAS_A_CONSTRUIR.filter((o) => !o.soloCon || o.soloCon === yaDicho.kind), [], CON_LO_SUYO),
   objetivo: (yaDicho, parte) => preguntarObjetivo(yaDicho.kind, { empezada: esDeAlguien(parte) }),
-  nivel: () => elegir('Sobre ti', '¿Qué tal te manejas con el ordenador?', COMO_TE_MANEJAS),
+  nivel: () => elegir('Sobre ti', '¿Qué tal te manejas con el ordenador?', COMO_TE_MANEJAS, [], CON_LO_SUYO),
   nombres: (yaDicho) => preguntarNombres(yaDicho.objetivo, yaDicho.alcance),
 };
 
@@ -876,6 +915,21 @@ const LO_QUE_SE_GUARDA = {
   queConstruir: (r, o) => { r.tamano = o.tamano; },
   nivel: (r, o) => { r.nivel = o.nivel; },
   nombres: (r, o) => { r.nombres = o; },
+};
+
+// Contestada con sus palabras (decisión 206): lo escrito va entero al asistente,
+// en el primer mensaje, y a RSC, que solo acepta los valores de su lista, lo más
+// prudente de cada una. Un poco de todo; empezar sencillo, que RSC sube solo si
+// el objetivo habla de pagos o de integraciones; y el nivel de quien no es
+// técnico, que lleva el freno puesto. El asistente ajusta el perfil al hablar.
+// Lo que solo es nuestro (qué lleva y cuánta gente) se queda sin valor: no se
+// adivina uno de la lista.
+const SI_LO_CUENTA = {
+  deQueVa: (r) => { r.kind = 'mixed'; },
+  alcance: (r) => { r.alcance = null; },
+  personas: (r) => { r.personas = null; },
+  queConstruir: (r) => { r.tamano = 'small'; },
+  nivel: (r) => { r.nivel = 'non-technical'; },
 };
 
 // Lo que el recibo ya contesta, en la forma que espera `montarElArnes`.
@@ -896,7 +950,9 @@ const DONDE_SE_GUARDA = {
   asistente: 'asistente', deQueVa: 'kind', alcance: 'alcance', personas: 'personas',
   queConstruir: 'tamano', objetivo: 'objetivo', nivel: 'nivel', nombres: 'nombres',
 };
-const yaContestada = (que, respuestas) => Boolean(DONDE_SE_GUARDA[que] && respuestas && respuestas[DONDE_SE_GUARDA[que]]);
+const yaContestada = (que, respuestas) => Boolean(respuestas && (
+  (DONDE_SE_GUARDA[que] && respuestas[DONDE_SE_GUARDA[que]])
+  || (respuestas.conSusPalabras && respuestas.conSusPalabras[que])));
 
 // La web se pregunta al montar de cero. Si se dejó en blanco queda `null`, que
 // también es una respuesta: por eso se mira si está, no si tiene algo.
@@ -948,7 +1004,10 @@ async function entrevistar(plan, parte, guardadas = null) {
     const contestada = await COMO_SE_PREGUNTA[que](respuestas, parte);
     if (!contestada) return null;
 
-    if (LO_QUE_SE_GUARDA[que]) LO_QUE_SE_GUARDA[que](respuestas, contestada);
+    if (contestada.conSusPalabras && SI_LO_CUENTA[que]) {
+      SI_LO_CUENTA[que](respuestas);
+      respuestas.conSusPalabras = { ...(respuestas.conSusPalabras || {}), [que]: contestada.conSusPalabras };
+    } else if (LO_QUE_SE_GUARDA[que]) LO_QUE_SE_GUARDA[que](respuestas, contestada);
     else respuestas[que] = contestada;
   }
 
@@ -1328,12 +1387,20 @@ const ESPERANDO_A_GIT = 'Estoy poniendo git. En cuanto esté, preparo la carpeta
 
 // El instalador del sistema, con su barra de progreso. Una sola vez a la vez
 // (`git.instalar`). No revienta nunca: un fallo vuelve como un no.
+// Arranca ya, antes de la primera pregunta: con la de con quién trabajar
+// (decisión 206), que sale en el mismo instante, git empezaba después de ella.
+// Lo que falle al arrancar se dice igual, como lo que falle después.
 function ponerGit() {
-  return Promise.resolve()
-    .then(() => vscode.window.withProgress(
+  let enMarcha;
+  try {
+    enMarcha = Promise.resolve(vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: 'Poniendo git', cancellable: false },
       (progreso) => git.instalar((que) => progreso.report({ message: que })),
-    ))
+    ));
+  } catch (error) {
+    enMarcha = Promise.reject(error);
+  }
+  return enMarcha
     .then((hecho) => hecho || { ok: false, mensaje: 'el instalador no ha contestado' }) // diccionario: interno
     .catch((error) => ({ ok: false, mensaje: error.message }));
 }
@@ -1680,6 +1747,7 @@ async function hacerLosPasos(plan, parte, respuestas, contexto, salida) {
         objetivo: respuestas.objetivo,
         alcance: respuestas.alcance || null,
         personas: respuestas.personas || null,
+        conSusPalabras: respuestas.conSusPalabras || null,
         web: respuestas.web,
         nombres: respuestas.nombres || { arnes: null, empresa: null },
         // «Listo» solo cuando el arnés también lo daría por listo (G7). Con el
@@ -1737,6 +1805,21 @@ function hayFreno() {
 // si hay freno, y que se pregunte de una en una. En una carpeta de alguien,
 // además, que mire antes de tocar. Los encargos que van en el mensaje,
 // después del objetivo, cada uno en su párrafo.
+// Lo que contestó con sus palabras, con su pregunta delante (decisión 206).
+const PREGUNTA_DE = {
+  deQueVa: '¿De qué va esto?',
+  alcance: '¿Qué vas a llevar en esta carpeta?',
+  personas: '¿Cuántas personas están metidas en esto?',
+  queConstruir: '¿Qué vas a construir?',
+  nivel: '¿Qué tal te manejas con el ordenador?',
+};
+function loQueConteConMisPalabras(conSusPalabras) {
+  const dichas = Object.keys(PREGUNTA_DE)
+    .filter((que) => conSusPalabras && typeof conSusPalabras[que] === 'string' && conSusPalabras[que].trim())
+    .map((que) => `«${PREGUNTA_DE[que]}» ${conSusPalabras[que].trim().replace(/[.\s]+$/, '')}`);
+  return dichas.length ? `Algunas preguntas te las he contestado con mis palabras; tenlas en cuenta: ${dichas.join('. ')}.` : '';
+}
+
 function primerMensaje(hecho, { comoSeLlama, conWeb = '', conFreno = false }) {
   const { empresa } = hecho.nombres || {};
   const deQuien = empresa && empresa !== comoSeLlama ? ` Es para ${empresa}.` : '';
@@ -1748,12 +1831,13 @@ function primerMensaje(hecho, { comoSeLlama, conWeb = '', conFreno = false }) {
   // Lo de la web y los encargos van en párrafo aparte; sin ellos, un espacio.
   // Antes salía «facturas.Después» pegado.
   const enMedio = conWeb || encargos ? `${conWeb}${encargos}` : ' ';
+  const conMisPalabras = loQueConteConMisPalabras(hecho.conSusPalabras);
   const freno = conFreno
     ? 'En esta carpeta hay freno ante órdenes peligrosas.'
     : 'En esta carpeta no hay freno ante órdenes peligrosas: antes de una orden que borre o deshaga algo, pregúntame.';
   return `Acabo de montar aquí un arnés que he llamado "${comoSeLlama}".${deQuien}${queLleva ? ` ${queLleva}` : ''}${deAlguien}`
     + ` Lo primero que quiero resolver: ${hecho.objetivo}.${enMedio}`
-    + `Completa conmigo el perfil: a qué me dedico, qué herramientas uso y qué no se puede tocar. ${freno} Pregúntame de una en una.`;
+    + `${conMisPalabras ? `${conMisPalabras} ` : ''}Completa conmigo el perfil: a qué me dedico, qué herramientas uso y qué no se puede tocar. ${freno} Pregúntame de una en una.`;
 }
 
 module.exports = {

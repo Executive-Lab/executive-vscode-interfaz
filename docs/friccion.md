@@ -92,8 +92,10 @@ sesión de verdad.
 y las conexiones, y enseña el resultado al momento; solo cuando no encuentra nada ofrece
 preguntárselo a él. Falta el resto:
 
-**Los botones abren conversación nueva.** Claude no permite escribir en la que ya tienes abierta; con
-Codex no permite ni eso, así que se copia al portapapeles. Lo honesto sería que los botones que solo
+**Los botones abren conversación nueva.** Claude no permite escribir en la que ya tienes abierta: el encargo
+se queda escrito en su caja y hay que darle a enviar. Con Codex, desde la 0.65 (decisión 206), el encargo lo
+empieza él solo en una pestaña nueva, con el programa que trae su extensión; solo sin ese programa se copia al
+portapapeles. Lo honesto sería que los botones que solo
 consultan **no hablaran con el asistente**: que la barra haga el trabajo y enseñe el resultado, como
 ya hace con los scripts de una herramienta. Menos conversación, menos espera, menos fricción.
 

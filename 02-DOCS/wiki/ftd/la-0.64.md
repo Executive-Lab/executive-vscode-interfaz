@@ -4,7 +4,7 @@ title: La 0.64, la marca de la empresa entera
 date: 2026-11-25
 author: Jose Sanchis
 branch: la-0.64
-status: in-progress
+status: done
 ---
 
 # La 0.64, la marca de la empresa entera
@@ -112,7 +112,10 @@ Lo que se vio al revisarla, con cinco marcas de prueba en claro y en oscuro:
 - **Cómo se deshace.** `git revert` del commit de la fusión. No hay datos que migrar: los campos nuevos del récord
   (`tipografia` con un nombre, `fuente`) los ignora una barra anterior, que pinta la marca como antes.
 
+- **Publicada.** Jose fusionó la PR #115 (squash, `51822cf`) el 25-11-2026, y la 0.64.0 salió ese día a las 13:19
+  (UTC) desde minarkap, con el `.vsix` adjunto: <https://github.com/Executive-Lab/executive-vscode-interfaz/releases/tag/v0.64.0>.
+
 ## Next
 
-- Jose: fusionar la PR y publicar la 0.64.0.
+- Hecho. Lo siguiente, en `la-0.65.md`.
 - Con el amarillo, el ✨ del botón casi no se ve. No se toca: es un emoji, y su color no es nuestro.

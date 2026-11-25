@@ -37,6 +37,8 @@ process.env.CODEX_HOME = CODEX_DE_MENTIRA;
 require(path.join(RAIZ, 'src', 'sesion-del-asistente')).modulo.ejecutar = async () => ({ codigo: -1, salida: '' });
 // Y el `codex` del PATH de quien corre esto no cuenta para saber si lo tiene (decisión 190).
 require(path.join(RAIZ, 'src', 'asistentes')).terminal.hayEnElPath = () => false;
+// Ni para abrirlo con un encargo (decisión 206).
+require(path.join(RAIZ, 'src', 'asistentes')).terminal.programaEnElPath = () => null;
 // Los ficheros de la plantilla de conexiones, como los deja RSC: el suelo los
 // pide todos, no solo la carpeta (G7). Salen del paquete que viaja dentro.
 // Sin el paquete —`node_modules` no va en git— la batería reventaba aquí,
@@ -1310,8 +1312,10 @@ contraseña de entrar: es una llave aparte que se puede anular sin tocar la cuen
       if (args.includes('--accept-plan')) return { codigo: 0, salida: `RSC_ONBOARDING_READY ${'d'.repeat(64)}` };
       return { codigo: 0, salida: `Plan id: ${'d'.repeat(64)}\nAccept exactly this plan: npx @ericrisco/rsc@2.0.5 onboard --target claude --accept-plan ${'d'.repeat(64)}` };
     };
-    const entrevista = async (instalados, respuestas) => {
+    const entrevista = async (instalados, respuestas, ajuste) => {
       vscode.guion.raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'entrevista-'));
+      if (ajuste) vscode.registrado.ajustes.global['executiveLab.asistente'] = ajuste;
+      else delete vscode.registrado.ajustes.global['executiveLab.asistente'];
       vscode.guion.extensionesInstaladas = instalados;
       vscode.guion.respuestas = [...respuestas];
       const hecho = await cargar('arrancar').arrancar({ extensionPath: RAIZ, workspaceState: { get: () => undefined, update: async () => {} } }, vscode.window.createOutputChannel());
@@ -1321,9 +1325,10 @@ contraseña de entrar: es una llave aparte que se puede anular sin tocar la cuen
     };
     try {
       const { min, max } = cargar('rumbo').cuantasPreguntas({ recibo: null, railes: null });
+      // La más corta: el asistente dicho en los ajustes (decisión 158), que no se pregunta.
       const corta = await entrevista(['anthropic.claude-code'], [
         'Llevar el día a día', 'La empresa entera', 'Solo yo', 'Organizar el papeleo', 'Lo justo', 'Ferretería Soler', '',
-      ]);
+      ], 'claude');
       const larga = await entrevista(['anthropic.claude-code', 'openai.chatgpt'], [
         'Claude', 'Un poco de todo', 'Un proyecto', 'Solo yo', 'Algo que irá sumando piezas', 'Otra cosa — te la cuento yo',
         'Llevar la web de la tienda', 'Me defiendo', 'Web nueva', 'Tienda Soler', '',
@@ -2156,7 +2161,7 @@ contraseña de entrar: es una llave aparte que se puede anular sin tocar la cuen
 
   await comprobar('un logotipo que es solo el símbolo pide que se escriba el nombre al lado', () => {
     // Una marca sin nombre en lo alto de la barra es un dibujo anónimo: la ene
-    // de puntos de Nexus Consulting es preciosa y no dice de quién es esto.
+    // de puntos de Asesoría Norte es preciosa y no dice de quién es esto.
     montarMarca(empresa, { simbolo: true });
     assert.equal(marca.leer().logoSinNombre, true, 'cuadrado: el nombre no va dentro');
 
@@ -4494,14 +4499,18 @@ exec git "$@"
       assert.match(paraUnAlumno['gitmoji-guard'].porQue, /a propósito/, 'apagado no es lo mismo que roto');
       assert.equal(paraUnAlumno['ship-guard'].estado, 'armado');
 
-      // Y el de órdenes peligrosas NO actúa con quien es técnico: lo decide el
-      // perfil, no nosotros (`danger-guard.mjs`, línea 36).
+      // Y con quien es técnico, el de órdenes peligrosas también actúa: no le
+      // bloquea nada, pero le pregunta antes de lo que no tiene vuelta atrás
+      // (`FOR_EVERYONE` en el `danger-guard.mjs` de RSC, desde la 3). Decía
+      // «Contigo no actúa», y no era verdad (decisión 205).
       fs2.writeFileSync(path.join(carpeta, '02-DOCS', 'wiki', 'harness', 'user-profile.md'),
         '---\ntechnical_level: technical\naccompaniment: L1\n---\n\n# Perfil\n');
       delete require.cache[require.resolve(path.join(RAIZ, 'src', 'trato.js'))];
       const paraUnTecnico = Object.fromEntries(cargar('reglas').losGuardianes().map((g) => [g.id, g]));
-      assert.equal(paraUnTecnico['danger-guard'].estado, 'noAplica', 'a un técnico no le frena');
-      assert.match(paraUnTecnico['danger-guard'].porQue, /técnico/, 'y se dice por qué, que si no parece una avería');
+      assert.equal(paraUnTecnico['danger-guard'].estado, 'armado', 'a un técnico también le actúa');
+      assert.match(paraUnTecnico['danger-guard'].porQue, /pregunta antes de lo que no tiene vuelta atrás/, 'y se dice cómo, que con él no es igual');
+      assert.match(paraUnTecnico['danger-guard'].porQue, /técnico/, 'y por qué');
+      assert.equal(paraUnAlumno['danger-guard'].porQue, '', 'a un alumno, sin matiz: le para');
       assert.equal(paraUnTecnico['ship-guard'].estado, 'armado', 'los otros dos no dependen del perfil');
 
       // Sin guardianes montados no se nombra ninguno: un rótulo con nada
@@ -5862,8 +5871,8 @@ exec git "$@"
 
   await comprobar('lo que se le pide lleva el material que se le ha dado', () => {
     const tema = cargar('tema');
-    const conTodo = tema.queLePedimos({ web: 'https://nexus.example', puestos: ['logo.svg'], contado: 'somos azules' });
-    assert.match(conTodo, /nexus\.example/);
+    const conTodo = tema.queLePedimos({ web: 'https://norte.example', puestos: ['logo.svg'], contado: 'somos azules' });
+    assert.match(conTodo, /norte\.example/);
     assert.match(conTodo, /logo\.svg/, 'se le dice qué mirar');
     assert.match(conTodo, /somos azules/);
     assert.match(conTodo, /brand\/marca\.md/, 'y dónde escribirlo');
@@ -6889,19 +6898,21 @@ exec git "$@"
   };
   const antesDeCadaOrden = (carpeta) => {
     const ajustes = JSON.parse(fs.readFileSync(path.join(carpeta, '.claude', 'settings.json'), 'utf8'));
-    return (ajustes.hooks.PreToolUse || []).filter((e) => e.matcher === 'Bash').flatMap((e) => e.hooks.map((h) => h.command));
+    const alcanzaA = (matcher, herramienta) => new RegExp(`^(?:${matcher})$`).test(herramienta);
+    return (ajustes.hooks.PreToolUse || []).filter((e) => alcanzaA(e.matcher, 'Bash')).flatMap((e) => e.hooks.map((h) => h.command));
   };
   const elFrenoNuestro = (carpeta) => antesDeCadaOrden(carpeta).find((o) => o.includes('.claude/skills/executive-lab/freno.mjs'));
   // Una orden, pasada por un enganche como lo corre Claude Code: con `sh -c` y
   // la carpeta en CLAUDE_PROJECT_DIR. En Windows, Claude Code usa Git Bash, y
   // `/bin/sh` no existe: las cinco pruebas del freno no llegaban a correr.
   const SH = process.platform === 'win32' ? cargar('entorno').bash() : '/bin/sh';
-  const pasarPor = (enganche, carpeta, orden) => require('node:child_process').spawnSync(SH, ['-c', enganche], {
-    input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: orden } }),
+  const pasarPor = (enganche, carpeta, orden, herramienta = 'Bash') => require('node:child_process').spawnSync(SH, ['-c', enganche], {
+    input: JSON.stringify({ tool_name: herramienta, tool_input: { command: orden } }),
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_PROJECT_DIR: carpeta },
   });
   const deniega = (dicho) => /"permissionDecision":\s*"deny"/.test(dicho.stdout);
+  const pregunta = (dicho) => /"permissionDecision":\s*"ask"/.test(dicho.stdout);
   const LAS_SEIS = [
     'rm -rf ./informes',
     'git push --force origin main',
@@ -6971,6 +6982,55 @@ exec git "$@"
     fs.writeFileSync(path.join(carpeta, '.rsc', '.no-danger-guard'), '');
     assert.ok(!deniega(pasarPor(nuestro, carpeta, 'rm -rf ./informes')), 'apagado, sigue denegando');
     return 'apagado, deja pasar';
+  });
+
+  await comprobar('205: el freno de la barra se engancha a Bash y a PowerShell, y el de antes se pone al día', () => {
+    // RSC 4.2.0 engancha su freno a los dos. En Windows, Claude corre órdenes con
+    // PowerShell, y un `Remove-Item -Recurse -Force` no pasaba por ningún freno.
+    const carpeta = conEnganchesDeRsc('freno-powershell-');
+    ponerLosRailesEn(carpeta);
+    const f = path.join(carpeta, '.claude', 'settings.json');
+    const losNuestros = () => JSON.parse(fs.readFileSync(f, 'utf8')).hooks.PreToolUse
+      .filter((e) => JSON.stringify(e).includes('/executive-lab/freno.mjs'));
+    assert.deepEqual(losNuestros().map((e) => e.matcher), ['Bash|PowerShell'], 'el freno no se engancha a los dos');
+    const nuestro = elFrenoNuestro(carpeta);
+    assert.ok(deniega(pasarPor(nuestro, carpeta, 'Remove-Item -Recurse -Force .\\informes', 'PowerShell')), 'no deniega un borrado entero con PowerShell');
+    assert.ok(!deniega(pasarPor(nuestro, carpeta, 'Get-ChildItem', 'PowerShell')), 'deniega lo que no es peligroso');
+    // Una carpeta con el enganche de una barra de antes, solo a Bash: se pone al
+    // día, y sigue habiendo uno solo.
+    const ajustes = JSON.parse(fs.readFileSync(f, 'utf8'));
+    for (const e of ajustes.hooks.PreToolUse) if (JSON.stringify(e).includes('/executive-lab/freno.mjs')) e.matcher = 'Bash';
+    fs.writeFileSync(f, `${JSON.stringify(ajustes, null, 2)}\n`);
+    ponerLosRailesEn(carpeta);
+    assert.deepEqual(losNuestros().map((e) => e.matcher), ['Bash|PowerShell'], 'el enganche de antes no se pone al día, o se duplica');
+    // Y la barra lo da por enganchado, con la misma regla que el envoltorio.
+    assert.ok(cargar('reglas').enganchadoAntesDeBash(fs.readFileSync(f, 'utf8'), '/executive-lab/freno.mjs'), 'la barra no lo ve enganchado');
+    return 'a Bash y a PowerShell, y el de antes, al día';
+  });
+
+  await comprobar('205: con un perfil técnico, el freno pregunta antes de lo que no tiene vuelta atrás y deja pasar lo demás', () => {
+    // Lo que la barra dice de él (`reglas.losGuardianes`), comprobado con el
+    // freno de verdad: a un técnico no le deniega nada, le pregunta antes de lo
+    // irreversible y calla con lo demás.
+    const carpeta = conEnganchesDeRsc('freno-tecnico-');
+    ponerLosRailesEn(carpeta);
+    const nuestro = elFrenoNuestro(carpeta);
+    const perfil = (nivel) => {
+      fs.mkdirSync(path.join(carpeta, '02-DOCS', 'wiki', 'harness'), { recursive: true });
+      fs.writeFileSync(path.join(carpeta, '02-DOCS', 'wiki', 'harness', 'user-profile.md'), `---\ntechnical_level: ${nivel}\n---\n`);
+    };
+    perfil('non-technical');
+    assert.ok(deniega(pasarPor(nuestro, carpeta, 'git push --force origin main')), 'a quien no es técnico no le deniega: la prueba no mira nada');
+    perfil('technical');
+    const irreversibles = ['git push --force origin main', 'git reset --hard HEAD~1', 'rm -rf .'];
+    for (const orden of irreversibles) {
+      const dicho = pasarPor(nuestro, carpeta, orden);
+      assert.ok(pregunta(dicho) && !deniega(dicho), `a un técnico, «${orden}» no se le pregunta: ${dicho.stdout}`);
+    }
+    for (const orden of ['rm -rf ./informes', LAS_SEIS[5]]) {
+      assert.equal(pasarPor(nuestro, carpeta, orden).stdout, '', `a un técnico, «${orden}» no pasa en silencio`);
+    }
+    return `${irreversibles.length} preguntadas y dos en silencio`;
   });
 
   await comprobar('en una carpeta con historial ajeno, reponer los raíles no engancha el freno sin su sí', async () => {
@@ -7490,7 +7550,7 @@ exec git "$@"
     }
   });
 
-  await comprobar('el freno apagado o con un perfil técnico no se ofrece, y apagado es apagado', async () => {
+  await comprobar('el freno apagado no se ofrece, apagado es apagado, y con un perfil técnico sí se ofrece', async () => {
     // Revisión de F3, M3. La pieza pendiente se ofrecía aunque la persona lo
     // hubiera apagado (.rsc/.no-danger-guard) o su perfil dijera que es técnica,
     // y Las reglas ponía «pendiente» por delante de «apagado».
@@ -7507,8 +7567,10 @@ exec git "$@"
       fs.rmSync(path.join(carpeta, '.rsc', '.no-danger-guard'));
       fs.writeFileSync(path.join(carpeta, '02-DOCS', 'wiki', 'harness', 'user-profile.md'), '---\ntechnical_level: technical\n---\n');
       delete require.cache[require.resolve(path.join(RAIZ, 'src', 'trato.js'))];
-      assert.equal(await pieza(), undefined, 'con un perfil técnico, que no frena, se ofrece igual');
-      return 'apagado o técnico, no se ofrece';
+      // Con un perfil técnico el freno pregunta antes de lo que no tiene vuelta
+      // atrás: también le sirve, y se ofrece (decisión 205). Antes no se ofrecía.
+      assert.ok(await pieza(), 'con un perfil técnico, que también le actúa, no se ofrece');
+      return 'apagado, no se ofrece; técnico, sí';
     } finally {
       vscode.guion.raiz = empresa;
       delete require.cache[require.resolve(path.join(RAIZ, 'src', 'trato.js'))];
@@ -9302,8 +9364,8 @@ exec git "$@"
   });
 
   await comprobar('las claves de una aplicación están en su sitio, y siguen sin salir de este ordenador', async () => {
-    // Jose, 29-09-2026, con una captura de nexus-presupuestos: «Hay 9 claves
-    // fuera de sitio» — Resend, Supabase, y NEXUS y USE «por montar», que no
+    // Jose, 29-09-2026, con una captura de norte-presupuestos: «Hay 9 claves
+    // fuera de sitio» — Resend, Supabase, y NORTE y USE «por montar», que no
     // son nadie. Estaban en el `.env.local` de `03-APP`, que es donde las lee
     // la aplicación de esa carpeta. Para RSC eso es un subproyecto y lo de
     // dentro no se mueve (decisión 135).
@@ -9323,7 +9385,7 @@ exec git "$@"
       'SUPABASE_SERVICE_ROLE_KEY=eyJservicio_secreto',
       'SUPABASE_DB_PASSWORD=otra_secreta',
       'SUPABASE_PROJECT_ID=abc',
-      'NEXUS_ADMIN_EMAIL=jefe@ejemplo.com',
+      'NORTE_ADMIN_EMAIL=jefe@ejemplo.com',
       'USE_MOCK_DATA=false',
     ].join('\n'));
     // Un fichero de acceso de la app también es suyo: Firebase lo lee de ahí.
@@ -9706,7 +9768,7 @@ exec git "$@"
       fs2.writeFileSync(path.join(carpeta, relativa), texto);
     };
     escribir('.rsc.json', JSON.stringify({ version: 1, targets: ['claude'] }));
-    escribir('02-DOCS/wiki/harness/user-profile.md', '---\narnes: Contabilidad\nempresa: Nexus\ntechnical_level: non-technical\n---\n');
+    escribir('02-DOCS/wiki/harness/user-profile.md', '---\narnes: Contabilidad\nempresa: Norte\ntechnical_level: non-technical\n---\n');
 
     const laDeHoy = fs2.readFileSync(path.join(RAIZ, 'media', 'railes', 'executive-lab', 'SKILL.md'), 'utf8');
     vscode.guion.raiz = carpeta;
@@ -10636,6 +10698,84 @@ exec git "$@"
     return 'las tres se preguntan · el nivel llega · el recibo se respeta';
   });
 
+  await comprobar('206: en cada pregunta del montaje se puede contestar con tus palabras, y le llega al asistente', async () => {
+    // Jose, 25-11: «que puedas meter tu propia respuesta personalizada, que puedas
+    // escribir y puedas decirle tú tus cosas». Al final de cada lista, una opción
+    // para escribirlo; lo escrito va entero al asistente, y a RSC, que solo acepta
+    // los valores de su lista, el más prudente.
+    const arrancarM = cargar('arrancar');
+    const PROPIA = 'Te lo cuento con mis palabras';
+    const caja = (pregunta) => `${pregunta} Cuéntamelo con tus palabras.`;
+    const ESCRITO = {
+      deQueVa: ['¿De qué va esto?', 'Una gestoría pequeña: nóminas y papeles de clientes'],
+      alcance: ['¿Qué vas a llevar en esta carpeta?', 'Las nóminas de mis clientes'],
+      personas: ['¿Cuántas personas están metidas en esto?', 'Mi socia y yo, y una gestora a media jornada'],
+      queConstruir: ['¿Qué vas a construir?', 'Un aviso cuando falte un papel'],
+      nivel: ['¿Qué tal te manejas con el ordenador?', 'Uso Excel con fórmulas y algo de macros.'],
+    };
+    const contesta = {};
+    for (const [pregunta, texto] of Object.values(ESCRITO)) {
+      contesta[pregunta] = PROPIA;
+      contesta[caja(pregunta)] = texto;
+    }
+    const { respuestas, vistas } = await entrevistarCon(contesta);
+    for (const [pregunta] of Object.values(ESCRITO)) {
+      const vista = vistas.find((v) => v.pregunta === pregunta);
+      assert.ok(vista, `no se ha preguntado «${pregunta}»`);
+      assert.equal(vista.opciones[vista.opciones.length - 1], PROPIA, `«${pregunta}» no deja contestarlo con sus palabras, al final`);
+      assert.ok(vistas.some((v) => v.caja && v.pregunta === caja(pregunta)), `«${pregunta}» no abre la caja para escribir`);
+    }
+    assert.deepEqual(respuestas.conSusPalabras, {
+      deQueVa: ESCRITO.deQueVa[1], alcance: ESCRITO.alcance[1], personas: ESCRITO.personas[1],
+      queConstruir: ESCRITO.queConstruir[1], nivel: ESCRITO.nivel[1],
+    }, 'lo escrito no se guarda tal cual');
+    // A RSC, lo más prudente de su lista: un poco de todo, empezar sencillo y el
+    // nivel de quien no es técnico, que lleva el freno puesto.
+    assert.equal(respuestas.kind, 'mixed');
+    assert.equal(respuestas.tamano, 'small');
+    assert.equal(respuestas.nivel, 'non-technical');
+    assert.equal(respuestas.alcance, null, 'el alcance escrito no se convierte en uno de la lista');
+    assert.equal(respuestas.personas, null, 'las personas escritas no se convierten en una de la lista');
+    const flags = arrancarM.flagsDelMontaje({ ...respuestas, asistente: 'claude' });
+    assert.equal(flags[flags.indexOf('--project-kind') + 1], 'mixed');
+    assert.equal(flags[flags.indexOf('--technical-level') + 1], 'non-technical');
+    assert.equal(flags[flags.indexOf('--software-scope') + 1], 'small');
+    // Contestada con sus palabras es contestada: no se vuelve a preguntar.
+    const faltan = arrancarM.faltanPorContestar(cargar('rumbo').elegirRama(PARTE_VACIA), PARTE_VACIA, respuestas);
+    assert.deepEqual(faltan.filter((q) => q in ESCRITO), [], 'lo contestado con sus palabras se vuelve a preguntar');
+    // Y le llega al asistente, con su pregunta delante.
+    const mensaje = arrancarM.primerMensaje({ objetivo: 'Que no se me pase ningún papel', nombres: {}, conSusPalabras: respuestas.conSusPalabras }, { comoSeLlama: 'Gestoría' });
+    for (const [pregunta, texto] of Object.values(ESCRITO)) {
+      assert.ok(mensaje.includes(`«${pregunta}» ${texto.replace(/\.$/, '')}`), `«${pregunta}» no le llega al asistente:\n${mensaje}`);
+    }
+    assert.ok(!mensaje.includes('..'), `sale un punto doble:\n${mensaje}`);
+    const sinNada = arrancarM.primerMensaje({ objetivo: 'Que no se me pase ningún papel', nombres: {} }, { comoSeLlama: 'Gestoría' });
+    assert.ok(!/con mis palabras/.test(sinNada), 'sin nada escrito, el mensaje lo nombra igual');
+
+    // Cerrar la caja sin escribir vuelve a la lista: no abandona el montaje.
+    const antes = { elegir: vscode.window.showQuickPick, escribir: vscode.window.showInputBox };
+    let listas = 0;
+    let siempreVisible = false;
+    vscode.window.showQuickPick = async (opciones) => {
+      const lista = await opciones;
+      listas += 1;
+      const propia = lista.find((o) => o.label === PROPIA);
+      siempreVisible = Boolean(propia && propia.alwaysShow);
+      return listas === 1 ? propia : lista[0];
+    };
+    vscode.window.showInputBox = async () => undefined;
+    try {
+      const otraVez = await arrancarM.COMO_SE_PREGUNTA.personas({}, PARTE_VACIA);
+      assert.equal(listas, 2, 'sin escribir nada, no vuelve a la lista');
+      assert.equal(otraVez.personas, 'solo-yo', 'y lo que se elige después, vale');
+      assert.ok(siempreVisible, 'al escribir en la caja de arriba, la opción de contarlo desaparece');
+    } finally {
+      vscode.window.showQuickPick = antes.elegir;
+      vscode.window.showInputBox = antes.escribir;
+    }
+    return `${Object.keys(ESCRITO).length} preguntas, con sus palabras hasta el asistente`;
+  });
+
   await comprobar('el nombre viene rellenado con el de la carpeta, limpio y legible', async () => {
     // Decisión 184. La caja salía vacía, o con un nombre de área sacado del objetivo.
     const arrancarM = cargar('arrancar');
@@ -10689,14 +10829,14 @@ exec git "$@"
 
     // …y al primer mensaje, que es lo que el `init` de RSC pregunta al empezar.
     const mensaje = arrancarM.primerMensaje(
-      { nombres: { arnes: 'Contabilidad', empresa: 'Nexus Consulting' }, objetivo: 'Poner orden en mis facturas', alcance: 'departamento', personas: '11-50' },
+      { nombres: { arnes: 'Contabilidad', empresa: 'Asesoría Norte' }, objetivo: 'Poner orden en mis facturas', alcance: 'departamento', personas: '11-50' },
       { comoSeLlama: 'Contabilidad' },
     );
-    assert.match(mensaje, /Es para Nexus Consulting\. En esta carpeta llevo un departamento o un área, y somos de 11 a 50 personas\./);
+    assert.match(mensaje, /Es para Asesoría Norte\. En esta carpeta llevo un departamento o un área, y somos de 11 a 50 personas\./);
     assert.match(mensaje, /Poner orden en mis facturas\. Completa conmigo el perfil/, 'el objetivo y lo que sigue salen pegados');
     const deTodos = arrancarM.primerMensaje(
-      { nombres: { arnes: 'Nexus Consulting', empresa: 'Nexus Consulting' }, objetivo: 'Vender más', alcance: 'empresa', personas: 'solo-yo' },
-      { comoSeLlama: 'Nexus Consulting' },
+      { nombres: { arnes: 'Asesoría Norte', empresa: 'Asesoría Norte' }, objetivo: 'Vender más', alcance: 'empresa', personas: 'solo-yo' },
+      { comoSeLlama: 'Asesoría Norte' },
     );
     assert.ok(!/Es para/.test(deTodos), 'con la empresa entera se repite el nombre');
     assert.match(deTodos, /En esta carpeta llevo la empresa entera, y solo estoy yo\./);
@@ -10783,7 +10923,7 @@ exec git "$@"
     poner('.claude/skills/bro/SKILL.md', '#');
     poner('.rsc/session-start.mjs', '// de esta máquina: esto no es un clon');
     poner('02-DOCS/wiki/harness/user-profile.md',
-      '---\ntechnical_level: non-technical\naccompaniment: L3\nproject_kind: operations\narnes: Facturación\nempresa: Nexus Consulting\nalcance: departamento\npersonas: 11-50\n---\n\n# User profile\n');
+      '---\ntechnical_level: non-technical\naccompaniment: L3\nproject_kind: operations\narnes: Facturación\nempresa: Asesoría Norte\nalcance: departamento\npersonas: 11-50\n---\n\n# User profile\n');
     // Sin la plantilla de conexiones: el suelo a medias, que se completa montando otra vez.
 
     const antes = rscM.correr;
@@ -11258,7 +11398,8 @@ exec git "$@"
     } finally {
       vscode.window.showQuickPick = elegir;
     }
-    assert.equal(preguntado, '¿De qué va esto?', `con «Seguir sin copias» no sigue a las preguntas: ${preguntado}`);
+    // La primera, desde la 206, con quién va a trabajar.
+    assert.equal(preguntado, 'Tienes Claude. Si quieres, pongo también Codex', `con «Seguir sin copias» no sigue a las preguntas: ${preguntado}`);
     assert.equal(seguir.cancelado, true, 'sin contestar, se monta igual');
     assert.equal(seguir.faltaGit, undefined);
     assert.deepEqual(fs.readdirSync(vacia), [], 'sin contestar, se escribe algo');
@@ -13250,7 +13391,7 @@ exec git "$@"
     assert.equal(rscM.comoEsLaVersion('1.4.1'), 'vieja');
     assert.equal(rscM.comoEsLaVersion(LA_DE_LA_CLASE), 'igual');
     assert.equal(rscM.comoEsLaVersion(MAS_NUEVA), 'nueva', `la ${MAS_NUEVA} no es más nueva que la ${LA_DE_LA_CLASE}: se compara como texto`);
-    assert.equal(rscM.comoEsLaVersion('4.2.0'), 'nueva');
+    assert.equal(rscM.comoEsLaVersion('4.10.0'), 'nueva', 'la 4.10 va por delante de la 4.2: se compara como texto');
     assert.equal(rscM.comoEsLaVersion('2.1.0'), 'vieja', 'una 2 va por detrás de la 3 (decisión 145)');
     // Y una 3 va por detrás de la 4: la clase de la 3 se pone al día sola (decisión 200).
     assert.equal(rscM.comoEsLaVersion('3.9.9'), 'vieja', 'una 3 va por detrás de la 4 (decisión 200)');
@@ -15621,7 +15762,8 @@ exec git "$@"
       const git = process.env.GIT_CONFIG_GLOBAL;
       process.env.GIT_CONFIG_GLOBAL = path.join(casa, '.gitconfig');
       vscode.guion.raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'permiso-entero-'));
-      vscode.guion.respuestas = ['Llevar el día a día', 'La empresa entera', 'Solo yo', 'Organizar el papeleo', 'Lo justo', 'Ferretería Soler', ''];
+      // Lo primero, con quién: desde la 206 se pregunta también con uno puesto.
+      vscode.guion.respuestas = ['Claude', 'Llevar el día a día', 'La empresa entera', 'Solo yo', 'Organizar el papeleo', 'Lo justo', 'Ferretería Soler', ''];
       try {
         const entero = await arrancarM.arrancar({ extensionPath: RAIZ, workspaceState: { get: () => undefined, update: async () => {} } }, vscode.window.createOutputChannel());
         assert.equal(entero.ok, true, entero.mensaje || 'se canceló');
@@ -15964,7 +16106,7 @@ exec git "$@"
       const { respuestas, vistas } = await entrevistarCon({ 'No tienes ningún asistente en este ordenador': 'Poner Claude' });
       const aviso = vistas.find((v) => v.aviso && v.pregunta === 'No tienes ningún asistente en este ordenador. ¿Cuál pongo?');
       assert.ok(aviso, 'no se pregunta cuál poner');
-      assert.deepEqual(aviso.opciones, ['Poner Claude', 'Poner Codex']);
+      assert.deepEqual(aviso.opciones, ['Poner Claude', 'Poner Codex', 'Poner los dos']);
       const puesta = vscode.registrado.ejecutados.find((e) => e.id === 'workbench.extensions.installExtension');
       assert.equal(puesta && puesta.args[0], 'anthropic.claude-code', 'no se pone');
       assert.equal(respuestas.asistente, 'claude');
@@ -16039,7 +16181,7 @@ exec git "$@"
     try {
       // Automático, como hasta ahora: con los dos puestos, se pregunta.
       const automatico = await conAjuste(undefined);
-      assert.deepEqual(automatico.vistas.map((v) => v.pregunta), ['Tienes los dos instalados: elige uno'], 'en automático, con los dos, no se pregunta');
+      assert.deepEqual(automatico.vistas.map((v) => v.pregunta), ['Tienes los dos: elige uno, o los dos'], 'en automático, con los dos, no se pregunta');
       assert.equal(automatico.hecho, 'claude');
       for (const [valor, target] of [['claude', 'claude'], ['codex', 'codex'], ['losDos', 'claude,codex']]) {
         const { hecho, vistas } = await conAjuste(valor);
@@ -16053,7 +16195,7 @@ exec git "$@"
       ponerElAjuste('codex');
       const { respuestas, preguntas } = await entrevistarCon({});
       assert.equal(respuestas.asistente, 'codex');
-      assert.ok(!preguntas.includes('Tienes los dos instalados: elige uno'), 'la entrevista lo pregunta');
+      assert.ok(!preguntas.some((p) => /^Tienes /.test(p)), 'la entrevista lo pregunta');
       return 'automático pregunta · Claude, Codex y los dos, sin preguntar';
     } finally {
       ponerElAjuste(undefined);
@@ -20343,6 +20485,271 @@ exec git "$@"
       proveedor.enviar = antes.enviar;
       vscode.guion.raiz = empresa;
       proveedor.donde = { tipo: 'principal' };
+    }
+  });
+
+  // ── Codex trabaja él, los dos a la vez (decisión 206) ──────────────────
+  //
+  // Jose, 25-11: «Quiero que en codex también lo puedas ejecutar tú y abrirlo tú, no
+  // que copies un mensaje en el portapapeles». Su extensión no deja escribirle desde
+  // fuera (`asistentes.js`), pero trae su propio programa, el mismo Codex con la misma
+  // cuenta, y ese acepta el encargo al arrancar. Se le abre en una pestaña del editor,
+  // y empieza a trabajar: un encargo, una pestaña, y varios a la vez.
+  const conCodexEnSuExtension = async (hacer) => {
+    const asistentesM = cargar('asistentes');
+    const suya = fs.mkdtempSync(path.join(os.tmpdir(), 'extension-de-codex-'));
+    const sistema = { darwin: 'macos', win32: 'windows', linux: 'linux' }[process.platform];
+    const procesador = { x64: 'x86_64', arm64: 'aarch64' }[process.arch];
+    const programa = path.join(suya, 'bin', `${sistema}-${procesador}`, process.platform === 'win32' ? 'codex.exe' : 'codex');
+    fs.mkdirSync(path.dirname(programa), { recursive: true });
+    fs.writeFileSync(programa, '');
+    const antes = {
+      elDeAhora: asistentesM.elDeAhora, instaladas: vscode.guion.extensionesInstaladas,
+      rutas: vscode.guion.rutasDeExtensiones, delPath: asistentesM.terminal.programaEnElPath,
+    };
+    vscode.guion.extensionesInstaladas = [...antes.instaladas, 'openai.chatgpt'];
+    vscode.guion.rutasDeExtensiones = { ...antes.rutas, 'openai.chatgpt': suya };
+    asistentesM.elDeAhora = () => asistentesM.porId('codex');
+    vscode.registrado.terminales.length = 0;
+    try {
+      return await hacer(programa);
+    } finally {
+      asistentesM.elDeAhora = antes.elDeAhora;
+      asistentesM.terminal.programaEnElPath = antes.delPath;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      vscode.guion.rutasDeExtensiones = antes.rutas;
+      fs.rmSync(suya, { recursive: true, force: true });
+    }
+  };
+
+  await comprobar('206: con Codex, el encargo lo empieza él en una pestaña nueva, y cada encargo va en la suya', () => conCodexEnSuExtension(async (programa) => {
+    const puente = cargar('puente');
+    const asistentesM = cargar('asistentes');
+    vscode.registrado.portapapeles = '';
+    vscode.registrado.ejecutados.length = 0;
+    // Empieza por dos guiones: tiene que llegar como encargo, no como una opción suya.
+    const texto = '--sin-preguntar Haz el resumen de la semana';
+    assert.equal(await puente.enviar(texto), 'trabajando');
+    const [primera] = vscode.registrado.terminales;
+    assert.ok(primera, 'no abre ninguna pestaña');
+    assert.equal(primera.opciones.shellPath, programa, 'no es el Codex que trae su extensión');
+    assert.deepEqual(primera.opciones.shellArgs, ['--', texto], 'el encargo no le llega entero, o lo puede tomar por una opción');
+    assert.equal(primera.opciones.cwd, cargar('proyecto').raiz(), 'no trabaja en la carpeta');
+    assert.equal(primera.opciones.location, vscode.TerminalLocation.Editor, 'no va en una pestaña del editor');
+    assert.equal(primera.opciones.name, 'Codex');
+    assert.equal(primera.opciones.isTransient, true, 'al volver a abrir el editor, deja una pestaña muerta');
+    assert.ok(primera.mostrada, 'no se enseña');
+    assert.equal(vscode.registrado.portapapeles, '', 'lo copia igual');
+    assert.ok(!vscode.registrado.ejecutados.some((e) => e.id === 'chatgpt.openSidebar'), 'abre su barra para que lo pegue');
+    // Otro encargo, otra pestaña: los dos trabajan a la vez.
+    assert.equal(await puente.enviar('Y ahora, las facturas'), 'trabajando');
+    assert.equal(vscode.registrado.terminales.length, 2, 'el segundo no va en su propia pestaña');
+    assert.deepEqual(vscode.registrado.terminales[1].opciones.shellArgs, ['--', 'Y ahora, las facturas']);
+
+    // Sin el programa en su extensión, el Codex de este ordenador, si lo hay.
+    fs.rmSync(programa);
+    asistentesM.terminal.programaEnElPath = (nombre) => (nombre === 'codex' ? '/opt/codex/bin/codex' : null);
+    assert.equal(await puente.enviar('Haz el resumen'), 'trabajando');
+    assert.equal(vscode.registrado.terminales.at(-1).opciones.shellPath, '/opt/codex/bin/codex');
+    // Y sin ninguno, como antes: al portapapeles, avisando.
+    asistentesM.terminal.programaEnElPath = () => null;
+    assert.equal(await puente.enviar('Haz el resumen'), 'copiado');
+    assert.equal(vscode.registrado.terminales.length, 3, 'sin programa, abre una pestaña igual');
+
+    // Con Claude no cambia nada: su enlace, y el texto escrito en su caja.
+    asistentesM.elDeAhora = () => asistentesM.porId('claude');
+    assert.equal(await puente.enviar('Hola'), 'directo');
+    assert.equal(vscode.registrado.terminales.length, 3, 'con Claude abre una pestaña de Codex');
+    return 'su programa, en su pestaña, uno por encargo; sin él, el del ordenador; sin ninguno, el portapapeles';
+  }));
+
+  await comprobar('206: el programa de Codex se busca donde lo deja su extensión, en cada sistema', () => {
+    const asistentesM = cargar('asistentes');
+    const suya = fs.mkdtempSync(path.join(os.tmpdir(), 'extension-de-codex-'));
+    const antes = { instaladas: vscode.guion.extensionesInstaladas, rutas: vscode.guion.rutasDeExtensiones, delPath: asistentesM.terminal.programaEnElPath };
+    vscode.guion.extensionesInstaladas = [...antes.instaladas, 'openai.chatgpt'];
+    vscode.guion.rutasDeExtensiones = { ...antes.rutas, 'openai.chatgpt': suya };
+    asistentesM.terminal.programaEnElPath = () => null;
+    try {
+      // Como lo busca ella misma (`bin/<sistema>-<procesador>`, leído en su código).
+      const CASOS = [
+        ['darwin', 'arm64', ['macos-aarch64', 'codex']], ['darwin', 'x64', ['macos-x86_64', 'codex']],
+        ['win32', 'x64', ['windows-x86_64', 'codex.exe']], ['win32', 'arm64', ['windows-aarch64', 'codex.exe']],
+        ['linux', 'x64', ['linux-x86_64', 'codex']], ['linux', 'arm64', ['linux-aarch64', 'codex']],
+      ];
+      for (const [plataforma, arquitectura, donde] of CASOS) {
+        const programa = path.join(suya, 'bin', ...donde);
+        assert.equal(asistentesM.programaDeCodex({ plataforma, arquitectura }), null, `${plataforma}-${arquitectura}: da uno que no está`);
+        fs.mkdirSync(path.dirname(programa), { recursive: true });
+        fs.writeFileSync(programa, '');
+        assert.equal(asistentesM.programaDeCodex({ plataforma, arquitectura }), programa, `${plataforma}-${arquitectura}: no lo encuentra`);
+      }
+      // Un procesador que su extensión no trae: no se inventa una carpeta.
+      assert.equal(asistentesM.programaDeCodex({ plataforma: 'linux', arquitectura: 'ia32' }), null);
+      // Una carpeta con ese nombre no es el programa.
+      fs.rmSync(path.join(suya, 'bin', 'linux-x86_64', 'codex'));
+      fs.mkdirSync(path.join(suya, 'bin', 'linux-x86_64', 'codex'));
+      assert.equal(asistentesM.programaDeCodex({ plataforma: 'linux', arquitectura: 'x64' }), null, 'toma una carpeta por el programa');
+      // Sin su extensión, ni se mira dentro.
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      assert.equal(asistentesM.programaDeCodex({ plataforma: 'darwin', arquitectura: 'arm64' }), null);
+      return `${CASOS.length} sistemas, como los busca su extensión`;
+    } finally {
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      vscode.guion.rutasDeExtensiones = antes.rutas;
+      asistentesM.terminal.programaEnElPath = antes.delPath;
+      fs.rmSync(suya, { recursive: true, force: true });
+    }
+  });
+
+  await comprobar('206: cuando Codex ya está con ello, la barra lo dice así: ni «Dale a enviar» ni pegar nada', async () => {
+    const proveedor = vscode.registrado.proveedor;
+    const puenteM = cargar('puente');
+    const asistentesM = cargar('asistentes');
+    const enviados = [];
+    const antes = { enviar: proveedor.enviar, puente: puenteM.enviar, elDeAhora: asistentesM.elDeAhora, instaladas: vscode.guion.extensionesInstaladas, donde: proveedor.donde, pendiente: proveedor.avisoPendiente };
+    const CON_ELLO = 'Codex ya está con ello, en una pestaña nueva. Ahí ves lo que hace, y le contestas si te pregunta algo.';
+    proveedor.enviar = (m) => enviados.push(m);
+    puenteM.enviar = async () => 'trabajando';
+    vscode.guion.extensionesInstaladas = [...antes.instaladas, 'openai.chatgpt'];
+    asistentesM.elDeAhora = () => asistentesM.porId('codex');
+    const ultimoAviso = () => [...enviados].reverse().find((m) => m.tipo === 'aviso');
+    try {
+      proveedor.donde = { tipo: 'principal' };
+      await proveedor.manejar({ tipo: 'pedir', prompt: 'Haz el resumen de la semana.' });
+      assert.equal(ultimoAviso().texto, CON_ELLO, 'un botón no lo dice');
+      assert.deepEqual(await proveedor.pasarleYDecir('Documento añadido.', 'Léelo.'), { texto: `Documento añadido. ${CON_ELLO}`, malo: false }, 'darle documentos no lo dice');
+      await proveedor.manejar({ tipo: 'pedirAyudaEnElForo' });
+      assert.equal(ultimoAviso().texto, `${CON_ELLO} Cuando te conteste, copia el mensaje y pégalo en «Resolver dudas», en Circle.`, 'el foro no lo dice');
+      proveedor.avisoPendiente = null;
+      assert.equal(await proveedor.mandarElPrimero('Hola'), 'trabajando');
+      assert.equal(proveedor.avisoPendiente && proveedor.avisoPendiente.texto, CON_ELLO, 'el primer mensaje del montaje no lo dice');
+      for (const m of enviados.filter((e) => e.tipo === 'aviso')) assert.ok(!/Dale a enviar|pégalo con/i.test(m.texto.replace('pégalo en «Resolver dudas»', '')), `dice que lo mande o lo pegue: ${m.texto}`);
+      return 'un botón, los documentos, el foro y el primer mensaje';
+    } finally {
+      proveedor.enviar = antes.enviar;
+      puenteM.enviar = antes.puente;
+      asistentesM.elDeAhora = antes.elDeAhora;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      proveedor.donde = antes.donde;
+      proveedor.avisoPendiente = antes.pendiente;
+    }
+  });
+
+  await comprobar('206: una conversación nueva de Codex va en su propia pestaña; con los dos, se elige con cuál', async () => {
+    // Jose: «el truco del new agent para que puedas abrir al menos 2 versiones en
+    // paralelo». «New Codex Agent» (`chatgpt.newCodexPanel`) abre un panel nuevo cada
+    // vez; `chatgpt.newChat` cambia la de su barra, que es una sola.
+    const proveedor = vscode.registrado.proveedor;
+    const asistentesM = cargar('asistentes');
+    const enviados = [];
+    const antes = {
+      enviar: proveedor.enviar, elDeAhora: asistentesM.elDeAhora, losDelArnes: asistentesM.losDelArnes,
+      instaladas: vscode.guion.extensionesInstaladas, codex: vscode.guion.comandosDeCodex, elegir: vscode.window.showQuickPick,
+    };
+    proveedor.enviar = (m) => enviados.push(m);
+    vscode.guion.extensionesInstaladas = ['anthropic.claude-code', 'openai.chatgpt'];
+    vscode.guion.comandosDeCodex = [...antes.codex, 'chatgpt.newChat', 'chatgpt.newCodexPanel'];
+    const ultimoAviso = () => [...enviados].reverse().find((m) => m.tipo === 'aviso');
+    try {
+      asistentesM.elDeAhora = () => asistentesM.porId('codex');
+      asistentesM.losDelArnes = () => [asistentesM.porId('codex')];
+      vscode.registrado.ejecutados.length = 0;
+      await proveedor.manejar({ tipo: 'conversacionNueva' });
+      await proveedor.manejar({ tipo: 'conversacionNueva' });
+      assert.deepEqual(vscode.registrado.ejecutados.map((e) => e.id), ['chatgpt.newCodexPanel', 'chatgpt.newCodexPanel'], 'no abre un panel nuevo cada vez');
+      assert.equal(ultimoAviso().texto, 'Te he abierto una conversación nueva.');
+
+      // Con la carpeta montada para los dos, y los dos puestos: con cuál.
+      asistentesM.elDeAhora = antes.elDeAhora;
+      asistentesM.losDelArnes = () => [asistentesM.porId('claude'), asistentesM.porId('codex')];
+      let vista = null;
+      vscode.window.showQuickPick = async (opciones, ajustes) => {
+        const lista = await opciones;
+        vista = { rotulos: lista.map((o) => o.label), ajustes };
+        return lista.find((o) => o.label === 'Codex');
+      };
+      vscode.registrado.ejecutados.length = 0;
+      await proveedor.manejar({ tipo: 'conversacionNueva' });
+      assert.ok(vista, 'con los dos, no pregunta con cuál');
+      assert.deepEqual(vista.rotulos, ['Claude', 'Codex']);
+      assert.equal(vista.ajustes.placeHolder, '¿Con quién?');
+      assert.deepEqual(vscode.registrado.ejecutados.map((e) => e.id), ['chatgpt.newCodexPanel'], 'no la abre con el elegido');
+      assert.equal(ultimoAviso().texto, 'Te he abierto una conversación nueva con Codex.');
+      // Sin elegir, no se abre nada.
+      vscode.window.showQuickPick = async () => undefined;
+      vscode.registrado.ejecutados.length = 0;
+      enviados.length = 0;
+      await proveedor.manejar({ tipo: 'conversacionNueva' });
+      assert.deepEqual([vscode.registrado.ejecutados.length, enviados.filter((m) => m.tipo === 'aviso').length], [0, 0], 'sin elegir, abre o dice algo');
+      // Con uno solo puesto en el ordenador, no se pregunta.
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      vista = null;
+      vscode.window.showQuickPick = async () => { vista = true; return undefined; };
+      await proveedor.manejar({ tipo: 'conversacionNueva' });
+      assert.equal(vista, null, 'con uno solo puesto, pregunta con cuál');
+      return 'un panel nuevo cada vez; con los dos, se elige';
+    } finally {
+      proveedor.enviar = antes.enviar;
+      asistentesM.elDeAhora = antes.elDeAhora;
+      asistentesM.losDelArnes = antes.losDelArnes;
+      vscode.guion.extensionesInstaladas = antes.instaladas;
+      vscode.guion.comandosDeCodex = antes.codex;
+      vscode.window.showQuickPick = antes.elegir;
+    }
+  });
+
+  await comprobar('206: al montar se puede elegir trabajar con los dos, Claude y Codex', async () => {
+    // Jose, 25-11: «que se puedan añadir los dos agentes. Tanto Claude como Codex en el
+    // onboarding». Con uno puesto se pregunta si se pone también el otro; con los dos,
+    // se pueden elegir los dos; sin ninguno, se pueden poner los dos. Lo que falta se
+    // pone como con el ajuste (decisión 181).
+    const arrancarM = cargar('arrancar');
+    const antes = vscode.guion.extensionesInstaladas;
+    const puestas = () => vscode.registrado.ejecutados.filter((e) => e.id === 'workbench.extensions.installExtension').map((e) => e.args[0]);
+    const con = async (instaladas, contesta = {}) => {
+      vscode.guion.extensionesInstaladas = instaladas;
+      vscode.registrado.ejecutados.length = 0;
+      arrancarM.losQueSePusieron();
+      const r = await conRespuestas(contesta, () => arrancarM.preguntarAsistente());
+      return { ...r, puestos: arrancarM.losQueSePusieron() };
+    };
+    try {
+      // Con Claude puesto: Claude, o los dos.
+      let r = await con(['anthropic.claude-code']);
+      assert.deepEqual(r.vistas.map((v) => [v.pregunta, v.opciones]), [['Tienes Claude. Si quieres, pongo también Codex', ['Claude', 'Claude y Codex']]]);
+      assert.equal(r.hecho, 'claude', 'lo primero no es seguir con el que tiene');
+      r = await con(['anthropic.claude-code'], { 'Tienes Claude. Si quieres, pongo también Codex': 'Claude y Codex' });
+      assert.equal(r.hecho, 'claude,codex');
+      assert.deepEqual([puestas(), r.puestos], [['openai.chatgpt'], ['Codex']], 'no pone Codex, o no lo apunta para decirlo');
+      // Con Codex puesto, al revés.
+      r = await con(['openai.chatgpt'], { 'Tienes Codex. Si quieres, pongo también Claude': 'Claude y Codex' });
+      assert.equal(r.hecho, 'claude,codex');
+      assert.deepEqual(puestas(), ['anthropic.claude-code']);
+      // Con los dos puestos: uno, el otro, o los dos, sin poner nada.
+      r = await con(['anthropic.claude-code', 'openai.chatgpt'], { 'Tienes los dos: elige uno, o los dos': 'Claude y Codex' });
+      assert.deepEqual(r.vistas.map((v) => v.opciones), [['Claude', 'Codex', 'Claude y Codex']]);
+      assert.equal(r.hecho, 'claude,codex');
+      assert.deepEqual([puestas(), r.puestos], [[], []]);
+      // Sin ninguno: los dos también, con un botón.
+      r = await con([], { 'No tienes ningún asistente en este ordenador': 'Poner los dos' });
+      assert.equal(r.hecho, 'claude,codex');
+      assert.deepEqual(puestas(), ['anthropic.claude-code', 'openai.chatgpt']);
+      // Y va tal cual a RSC.
+      const flags = arrancarM.flagsDelMontaje({ nivel: 'mixed', kind: 'operations', objetivo: 'x', asistente: r.hecho });
+      assert.equal(flags[flags.indexOf('--target') + 1], 'claude,codex');
+      // Sin contestar, no se sigue.
+      const elegir = vscode.window.showQuickPick;
+      vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
+      vscode.window.showQuickPick = async () => undefined;
+      try {
+        assert.equal(await arrancarM.preguntarAsistente(), null, 'sin contestar, se sigue con uno');
+      } finally {
+        vscode.window.showQuickPick = elegir;
+      }
+      return 'con uno, con los dos y sin ninguno, se pueden elegir los dos';
+    } finally {
+      vscode.guion.extensionesInstaladas = antes;
     }
   });
 
@@ -27094,6 +27501,7 @@ exec git "$@"
     relevoM.comoEsta = () => ({ modo: 'path' });
     vscode.guion.extensionesInstaladas = ['anthropic.claude-code'];
     const DALE = 'Te lo he dejado escrito en la conversación. Dale a enviar.';
+    const CON_ELLO = 'Codex ya está con ello, en una pestaña nueva. Ahí ves lo que hace, y le contestas si te pregunta algo.';
     const montaje = (extra = {}) => async () => ({
       ok: true, rama: 'desdeCero', mensaje: 'Ferretería Soler ya está listo.', objetivo: 'Poner orden en mis facturas',
       nombres: { arnes: 'Ferretería Soler', empresa: 'Ferretería Soler' }, dichos: [], pegas: [], encargos: [], ...extra,
@@ -27152,6 +27560,10 @@ exec git "$@"
       assert.ok(!/Dale a enviar/.test(r.ultimo.texto), 'dice «Dale a enviar» con el texto copiado');
       r = await montar({ como: 'vacio' });
       assert.ok(!/Dale a enviar/.test(r.ultimo.texto));
+      // Con Codex ya trabajando en su pestaña (decisión 206), eso, y no «Dale a enviar».
+      r = await montar({ como: 'trabajando' });
+      assert.ok(r.ultimo.texto.endsWith(CON_ELLO), `con Codex trabajando, no lo dice: ${r.ultimo.texto}`);
+      assert.ok(!/Dale a enviar/.test(r.ultimo.texto));
 
       // Las copias solas: no se dicen si no van a guardar (apagadas, o sin copias), y se dicen como van.
       r = await montar({ guardarSolo: 0 });
@@ -27178,7 +27590,7 @@ exec git "$@"
       assert.deepEqual(enviados.filter((m) => m.tipo === 'aviso').map((m) => m.texto), ['Quitado. Solo guardo una copia cuando pulses el botón.']);
 
       // Lo mismo en la puesta al día: lo que dice según cómo llegó el mensaje.
-      for (const [como, dice] of [['directo', true], ['copiado', false]]) {
+      for (const [como, dice, conEllo] of [['directo', true, false], ['copiado', false, false], ['trabajando', false, true]]) {
         arrancarM.arrancar = montaje({ rama: 'ponerAlDia' });
         puenteM.enviar = async () => como;
         enviados.length = 0;
@@ -27186,6 +27598,7 @@ exec git "$@"
         const texto = enviados.filter((m) => m.tipo === 'aviso').map((m) => m.texto).join(' ');
         assert.match(texto, /^Lo he puesto al día con la versión que trae la barra\./);
         assert.equal(texto.includes(DALE), dice, `puesta al día, con el mensaje «${como}»: ${texto}`);
+        assert.equal(texto.includes(CON_ELLO), conEllo, `puesta al día, con el mensaje «${como}»: ${texto}`);
         assert.ok(!/vista sencilla|copia sola/.test(texto), 'en una puesta al día no se pone ni se pregunta nada de esto');
       }
       return 'vista sencilla preguntada · copias dichas · cada Quitarlo con su nombre · Dale a enviar según llegó, en el montaje y en la puesta al día';
@@ -30502,13 +30915,14 @@ exec git "$@"
       // Esta prueba estuvo rota desde que el wizard pasó de una pregunta a
       // seis: como solo corre con --con-arnes, nadie lo vio.
       vscode.guion.respuestas = [
+        'Claude',                         // con quién (desde la 206 se pregunta con uno puesto)
         'Llevar el día a día',            // de qué va
         'Un departamento o un área',      // qué lleva la carpeta
         'De 2 a 10',                      // cuánta gente hay detrás
         'Organizar el papeleo',           // qué quiere resolver
         'Lo justo',                       // cómo se maneja
         'Contratos',                      // cómo se llama esto
-        'Nexus Consulting',               // y su empresa
+        'Asesoría Norte',               // y su empresa
         '',                               // la web: en blanco, que es opcional
       ];
 
@@ -30631,7 +31045,7 @@ exec git "$@"
       // Y los nombres que puso, en el perfil: de ahí sale el rótulo. Con ellos,
       // qué lleva la carpeta y cuánta gente hay detrás.
       assert.match(perfil, /^arnes: Contratos$/m);
-      assert.match(perfil, /^empresa: Nexus Consulting$/m);
+      assert.match(perfil, /^empresa: Asesoría Norte$/m);
       // Con la 187 vuelven a preguntarse (la 184 las había quitado).
       assert.match(perfil, /^alcance: departamento$/m);
       assert.match(perfil, /^personas: 2-10$/m);
@@ -30664,7 +31078,7 @@ exec git "$@"
       try {
         // 1. Montada como en octubre.
         rscM.saberDondeEstamos(barraDeLaTres);
-        vscode.guion.respuestas = ['Llevar el día a día', 'Un departamento o un área', 'De 2 a 10', 'Organizar el papeleo',
+        vscode.guion.respuestas = ['Claude', 'Llevar el día a día', 'Un departamento o un área', 'De 2 a 10', 'Organizar el papeleo',
           'Lo justo', 'Facturas', 'Ferretería Soler', ''];
         const montada = await cargar('arrancar').arrancar(contexto, vscode.window.createOutputChannel());
         assert.equal(montada.ok, true, montada.mensaje || 'el montaje con la 3 se ha quedado a medias');
@@ -30734,6 +31148,7 @@ exec git "$@"
       process.env.GIT_CONFIG_GLOBAL = path.join(casa, '.gitconfig');
       vscode.guion.raiz = nueva;
       vscode.guion.respuestas = [
+        'Claude',                         // con quién (desde la 206 se pregunta con uno puesto)
         'Construir algo',                 // de qué va
         'Un proyecto',                    // qué lleva la carpeta
         'Solo yo',                        // cuánta gente hay detrás
@@ -30780,6 +31195,7 @@ exec git "$@"
       process.env.GIT_CONFIG_GLOBAL = path.join(casa, '.gitconfig');
       vscode.guion.raiz = nueva;
       vscode.guion.respuestas = [
+        'Claude',                         // con quién (desde la 206 se pregunta con uno puesto)
         'Un poco de todo',                // de qué va
         'La empresa entera',              // qué lleva la carpeta
         'De 2 a 10',                      // cuánta gente hay detrás
@@ -30820,7 +31236,7 @@ exec git "$@"
       try {
         vscode.guion.raiz = origen;
         vscode.guion.respuestas = [
-          'Llevar el día a día', 'Un proyecto', 'Solo yo', 'Organizar el papeleo', 'Lo justo',
+          'Claude', 'Llevar el día a día', 'Un proyecto', 'Solo yo', 'Organizar el papeleo', 'Lo justo',
           'Papeles', '', '',  // el nombre, la empresa en blanco y la web en blanco
         ];
         const montado = await cargar('arrancar').arrancar(contexto, vscode.window.createOutputChannel());

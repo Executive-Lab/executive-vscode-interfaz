@@ -76,7 +76,7 @@ function ajustes(contexto) {
 // ── El disfraz también se pone la cara de la empresa ──────────────────────
 //
 // El disfraz traía un tema CLARO fijo y el rótulo "Mi Empresa — Executive Lab".
-// Jose, con su carpeta de Nexus Consulting: *«he vuelto al modo sencillo y me
+// Jose, con su carpeta de Asesoría Norte: *«he vuelto al modo sencillo y me
 // carga los putos colores de executivelab»*. Y era verdad, literalmente: su
 // marca es azul marino y el modo sencillo le encendía un editor blanco con
 // nuestro nombre en la ventana.

@@ -52,7 +52,7 @@ function reglasDeCodex() {
 // El sufijo del interruptor NO es uniforme —el de gitmoji es `.no-gitmoji`, no
 // `.no-gitmoji-guard`— así que va escrito uno por uno y no calculado.
 const GUARDIANES = [
-  { id: 'danger-guard', fichero: 'danger-guard.mjs', interruptor: '.no-danger-guard', soloSiNoEsTecnico: true },
+  { id: 'danger-guard', fichero: 'danger-guard.mjs', interruptor: '.no-danger-guard', conUnTecnicoPregunta: true },
   { id: 'gitmoji-guard', fichero: 'gitmoji-guard.mjs', interruptor: '.no-gitmoji' },
   { id: 'ship-guard', fichero: 'ship-guard.mjs', interruptor: '.no-ship-guard' },
   // De la 3 (decisión 145). El de la rama principal no frena en las carpetas de
@@ -427,10 +427,14 @@ function comoEstaElNuestro() {
 // Qué guardianes hay montados y cuáles están actuando ahora mismo.
 //
 // Tres estados, y los tres significan cosas distintas para quien mira:
-//   'armado'   está y te puede parar
-//   'apagado'  está, y alguien decidió aquí que no actúe
-//   'noAplica' está, pero contigo no actúa (el de órdenes peligrosas solo
-//              actúa con quien no es técnico, y eso lo dice tu perfil)
+//   'armado'    está y te puede parar
+//   'apagado'   está, y alguien decidió aquí que no actúe
+//   'pendiente' el nuestro, a falta de engancharlo en sus ajustes
+//
+// El de órdenes peligrosas actúa también con quien es técnico, pero de otra
+// forma: no le bloquea nada y le pregunta antes de lo que no tiene vuelta atrás
+// (`FOR_EVERYONE` en el de RSC). Antes salía «no aplica», y no era verdad
+// (decisión 205).
 function losGuardianes() {
   const eresTecnico = trato.comoEstamos().palabras === 'technical';
   const nuestro = comoEstaElNuestro();
@@ -445,20 +449,20 @@ function losGuardianes() {
       const deRsc = g.id === 'danger-guard' ? elDeRscEstaPuesto() : hayEnRsc(g.fichero);
       const pendiente = !deRsc && conElNuestro(g) && !nuestro.enganchado;
       const apagado = hayEnRsc(g.interruptor);
-      const contigoNo = Boolean(g.soloSiNoEsTecnico && eresTecnico);
+      const soloPregunta = Boolean(g.conUnTecnicoPregunta && eresTecnico);
       return {
         id: g.id,
         nombre: dicho.nombre,
         queHace: dicho.queHace,
         // Apagado va primero: es lo que decidió la persona (revisión de F3, M3).
-        estado: apagado ? 'apagado' : (pendiente ? 'pendiente' : (contigoNo ? 'noAplica' : 'armado')),
-        // Por qué no actúa, cuando no actúa. Sin esto, «no actúa» parece una
-        // avería y es una decisión.
+        estado: apagado ? 'apagado' : (pendiente ? 'pendiente' : 'armado'),
+        // Por qué no actúa, cuando no actúa, o cómo, si contigo es distinto. Sin
+        // esto, «no actúa» parece una avería y es una decisión.
         porQue: apagado
           ? 'Apagado aquí, a propósito'
           : (pendiente
             ? 'Todavía no: toca los ajustes de Claude de esta carpeta'
-            : (contigoNo ? 'Contigo no actúa: tu perfil dice que eres técnico' : '')),
+            : (soloPregunta ? 'Contigo no bloquea: te pregunta antes de lo que no tiene vuelta atrás, porque tu perfil dice que eres técnico' : '')),
         // De quién es, junto a lo que hace. Solo el de órdenes peligrosas puede
         // ser de los dos, y sin enganchar todavía no es de nadie.
         deQuien: g.id !== 'danger-guard' || pendiente ? ''

@@ -43,20 +43,26 @@ conexiones, la marca, los documentos que esperan— está en la habilidad `execu
 
 7. **Nada de `npx` sin versión.** Las habilidades y los comandos del arnés te dicen muchas veces que
    corras su paquete sin número de versión, o con `@latest`: para `add`, `agent-model`, `agents`,
-   `audit`, `capabilities`, `catalog`, `consult`, `copy`, `doctor`, `git-permissions`, `isolation`,
-   `knowledge-sync`, `list`, `main`, `memory`, `onboard`, `purge`, `reassess`, `registry`, `repair`,
-   `review`, `sello`, `sync`, `uninstall` y `worktrees`, y en `/save-session`, `/resume-session`,
+   `audit`, `capabilities`, `catalog`, `consult`, `copy`, `doctor`, `emoji`, `git-permissions`,
+   `ingest`, `isolation`, `knowledge-sync`, `list`, `main`, `memory`, `onboard`, `purge`, `reassess`,
+   `registry`, `repair`, `review`, `risk`, `sello`, `spec`, `sync`, `uninstall`, `upgrade` y
+   `worktrees`, y en `/save-session`, `/resume-session`,
    `/learn` y `/checkpoint`. No lo hagas: así se trae la última publicada, que aquí no ha adoptado nadie, y toda
    la clase dejaría de correr el mismo catálogo. Usa, por este orden:
 
    1. **Lo que ya está instalado en la carpeta**, que es local y no baja nada:
       `node .rsc/session-memory.mjs resume` (o `capture`, `learn`, `status`) para todo lo de la
       memoria entre conversaciones.
-   2. **Para añadir una habilidad, la barra**: dile que la busque en *Habilidades (skills)*, en
-      *Sugerencias del catálogo* o en *Resto del catálogo*, y la pulse: se añade sola. No la añadas tú.
+   2. **Para añadir una habilidad, pídesela a la barra.** Pregunta antes, y con su sí borra
+      `02-DOCS/raw/pedidos/<id>.hecho` si lo hay y escribe un fichero vacío
+      `02-DOCS/raw/pedidos/<id>.habilidad`, con el identificador del catálogo (por ejemplo
+      `connect-tool.habilidad`). La barra la añade sola en unos segundos, con la versión de la clase, y
+      deja la respuesta en `02-DOCS/raw/pedidos/<id>.hecho`: léela y díselo en una línea. Si el nombre
+      no existe, la respuesta trae los que más se parecen. Si al minuto no hay respuesta, puede que la
+      barra no esté abierta o que le esté preguntando a la persona: díselo. No la añadas tú.
    3. Si de verdad hace falta el paquete, **con la versión que declara `.rsc.json`** en
-      `catalogVersion`, escrita detrás del nombre con una arroba. Si dice `4.1.9`:
-      `npx @ericrisco/rsc@4.1.9 doctor`.
+      `catalogVersion`, escrita detrás del nombre con una arroba. Si dice `4.2.0`:
+      `npx @ericrisco/rsc@4.2.0 doctor`.
       Nunca la última publicada, y nunca `@latest`.
 
    Y si nada de eso se puede, dilo y no lo ejecutes. Esas instrucciones las reescribe el arnés en cada

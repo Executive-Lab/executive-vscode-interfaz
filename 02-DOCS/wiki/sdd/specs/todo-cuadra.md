@@ -5,7 +5,9 @@ description: Spec paraguas del programa todo-cuadra. El arranque monta con cualq
 timestamp: 2026-09-24T15:45:00Z
 topic: sdd
 slug: todo-cuadra
-status: aprobada en autopilot, no punto por punto
+status: shipped
+approval: aprobada en autopilot, no punto por punto
+shipped_in: 0.41.0 (verificación del 28-09-2026; C2 en Windows, medido en la decisión 129)
 ---
 
 # Todo cuadra

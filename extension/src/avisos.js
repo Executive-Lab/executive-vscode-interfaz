@@ -403,7 +403,7 @@ function variantesDeUnaCarpeta(carpetaEntera) {
 // La empresa, siempre. El nombre de esto y el de la carpeta, solo si son más
 // de una palabra: «Contabilidad», «ventas» o «casa» son palabras de la frase, y
 // taparlas deja un aviso que no se entiende («el botón de <su nombre> no va»);
-// «nexus-consulting» o «Proyecto Nexus» sí son un nombre.
+// «asesoria-norte» o «Proyecto Norte» sí son un nombre.
 const sinTildes = (t) => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Un nombre, escrito como lo escriba quien sea. La forma de «Subir a GitHub»

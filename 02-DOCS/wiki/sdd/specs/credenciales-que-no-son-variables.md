@@ -4,7 +4,8 @@ title: Las credenciales que no son variables también tienen sitio
 description: Una cuenta de servicio .json o un .pem no es una línea en un .env: es un fichero entero. Hoy la barra no los ve, así que una conexión que funciona sale como «sin conectar». Su sitio en RSC es 01-TOOLS/<HERRAMIENTA>/keys/.
 timestamp: 2026-09-22T02:00:00Z
 topic: sdd
-status: approved
+status: shipped
+shipped_in: 0.27.0 (verificación del 22-09-2026: pasa)
 ---
 
 # Las credenciales que no son variables también tienen sitio

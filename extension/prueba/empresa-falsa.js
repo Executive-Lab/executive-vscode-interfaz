@@ -388,7 +388,7 @@ status: unprocessed
 function montarMarca(raiz, {
   acento = '#0057b8', texto = '#1a1a1a', fondo = '#f7f5f2', logo = true,
   // Un logotipo que es solo el símbolo, sin el nombre dentro: cuadrado, como
-  // la ene de puntos de Nexus Consulting. El de por defecto es una tira de
+  // la ene de puntos de Asesoría Norte. El de por defecto es una tira de
   // letras, que sí lo lleva.
   simbolo = false,
   tipografia = null,
