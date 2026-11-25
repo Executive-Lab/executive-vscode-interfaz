@@ -8761,6 +8761,99 @@ exec git "$@"
     return 'colores, nombre y logotipo de la portada; sin pisar lo puesto a mano';
   });
 
+  await comprobar('207: el nombre de la marca es la parte del título que dice el dominio, y el icono para móvil va sin placa', async () => {
+    // Jose, 25-11-2026, con la web de su empresa: «ha salido pero feo». El título
+    // era «Talleres Bonet | Reparación de maquinaria industrial en toda Cataluña» y la barra se
+    // quedaba con la parte más larga, que era el lema. Y el logotipo, el icono
+    // para móvil (un cuadrado que ya trae su fondo), salía sobre una placa blanca.
+    const web = cargar('web');
+    assert.equal(web.nombreDelTitulo('Talleres Bonet | Reparación de maquinaria industrial en toda Cataluña', 'https://talleresbonet.com/'), 'Talleres Bonet', 'se queda con el lema');
+    assert.equal(web.nombreDelTitulo('Gestoría y asesoría fiscal en Bilbao — Asesoría Norte', 'https://www.asesorianorte.es'), 'Asesoría Norte', 'sin tildes ni «www», no casa con el dominio');
+    assert.equal(web.nombreDelTitulo('Inicio | Ferretería Soler', 'https://ferreteriasoler.es'), 'Ferretería Soler');
+    assert.equal(web.nombreDelTitulo('Inicio | Ferretería Soler'), 'Ferretería Soler', 'sin dirección, como siempre');
+    // Sin parte que case con el dominio, como antes: la más larga, sin la de menú.
+    assert.equal(web.nombreDelTitulo('Inicio | Tornillos y herramientas', 'https://otra-cosa.es'), 'Tornillos y herramientas');
+
+    const html = (icono) => `<!doctype html><html><head>
+      <title>Talleres Bonet | Reparación de maquinaria industrial en toda Cataluña</title>
+      ${icono}
+      <style>:root{--primary:#e6b23c;--background:#0b0a07;--foreground:#f4efe4}</style>
+      </head><body></body></html>`;
+    const DEL_MOVIL = '<link rel="apple-touch-icon" href="/apple-touch-icon.png" />';
+    const leido = web.extraer(html(DEL_MOVIL), 'https://talleresbonet.com/');
+    assert.equal(leido.nombre, 'Talleres Bonet');
+    assert.ok(leido.logo && leido.logo.icono, 'no sabe que el logotipo es el icono para móvil');
+    assert.ok(!web.extraer(html('<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />'), 'https://talleresbonet.com/').logo.icono, 'cualquier icono cuenta como el del móvil');
+
+    const fs2 = require('node:fs');
+    const carpeta = fs2.mkdtempSync(path.join(os.tmpdir(), 'cara-207-'));
+    fs2.mkdirSync(path.join(carpeta, '02-DOCS', 'wiki'), { recursive: true });
+    const png = Buffer.from('89504e470d0a1a0a', 'hex');
+    const red = (portada) => async (url) => (url.endsWith('.png')
+      ? { cuerpo: png, tipo: 'image/png', url }
+      : { cuerpo: Buffer.from(portada), tipo: 'text/html', url });
+    vscode.guion.raiz = carpeta;
+    try {
+      assert.ok((await web.sacarLaCara('https://talleresbonet.com', { bajar: red(html(DEL_MOVIL)) })).ok);
+      const suya = cargar('marca').leer();
+      assert.equal(suya.nombre, 'Talleres Bonet');
+      assert.ok(suya.logo, 'sin logotipo');
+      assert.equal(suya.placa, false, 'el icono para móvil, que ya trae su fondo, sale sobre una placa');
+      // Lo apuntado es de ese fichero: si el asistente pone luego otro logotipo,
+      // ese ya no es el icono, y lleva su placa si le hace falta.
+      const record = path.join(carpeta, '02-DOCS', 'wiki', 'brand', 'marca.md');
+      const escrito = fs2.readFileSync(record, 'utf8');
+      assert.match(escrito, /^logo_es_icono: logo\.png$/m, `no apunta qué fichero es el icono:\n${escrito}`);
+      fs2.copyFileSync(path.join(path.dirname(record), 'logo.png'), path.join(path.dirname(record), 'el-de-verdad.png'));
+      fs2.writeFileSync(record, escrito.replace(/^logo: logo\.png$/m, 'logo: el-de-verdad.png'));
+      assert.equal(cargar('marca').leer().placa, true, 'otro logotipo hereda lo del icono y se queda sin placa');
+      // Un logotipo cualquiera en PNG, sobre oscuro, sigue llevando su placa.
+      assert.ok((await web.sacarLaCara('https://talleresbonet.com', { bajar: red(html('<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />')) })).ok);
+      assert.equal(cargar('marca').leer().placa, true, 'un PNG sobre oscuro se queda sin placa');
+    } finally {
+      vscode.guion.raiz = empresa;
+      fs2.rmSync(carpeta, { recursive: true, force: true });
+    }
+    return '«Talleres Bonet», no su lema; el icono para móvil, sin placa';
+  });
+
+  await comprobar('207: una web que no se abre se dice, con un botón para escribirla otra vez', async () => {
+    // «taleresbonet.com», con una l de menos: esa web no se abre. La barra no podía leerla y
+    // no decía nada; la marca, sin poner, y nadie sabía por qué.
+    const web = cargar('web');
+    const carpeta = require('node:fs').mkdtempSync(path.join(os.tmpdir(), 'cara-207-'));
+    vscode.guion.raiz = carpeta;
+    try {
+      const cara = await web.sacarLaCara('https://taleresbonet.com', { bajar: async () => { throw new Error('getaddrinfo ENOTFOUND taleresbonet.com'); } });
+      assert.equal(cara.ok, false);
+      assert.equal(cara.noSeAbre, true, 'no distingue una web que no se abre');
+      const sinColor = await web.sacarLaCara('https://gris.es', { bajar: async (url) => ({ cuerpo: Buffer.from('<html><head><title>Gris</title></head></html>'), tipo: 'text/html', url }) });
+      assert.ok(!sinColor.noSeAbre, 'una web que se abre, aunque no tenga color, cuenta como que no se abre');
+
+      const proveedor = vscode.registrado.proveedor;
+      const enviados = [];
+      const antes = { sacar: web.sacarLaCara, enviar: proveedor.enviar, refrescar: proveedor.refrescar };
+      proveedor.enviar = (m) => enviados.push(m);
+      proveedor.refrescar = async () => {};
+      web.sacarLaCara = async () => ({ ok: false, noSeAbre: true, motivo: 'no he podido leer la web: getaddrinfo ENOTFOUND taleresbonet.com' });
+      try {
+        await proveedor.sacarLaCara('https://taleresbonet.com');
+      } finally {
+        web.sacarLaCara = antes.sacar;
+        proveedor.enviar = antes.enviar;
+        proveedor.refrescar = antes.refrescar;
+      }
+      const aviso = enviados.find((m) => m.tipo === 'aviso');
+      assert.ok(aviso, 'no dice nada');
+      assert.equal(aviso.texto, 'No he podido abrir taleresbonet.com: o no está bien escrita, o ahora no hay conexión.');
+      assert.equal(aviso.malo, true);
+      assert.deepEqual(aviso.boton, { etiqueta: 'Escribir la web otra vez', accion: { tipo: 'ponerLaCara' } });
+    } finally {
+      vscode.guion.raiz = empresa;
+    }
+    return 'se dice, con su botón';
+  });
+
   await comprobar('el socorro sale también en la pantalla sin arnés', () => {
     // La captura de Jose: «No he podido montar el arnés. Pulsa "Algo va mal"»
     // y sin el botón. Venía de una barra anterior al 19-09 (99dfa57); esto lo
@@ -20567,6 +20660,79 @@ exec git "$@"
     return 'su programa, en su pestaña, uno por encargo; sin él, el del ordenador; sin ninguno, el portapapeles';
   }));
 
+  // Un programa de Codex fingido, como el de verdad con `exec --json`: lo primero
+  // que suelta es el número de la conversación. Vale en los tres sistemas.
+  const codexFingido = (lanzados, { numero = true } = {}) => (programa, args, opciones) => {
+    const { PassThrough } = require('node:stream');
+    const hijo = new (require('node:events'))();
+    hijo.stdout = new PassThrough();
+    hijo.stderr = new PassThrough();
+    hijo.kill = () => { hijo.matado = true; };
+    lanzados.push({ programa, args, opciones, hijo });
+    setImmediate(() => {
+      if (numero) hijo.stdout.write(`${JSON.stringify({ type: 'thread.started', thread_id: `conversacion-${lanzados.length}` })}\n`);
+      else { hijo.stdout.end(); hijo.emit('close', 1, null); }
+    });
+    return hijo;
+  };
+
+  await comprobar('207: con Codex, el encargo lo empieza su programa por detrás y la conversación se abre en su panel, una por encargo', () => conCodexEnSuExtension(async (programa) => {
+    // Jose, 25-11-2026: «no me refiero a que despliegues terminal, sino esto de
+    // codex new agent que permite dos ventanas en vscode». Su panel no deja que
+    // nadie le escriba, pero abre una conversación por su número; y su programa,
+    // sin pantalla, empieza una y da su número lo primero.
+    const puente = cargar('puente');
+    const lanzados = [];
+    const antes = puente.codexPorDetras.lanzar;
+    puente.codexPorDetras.lanzar = codexFingido(lanzados);
+    vscode.registrado.portapapeles = '';
+    vscode.registrado.ejecutados.length = 0;
+    const paneles = () => vscode.registrado.ejecutados.filter((e) => e.id === 'vscode.openWith');
+    try {
+      const texto = '--sin-preguntar Haz el resumen de la semana';
+      assert.equal(await puente.enviar(texto), 'trabajando');
+      const [primero] = lanzados;
+      assert.ok(primero, 'no arranca su programa');
+      assert.equal(primero.programa, programa, 'no es el Codex que trae su extensión');
+      assert.deepEqual(primero.args, ['exec', '--json', '-s', 'workspace-write', '--', texto], 'el encargo no le llega entero, o lo puede tomar por una opción');
+      assert.equal(primero.opciones.cwd, cargar('proyecto').raiz(), 'no trabaja en la carpeta');
+      assert.equal(paneles().length, 1, 'no abre la conversación en su panel');
+      assert.equal(String(paneles()[0].args[0]), 'openai-codex://route/local/conversacion-1', 'no abre esa conversación');
+      assert.equal(paneles()[0].args[1], 'chatgpt.conversationEditor', 'no la abre con el panel de Codex');
+      assert.equal(vscode.registrado.terminales.length, 0, 'abre además una terminal');
+      assert.equal(vscode.registrado.portapapeles, '', 'lo copia igual');
+      // Otro encargo, otro panel: los dos trabajan a la vez.
+      assert.equal(await puente.enviar('Y ahora, las facturas'), 'trabajando');
+      assert.equal(paneles().length, 2, 'el segundo no va en su propio panel');
+      assert.equal(String(paneles()[1].args[0]), 'openai-codex://route/local/conversacion-2');
+
+      // Si su programa no da el número (sin cuenta, sin red), la pestaña de la
+      // 206, que enseña lo que pasa y deja contestarle.
+      puente.codexPorDetras.lanzar = codexFingido(lanzados, { numero: false });
+      assert.equal(await puente.enviar('Haz el resumen'), 'trabajando');
+      assert.equal(paneles().length, 2, 'abre un panel sin conversación');
+      assert.equal(vscode.registrado.terminales.length, 1, 'sin número, no va a su pestaña');
+      assert.deepEqual(vscode.registrado.terminales[0].opciones.shellArgs, ['--no-daemon', '--', 'Haz el resumen']);
+
+      // Con Codex en el ordenador y no en el editor, no hay panel donde verlo:
+      // trabajaría por detrás sin que nadie lo viera. Va a su pestaña, y su
+      // programa no arranca por detrás.
+      puente.codexPorDetras.lanzar = codexFingido(lanzados);
+      const yaLanzados = lanzados.length;
+      vscode.guion.extensionesInstaladas = vscode.guion.extensionesInstaladas.filter((id) => id !== 'openai.chatgpt');
+      cargar('asistentes').terminal.programaEnElPath = (nombre) => (nombre === 'codex' ? '/opt/codex/bin/codex' : null);
+      assert.equal(await puente.enviar('Haz el resumen sin panel'), 'trabajando');
+      assert.equal(lanzados.length, yaLanzados, 'sin su panel, lo arranca por detrás y no se ve');
+      assert.equal(paneles().length, 2, 'abre un panel que no está');
+      assert.equal(vscode.registrado.terminales.length, 2, 'sin su panel, no va a su pestaña');
+      assert.equal(vscode.registrado.terminales[1].opciones.shellPath, '/opt/codex/bin/codex');
+      assert.deepEqual(vscode.registrado.terminales[1].opciones.shellArgs, ['--', 'Haz el resumen sin panel']);
+      return 'su programa por detrás, y cada conversación en su panel; sin número o sin su panel, la pestaña';
+    } finally {
+      puente.codexPorDetras.lanzar = antes;
+    }
+  }));
+
   await comprobar('206: el programa de Codex se busca donde lo deja su extensión, en cada sistema', () => {
     const asistentesM = cargar('asistentes');
     const suya = fs.mkdtempSync(path.join(os.tmpdir(), 'extension-de-codex-'));
@@ -27450,6 +27616,35 @@ exec git "$@"
       assert.ok(dicho.some((t) => t.includes('Cuando quieras preparar la cuenta de GitHub, la tienes en Ayuda › Sugerencias.')), `con «Más tarde» no dice dónde queda: ${dicho.join(' | ')}`);
       assert.ok(!dicho.some((t) => /Histórico/.test(t)), 'manda a Histórico, que en la barra sencilla no existe');
 
+      // 207: la marca y el primer mensaje van antes que la pregunta de GitHub. Jose,
+      // 25-11-2026: con la pregunta sin contestar en una esquina, ni la marca ni el
+      // asistente arrancaban. GitHub no cambia nada de lo que lee el asistente; los
+      // ajustes que sí (permisos, consejos) siguen yendo antes.
+      {
+        const orden = [];
+        const antes207 = { info: vscode.window.showInformationMessage, cara: proveedor.sacarLaCara, enviar: puenteM.enviar, arrancar: arrancarM.arrancar };
+        vscode.window.showInformationMessage = async (texto, ...botones) => {
+          if (/cuenta de GitHub/.test(texto)) orden.push('github');
+          return antes207.info.call(vscode.window, texto, ...botones);
+        };
+        proveedor.sacarLaCara = async () => { orden.push('marca'); return { ok: false }; };
+        puenteM.enviar = async () => { orden.push('primer mensaje'); return 'directo'; };
+        arrancarM.arrancar = async () => ({
+          ok: true, rama: 'desdeCero', mensaje: 'Ferretería Soler ya está listo.', objetivo: 'Poner orden en mis facturas', web: 'https://ferreteriasoler.es',
+          nombres: { arnes: 'Ferretería Soler', empresa: 'Ferretería Soler' }, dichos: [], pegas: [], encargos: [],
+        });
+        vscode.guion.eleccion = undefined;
+        try {
+          await proveedor.arrancar();
+        } finally {
+          vscode.window.showInformationMessage = antes207.info;
+          proveedor.sacarLaCara = antes207.cara;
+          puenteM.enviar = antes207.enviar;
+          arrancarM.arrancar = antes207.arrancar;
+        }
+        assert.deepEqual(orden, ['marca', 'primer mensaje', 'github'], `la pregunta de GitHub frena lo demás: ${orden.join(' → ')}`);
+      }
+
       // Con «Sí, ahora», se queda en la cuenta: no la tapa la principal.
       vscode.guion.eleccion = 'Sí, ahora';
       enviados.length = 0;
@@ -27571,6 +27766,26 @@ exec git "$@"
       r = await montar({ como: 'trabajando' });
       assert.ok(r.ultimo.texto.endsWith(CON_ELLO), `con Codex trabajando, no lo dice: ${r.ultimo.texto}`);
       assert.ok(!/Dale a enviar/.test(r.ultimo.texto));
+
+      // Lo de la web va en el aviso del final, con su botón (decisión 207): la
+      // barra enseña un aviso cada vez, y el del final tapaba «No he podido abrir…»,
+      // que es justo cuando se escribe mal al montar.
+      const webM = cargar('web');
+      const antesCara = webM.sacarLaCara;
+      try {
+        webM.sacarLaCara = async () => ({ ok: false, noSeAbre: true, motivo: 'getaddrinfo ENOTFOUND taleresbonet.com' });
+        r = await montar({ extra: { web: 'https://taleresbonet.com' } });
+        assert.ok(r.ultimo.texto.includes('No he podido abrir taleresbonet.com: o no está bien escrita, o ahora no hay conexión.'), `el aviso del final tapa lo de la web: ${r.ultimo.texto}`);
+        assert.ok(r.ultimo.texto.endsWith(DALE), `no acaba en «Dale a enviar»: ${r.ultimo.texto}`);
+        assert.deepEqual((r.ultimo.botones || []).map((b) => [b.etiqueta, b.accion.tipo]), [['Quitar las copias solas', 'quitarElGuardadoSolo'], ['Escribir la web otra vez', 'ponerLaCara']]);
+        // Y la que sí se lee, también: «Ya lleva la cara…» se quedaba tapada igual.
+        webM.sacarLaCara = async () => ({ ok: true, nombre: 'Talleres Bonet', logo: 'logo.png' });
+        r = await montar({ extra: { web: 'https://talleresbonet.com' } });
+        assert.ok(r.ultimo.texto.includes('Ya lleva la cara de Talleres Bonet, con su logotipo.'), `el aviso del final tapa la cara: ${r.ultimo.texto}`);
+        assert.ok(r.ultimo.texto.endsWith(DALE));
+      } finally {
+        webM.sacarLaCara = antesCara;
+      }
 
       // Las copias solas: no se dicen si no van a guardar (apagadas, o sin copias), y se dicen como van.
       r = await montar({ guardarSolo: 0 });

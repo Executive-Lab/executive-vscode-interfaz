@@ -132,6 +132,9 @@ const quitarSoloEsto = (que) => ({ etiqueta: 'Quitarlo', accion: { tipo: 'quitar
 // sola sale «Quitarlo»; con varias, cada una dice qué quita.
 const QUITAR_EL_GUARDADO_SOLO = { etiqueta: 'Quitarlo', etiquetaConVarios: 'Quitar las copias solas', accion: { tipo: 'quitarElGuardadoSolo' } };
 const QUITAR_LO_DE_CLAUDE_DEL_MONTAJE = { ...QUITAR_LO_DE_CLAUDE, etiquetaConVarios: 'Quitar lo de Claude' };
+// Una web que no se abre (decisión 207). Con su rótulo para cuando va con otros:
+// en el montaje se suma al aviso del final.
+const ESCRIBIR_LA_WEB_OTRA_VEZ = { etiqueta: 'Escribir la web otra vez', etiquetaConVarios: 'Escribir la web otra vez', accion: { tipo: 'ponerLaCara' } };
 const DALE_A_ENVIAR = 'Te lo he dejado escrito en la conversación. Dale a enviar.';
 // Y cuando Codex ya está trabajando en su pestaña (decisión 206): no hay nada que
 // enviar ni que pegar. Copiado, lo dice el aviso del portapapeles.
@@ -3673,9 +3676,10 @@ ${cabecera}
   // Manda el primer mensaje del montaje a la caja del asistente. Escrito sin
   // enviar: se dice, como en `pedir` (decisión 181). Copiado, ya lo dice el
   // aviso del portapapeles.
-  async mandarElPrimero(texto) {
+  // `sinDecirlo`: lo dice quien llama, en su sitio (el montaje, al final).
+  async mandarElPrimero(texto, { sinDecirlo = false } = {}) {
     const como = await puente.enviar(texto);
-    this.dejarElAviso(comoLlego(como));
+    if (!sinDecirlo) this.dejarElAviso(comoLlego(como));
     return como;
   }
 
@@ -4423,10 +4427,45 @@ ${cabecera}
     this.avisoPendiente = null;
     await this.refrescar(true);
     this.avisoPendiente = pendiente;
+    // La cara, al momento y por la barra: ya tenemos la web, así que no hay
+    // que esperar a que el asistente la mire —ni a que el alumno le dé a
+    // enviar—. Lo que salga es un primer intento; al asistente se le pide que
+    // lo afine, no que lo haga desde cero (decisión 103).
+    const cara = hecho.web ? await this.sacarLaCara(hecho.web, { delMontaje: true }) : null;
+    const conWeb = hecho.web ? `\n\n${marca.queLePedimos(hecho.web, Boolean(cara && cara.ok))}\n\n` : '';
+
+    // Si la carpeta ya traía claves —un `.env` de antes, un `.env.local`—, el
+    // plan de a dónde va cada una viaja en este primer mensaje: es cuando el
+    // asistente está montando y cuando el alumno espera trámites. Antes solo
+    // salía si alguien entraba en Conexiones y pulsaba (decisión 104). Ahora
+    // va con los demás encargos del arranque, en `hecho.paraElMensaje` (A7).
+    const comoSeLlama = hecho.nombres.arnes || identidad.deQuien();
+    const primero = arrancar.primerMensaje(hecho, { comoSeLlama, conWeb, conFreno: arrancar.hayFreno() });
+    // Sin sesión, la caja del asistente iba a pedir entrar y se comía el encargo
+    // (decisión 186): se guarda hasta que se diga que ya está dentro. Sin poder
+    // saberlo, como antes.
+    // Y este montaje manda o aplaza solo el suyo: uno aplazado de antes ya no vale
+    // y no sale después del nuevo con «Ya he entrado».
+    sesionDelAsistente.soltar();
+    const sesion = await sesionDelAsistente.haySesion(asistentes.elDeAhora(), { fresco: true });
+    // Lo que hay que hacer ahora («Dale a enviar», «Codex ya está con ello»,
+    // «primero entra») se dice lo último, detrás de lo de GitHub, que es para más
+    // tarde (decisión 207).
+    let loDeAhora;
+    if (sesion === 'no') {
+      sesionDelAsistente.aplazar(primero);
+      loDeAhora = PRIMERO_LA_CUENTA;
+    } else {
+      loDeAhora = comoLlego(await this.mandarElPrimero(primero, { sinDecirlo: true }));
+    }
     // La lista de lo que falta se deja para el final, después de GitHub: si
     // saliera ahora, la pregunta de la cuenta le caería encima.
 
-    // La cuenta de GitHub, aquí y no cuando haga falta.
+    // La cuenta de GitHub, aquí y no cuando haga falta. Y después de la marca y
+    // del primer mensaje (decisión 207): con la pregunta sin contestar en una
+    // esquina, ni la marca ni el asistente arrancaban. No cambia nada de lo que
+    // lee el asistente, así que no hace falta antes; los ajustes que sí lo
+    // cambian (permisos, consejos) siguen yendo antes del primer mensaje.
     //
     // Antes esto solo salía el día que alguien pulsaba "Subir a GitHub", que es
     // el peor momento: ya quiere guardar algo y se encuentra con que le toca
@@ -4455,33 +4494,8 @@ ${cabecera}
       }
     }
 
-    // La cara, al momento y por la barra: ya tenemos la web, así que no hay
-    // que esperar a que el asistente la mire —ni a que el alumno le dé a
-    // enviar—. Lo que salga es un primer intento; al asistente se le pide que
-    // lo afine, no que lo haga desde cero (decisión 103).
-    const cara = hecho.web ? await this.sacarLaCara(hecho.web) : null;
-    const conWeb = hecho.web ? `\n\n${marca.queLePedimos(hecho.web, Boolean(cara && cara.ok))}\n\n` : '';
+    this.dejarElAviso(loDeAhora);
 
-    // Si la carpeta ya traía claves —un `.env` de antes, un `.env.local`—, el
-    // plan de a dónde va cada una viaja en este primer mensaje: es cuando el
-    // asistente está montando y cuando el alumno espera trámites. Antes solo
-    // salía si alguien entraba en Conexiones y pulsaba (decisión 104). Ahora
-    // va con los demás encargos del arranque, en `hecho.paraElMensaje` (A7).
-    const comoSeLlama = hecho.nombres.arnes || identidad.deQuien();
-    const primero = arrancar.primerMensaje(hecho, { comoSeLlama, conWeb, conFreno: arrancar.hayFreno() });
-    // Sin sesión, la caja del asistente iba a pedir entrar y se comía el encargo
-    // (decisión 186): se guarda hasta que se diga que ya está dentro. Sin poder
-    // saberlo, como antes.
-    // Y este montaje manda o aplaza solo el suyo: uno aplazado de antes ya no vale
-    // y no sale después del nuevo con «Ya he entrado».
-    sesionDelAsistente.soltar();
-    const sesion = await sesionDelAsistente.haySesion(asistentes.elDeAhora(), { fresco: true });
-    if (sesion === 'no') {
-      sesionDelAsistente.aplazar(primero);
-      this.dejarElAviso(PRIMERO_LA_CUENTA);
-    } else {
-      await this.mandarElPrimero(primero);
-    }
     // Al final, la principal, con la tarjeta que toca y lo aplazado dicho; o la
     // lista, si algo se ha roto. Si fue a preparar la cuenta, se queda allí.
     await this.siFaltaAlgoDecirlo(!fueAGitHub);
@@ -4528,18 +4542,34 @@ ${cabecera}
   // La barra mira la web y deja un primer intento de cara; si lo consigue, se
   // ve al momento. Si no —sin red, web caída, una web sin color de marca— no
   // pasa nada: no se escribe nada y el asistente lo hará con calma.
-  async sacarLaCara(direccion) {
+  //
+  // `delMontaje`: lo que se diga va en el aviso del final del montaje, y el que
+  // el montaje tiene guardado no se suelta al repintar (decisión 207). La barra
+  // enseña un aviso cada vez: el del final tapaba este, y el repintado soltaba
+  // antes de tiempo el guardado, que se quedaba sin «Guardo una copia sola…».
+  async sacarLaCara(direccion, { delMontaje = false } = {}) {
     this.enviar({ tipo: 'esperando', que: 'Mirando tu web…' });
     const cara = await web.sacarLaCara(direccion);
     if (!cara.ok) this.salida.appendLine(`[cara] ${direccion}: ${cara.motivo}`); // diccionario: interno
+    const guardado = delMontaje ? this.avisoPendiente : null;
+    if (delMontaje) this.avisoPendiente = null;
     await this.refrescar(true);
-    // Una escritura que falló se dice, con cuál y por qué (decisión 189); el resto de motivos, no.
-    if (!cara.ok && cara.escritura) this.enviar({ tipo: 'aviso', texto: cara.escritura, malo: true });
+    if (delMontaje) this.avisoPendiente = guardado;
+    const decir = (texto, { malo = false, boton = null } = {}) => (delMontaje
+      ? this.dejarElAviso(texto, boton)
+      : this.enviar({ tipo: 'aviso', texto, ...(malo ? { malo } : {}), ...(boton ? { boton: { etiqueta: boton.etiqueta, accion: boton.accion } } : {}) }));
+    // Una escritura que falló se dice, con cuál y por qué (decisión 189). Y una
+    // web que no se abre, con su botón para escribirla otra vez (decisión 207):
+    // con una letra de menos, la marca no salía y nadie sabía por qué. El resto
+    // de motivos, no.
+    if (!cara.ok && cara.escritura) decir(cara.escritura, { malo: true });
+    if (!cara.ok && cara.noSeAbre) {
+      let cual = direccion;
+      try { cual = new URL(direccion).hostname; } catch { /* la dirección tal cual */ }
+      decir(`No he podido abrir ${cual}: o no está bien escrita, o ahora no hay conexión.`, { malo: true, boton: ESCRIBIR_LA_WEB_OTRA_VEZ });
+    }
     if (cara.ok) {
-      this.enviar({
-        tipo: 'aviso',
-        texto: `Ya lleva la cara de ${cara.nombre}${cara.logo ? ', con su logotipo' : ''}. Le he pedido al asistente que la afine.${cara.logoSinGuardar ? ` ${cara.logoSinGuardar}` : ''}`,
-      });
+      decir(`Ya lleva la cara de ${cara.nombre}${cara.logo ? ', con su logotipo' : ''}. Le he pedido al asistente que la afine.${cara.logoSinGuardar ? ` ${cara.logoSinGuardar}` : ''}`);
     }
     return cara;
   }

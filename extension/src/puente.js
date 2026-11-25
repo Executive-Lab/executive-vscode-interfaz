@@ -73,10 +73,101 @@ const conversacionNueva = (quien = asistentes.elDeAhora()) => ejecutarSiExiste(q
 // le pasa como argumento, sin pasar por ningún intérprete de órdenes
 // (`programaEnElPath` lo explica para Windows). Al volver a abrir el
 // editor la pestaña no se recupera: el programa ya no estaría.
+//
+// ── Y mejor, en su panel (decisión 207) ──────────────────────────────────
+//
+// Jose, 25-11-2026: «no me refiero a que despliegues terminal, sino esto de codex
+// new agent que permite dos ventanas en vscode». Su panel («New Codex Agent») no
+// deja que nadie le escriba: su orden no recibe texto y su pantalla de inicio no
+// lee nada de la dirección (leído en openai.chatgpt 26.1120.50957). Pero abre una
+// conversación ya empezada por su número, `openai-codex://route/local/<número>`,
+// con su propio editor, `chatgpt.conversationEditor`: es lo que hace su lista de
+// conversaciones. Y su programa, sin pantalla (`exec --json`), empieza una con el
+// encargo y lo primero que suelta es ese número. Las dos partes comparten las
+// conversaciones (`~/.codex`): probado con el Codex de Jose el 25-11-2026.
+//
+// Así que: su programa empieza el encargo por detrás, en la carpeta, y en cuanto
+// da el número se abre esa conversación en un panel suyo. Un encargo, un panel:
+// varios a la vez. `workspace-write`: puede tocar lo de la carpeta, nada fuera;
+// sin pantalla no hay a quién preguntarle, así que no se le deja más. Lo que se
+// le diga después, en su panel, va con lo que tenga puesto esa persona.
+//
+// Si no da el número a tiempo (sin cuenta, sin red, un programa que no conoce
+// `exec`), la pestaña de la 206, que enseña lo que pasa y deja contestarle. Y si
+// Codex está en el ordenador pero no en el editor, también: no hay panel donde
+// verlo, y por detrás trabajaría sin que nadie lo viera.
+const PANEL_DE_CODEX = 'chatgpt.conversationEditor';
+const conversacionDeCodex = (numero) => vscode.Uri.parse(`openai-codex://route/local/${encodeURIComponent(numero)}`);
+const ESPERA_AL_NUMERO = 30000;
+// Se cambia en las pruebas: un programa fingido que suelta lo que el de verdad.
+const codexPorDetras = {
+  lanzar: (programa, args, opciones) => require('node:child_process').spawn(programa, args, { ...opciones, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true }),
+};
+
+// Empieza el encargo y devuelve el número de la conversación, o null.
+function empezarPorDetras(programa, texto, salida) {
+  return new Promise((resolver) => {
+    let hijo;
+    let hecho = false;
+    const acabar = (numero) => {
+      if (hecho) return;
+      hecho = true;
+      clearTimeout(reloj);
+      resolver(numero);
+    };
+    const reloj = setTimeout(() => {
+      if (salida) salida.appendLine('[puente] Codex no ha dado el número de la conversación a tiempo'); // diccionario: interno
+      try { hijo.kill(); } catch { /* ya no estaba */ }
+      acabar(null);
+    }, ESPERA_AL_NUMERO);
+    try {
+      hijo = codexPorDetras.lanzar(programa, ['exec', '--json', '-s', 'workspace-write', '--', texto], { cwd: require('./proyecto').raiz() });
+    } catch (error) {
+      if (salida) salida.appendLine(`[puente] Codex no ha arrancado por detrás: ${error.message}`); // diccionario: interno
+      acabar(null);
+      return;
+    }
+    hijo.on('error', (error) => {
+      if (salida) salida.appendLine(`[puente] Codex no ha arrancado por detrás: ${error.message}`); // diccionario: interno
+      acabar(null);
+    });
+    // `close` y no `exit`: llega cuando ya se ha leído todo lo que dijo. Uno que
+    // suelta el número y acaba en seguida podía acabar antes de leerse el número.
+    hijo.on('close', (codigo) => {
+      if (salida) salida.appendLine(`[puente] Codex ha acabado por detrás (${codigo})`); // diccionario: interno
+      acabar(null);
+    });
+    require('node:readline').createInterface({ input: hijo.stdout }).on('line', (linea) => {
+      let suceso;
+      try { suceso = JSON.parse(linea); } catch { return; }
+      if (suceso && suceso.type === 'thread.started' && typeof suceso.thread_id === 'string' && suceso.thread_id) acabar(suceso.thread_id);
+    });
+    // Lo que diga por el otro canal no se enseña, pero tampoco se deja llenar.
+    if (hijo.stderr) hijo.stderr.resume();
+  });
+}
+
 async function ponerACodex(texto, salida) {
   const arranque = asistentes.arranqueDeCodex();
   if (!arranque) return null;
-  const { programa, opciones } = arranque;
+  if (!asistentes.estaInstalado(asistentes.porId('codex'))) return enSuPestana(arranque, texto, salida);
+  const numero = await empezarPorDetras(arranque.programa, texto, salida);
+  if (numero) {
+    try {
+      await vscode.commands.executeCommand('vscode.openWith', conversacionDeCodex(numero), PANEL_DE_CODEX, { viewColumn: vscode.ViewColumn.Active, preview: false });
+      if (salida) salida.appendLine(`[puente] Codex trabaja en su panel: ${numero}`); // diccionario: interno
+    } catch (error) {
+      // El encargo ya está en marcha: abrir además la pestaña lo haría dos veces.
+      // Queda en su lista de conversaciones.
+      if (salida) salida.appendLine(`[puente] Codex trabaja, pero su panel no se ha abierto: ${error.message}`); // diccionario: interno
+    }
+    return 'trabajando';
+  }
+  return enSuPestana(arranque, texto, salida);
+}
+
+// La pestaña de la 206.
+function enSuPestana({ programa, opciones }, texto, salida) {
   try {
     const pestana = vscode.window.createTerminal({
       name: 'Codex',
@@ -263,4 +354,4 @@ async function diagnostico(salida) {
   salida.show(true);
 }
 
-module.exports = { enviar, darFoco, abrirConversacion, abrirEste, conversacionNueva, diagnostico, primeroDisponible, cabeEnElEnlace, cabeEntero };
+module.exports = { enviar, darFoco, abrirConversacion, abrirEste, conversacionNueva, diagnostico, primeroDisponible, cabeEnElEnlace, cabeEntero, codexPorDetras };

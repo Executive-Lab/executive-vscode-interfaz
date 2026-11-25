@@ -17,7 +17,9 @@
 // ── Qué se lee, y en qué orden ───────────────────────────────────────────
 //
 //   nombre   `og:site_name`; si no, el `<title>` sin la coletilla
-//            («Ferretería Soler | Inicio» → «Ferretería Soler»).
+//            («Ferretería Soler | Inicio» → «Ferretería Soler»), y de sus
+//            partes, la que dice el dominio («Talleres Bonet | Reparación…»
+//            en talleresbonet.com → «Talleres Bonet»; decisión 207).
 //   acento   `<meta name="theme-color">` si es un color de verdad —no blanco,
 //            negro ni gris—; si no, una variable CSS de marca (`--primary`,
 //            `--brand`, `--accent`…) en el HTML o en su primera hoja de
@@ -25,7 +27,10 @@
 //   fondo    `--background` / `--bg`, o el `background` del `body`; si no, blanco.
 //   texto    `--foreground` / `--text`, o el `color` del `body`; si no, según el fondo.
 //   logo     `apple-touch-icon` (el grande) y, si no, `icon` en svg o png.
-//            Un `.ico` no sirve: la barra no lo pinta.
+//            Un `.ico` no sirve: la barra no lo pinta. El de `apple-touch-icon`
+//            es el icono para móvil, un cuadrado que ya trae su fondo: se
+//            apunta qué fichero es (`logo_es_icono: logo.png`) para que no
+//            lleve placa (decisión 207).
 //   letra    una hoja de Google Fonts (y se baja su fichero) o el `font-family`
 //            de sus títulos o de su `body`, sin las del sistema (decisión 204).
 //
@@ -130,12 +135,34 @@ function meta(html, clave) {
 }
 
 // «Ferretería Soler | Inicio», «Inicio - Ferretería Soler»: se queda la parte
-// que no sea una palabra de menú, y si hay duda, la más larga.
+// que no sea una palabra de menú. De las que quedan, la que dice el dominio, y
+// si ninguna lo dice, la más larga.
+//
+// Lo del dominio es de la decisión 207. En «Talleres Bonet | Reparación de maquinaria
+// industrial en toda Cataluña» la más larga es el lema, y la marca salía con él de
+// nombre. Una portada suele ser «Marca | Lema» y el dominio, la marca junta
+// (`talleresbonet`): sin tildes, espacios ni signos, se ve cuál es.
 const MENU = /^(inicio|home|bienvenidos?|welcome|página principal|portada)$/i;
-function nombreDelTitulo(titulo) {
+const junto = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function delDominio(web) {
+  try {
+    // Todas las palabras de la dirección menos la última: `www`, el nombre, y
+    // en `tienda.soler.es`, también `tienda`.
+    return new URL(web).hostname.split('.').slice(0, -1).map(junto).filter((p) => p.length >= 4 && p !== 'www');
+  } catch {
+    return [];
+  }
+}
+function nombreDelTitulo(titulo, web) {
   const partes = sinEntidades(titulo).split(/\s+[|–—\-·»]\s+/).map((p) => p.trim()).filter(Boolean);
   if (!partes.length) return '';
   const candidatas = partes.filter((p) => !MENU.test(p));
+  const dominio = delDominio(web);
+  const laDelDominio = candidatas.find((p) => {
+    const parte = junto(p);
+    return parte.length >= 4 && dominio.some((d) => d === parte || d.includes(parte) || parte.includes(d));
+  });
+  if (laDelDominio) return laDelDominio.slice(0, 60);
   return (candidatas.length ? candidatas : partes).sort((a, b) => b.length - a.length)[0].slice(0, 60);
 }
 
@@ -226,11 +253,11 @@ function logoDe(html, base) {
     const ext = (direccion.match(EXTENSIONES) || [])[1] || (tipo === 'image/svg+xml' ? 'svg' : tipo === 'image/png' ? 'png' : null);
     if (!ext) continue;
     const tamano = Number((atributo(et, 'sizes').match(/(\d+)x/) || [])[1] || 0);
-    if (rel.includes('apple-touch-icon') || rel.includes('apple-touch-icon-precomposed')) candidatos.push({ direccion, ext: ext.toLowerCase(), peso: 1000 + tamano });
-    else if (rel.includes('icon')) candidatos.push({ direccion, ext: ext.toLowerCase(), peso: (ext === 'svg' ? 500 : 0) + tamano });
+    if (rel.includes('apple-touch-icon') || rel.includes('apple-touch-icon-precomposed')) candidatos.push({ direccion, ext: ext.toLowerCase(), peso: 1000 + tamano, icono: true });
+    else if (rel.includes('icon')) candidatos.push({ direccion, ext: ext.toLowerCase(), peso: (ext === 'svg' ? 500 : 0) + tamano, icono: false });
   }
   candidatos.sort((a, b) => b.peso - a.peso);
-  return candidatos[0] ? { url: candidatos[0].direccion, ext: candidatos[0].ext.replace('jpeg', 'jpg') } : null;
+  return candidatos[0] ? { url: candidatos[0].direccion, ext: candidatos[0].ext.replace('jpeg', 'jpg'), icono: candidatos[0].icono } : null;
 }
 
 // ── La tipografía ────────────────────────────────────────────────────────
@@ -295,7 +322,7 @@ async function bajarDeGoogle(nombre, bajar) {
 function extraer(html, base) {
   const css = cssEnLinea(html);
   const tema = normalizar(meta(html, 'theme-color'));
-  const nombre = meta(html, 'og:site_name') || nombreDelTitulo((html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '');
+  const nombre = meta(html, 'og:site_name') || nombreDelTitulo((html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '', base);
 
   return {
     nombre: nombre || '',
@@ -338,7 +365,10 @@ async function sacarLaCara(web, { bajar = descargar } = {}) {
   try {
     portada = await bajar(web);
   } catch (error) {
-    return { ok: false, motivo: `no he podido leer la web: ${error.message}` };
+    // Que no se abra se dice (decisión 207): una web mal escrita dejaba la barra
+    // sin marca y sin una palabra. Que se abra y no traiga color, no: el
+    // asistente lo hará con calma.
+    return { ok: false, noSeAbre: true, motivo: `no he podido leer la web: ${error.message}` };
   }
   if (!/html/i.test(portada.tipo) && !/<html|<head|<body/i.test(portada.cuerpo.toString('utf8', 0, 2000))) {
     return { ok: false, motivo: 'eso no es una página web' };
@@ -419,6 +449,8 @@ async function sacarLaCara(web, { bajar = descargar } = {}) {
     `texto: ${texto}`,
     `acento: ${leido.acento}`,
     ...(logo ? [`logo: ${logo}`] : []),
+    // El fichero, no un «sí»: si luego se cambia el logotipo, lo apuntado ya no es de él.
+    ...(logo && leido.logo.icono ? [`logo_es_icono: ${logo}`] : []),
     ...(leido.tipografia ? [`tipografia: ${leido.tipografia.nombre}`] : []),
     ...(fuente ? [`fuente: ${fuente}`] : []),
     `resource: ${web}`,

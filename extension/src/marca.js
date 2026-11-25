@@ -118,6 +118,14 @@ function llevaElNombre(campos, fichero) {
 //     apuesta, pero es la que falla menos.
 const SE_DISTINGUE = 3;
 
+// El icono para móvil (`apple-touch-icon`) ya es un cuadrado con su fondo:
+// encima de una placa quedaba un cuadrado dentro de otro (decisión 207). La
+// barra apunta qué fichero es al sacarlo de la web (`logo_es_icono: logo.png`),
+// y solo cuenta mientras el logotipo sea ese: si el asistente pone otro, el
+// nuevo lleva su placa si le hace falta.
+const esIcono = (campos) => typeof campos.logo_es_icono === 'string' && typeof campos.logo === 'string'
+  && campos.logo_es_icono.trim() !== '' && campos.logo_es_icono.trim() === campos.logo.trim();
+
 // Devuelve el color de la plaquita, o null si no hace falta ninguna. La plaquita
 // se elige **contra el logotipo**, no contra el fondo: un logotipo oscuro
 // necesita una clara y uno claro una oscura, y da igual de qué color sea la
@@ -201,7 +209,7 @@ function leer() {
     // Solo tiene sentido preguntárselo si hay logotipo y hay nombre que poner.
     logoSinNombre: Boolean(logo && nombre && !llevaElNombre(campos, logo)),
     // Si hace falta plaquita detrás del logotipo para que se vea.
-    placa: Boolean(logo && placaPara(logo, esquema.superficie)),
+    placa: Boolean(logo && !esIcono(campos) && placaPara(logo, esquema.superficie)),
     carpeta: donde,
     oscura: esOscura,
     // Una de la lista (`sistema`, `clasica`, `grande`) o el nombre de la suya.
