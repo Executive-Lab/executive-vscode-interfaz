@@ -68,17 +68,20 @@ const conversacionNueva = (quien = asistentes.elDeAhora()) => ejecutarSiExiste(q
 // hace y se le contesta. Un encargo, una pestaña: varios van a la vez.
 //
 // El encargo va detrás de `--`: así uno que empiece por guiones no se toma por
-// una opción suya. Se le pasa como argumento, sin pasar por ningún intérprete de
-// órdenes (`programaEnElPath` lo explica para Windows). Al volver a abrir el
+// una opción suya. Delante, las opciones con que ese programa arranca
+// (`asistentes.arranqueDeCodex` dice por qué el de su extensión lleva una). Se
+// le pasa como argumento, sin pasar por ningún intérprete de órdenes
+// (`programaEnElPath` lo explica para Windows). Al volver a abrir el
 // editor la pestaña no se recupera: el programa ya no estaría.
 async function ponerACodex(texto, salida) {
-  const programa = asistentes.programaDeCodex();
-  if (!programa) return null;
+  const arranque = asistentes.arranqueDeCodex();
+  if (!arranque) return null;
+  const { programa, opciones } = arranque;
   try {
     const pestana = vscode.window.createTerminal({
       name: 'Codex',
       shellPath: programa,
-      shellArgs: ['--', texto],
+      shellArgs: [...opciones, '--', texto],
       cwd: require('./proyecto').raiz(),
       location: vscode.TerminalLocation.Editor,
       isTransient: true,

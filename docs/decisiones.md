@@ -10241,7 +10241,7 @@ verdad. Cambian tres: «Las reglas» con un técnico, el freno que se ofrece, y 
 
 ## 206. Con tus palabras, los dos asistentes, y Codex que trabaja él
 
-**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD `02-DOCS/wiki/ftd/la-0.65.md`
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, en la PR #116 · FTD `02-DOCS/wiki/ftd/la-0.65.md`
 
 Jose, 25-11, con la 0.65 en marcha, tres peticiones seguidas:
 
@@ -10266,7 +10266,7 @@ Sin ninguno, el aviso suma «Poner los dos». Lo que falta se pone como con el a
 (decisión 181). Antes, con uno solo puesto, ni se preguntaba, y la única forma de tener los dos era el ajuste. RSC
 recibe `--target claude,codex`, que ya aceptaba.
 
-**3. Con Codex, el encargo lo empieza él.** Leída su extensión (openai.chatgpt 26.51120.50957): ningún comando
+**3. Con Codex, el encargo lo empieza él.** Leída su extensión (openai.chatgpt 26.1120.50957): ningún comando
 acepta texto (`addToThread` y `addFileToThread` solo adjuntan ficheros) y su enlace lleva a su barra y tira lo que se
 le pasa, porque la caja de inicio no lee `prompt`. Se probó en la máquina de Jose: Codex abierto, la caja vacía. Pero
 la extensión trae su propio programa, en `bin/<sistema>-<procesador>/codex`, que es el mismo Codex con la misma
@@ -10282,6 +10282,9 @@ hace, y le contestas si te pregunta algo.» Nada de portapapeles ni de «Dale a 
   `.cmd` pasaría por `cmd.exe`, que reinterpreta `&`, `%` y las comillas. Sin ninguno, el portapapeles, como antes.
 - **Un encargo largo** sigue yendo a un fichero de la carpeta (decisión 166), y a Codex se le da la línea que lo nombra.
 - **La pestaña no se recupera** al volver a abrir el editor: el programa ya no estaría.
+- **El de su extensión arranca con `--no-daemon`.** Viene suelto, sin el paquete que pide su servidor de fondo, y sin
+  esa opción se cae nada más abrir: «this CLI has no complete local package». El del ordenador es un paquete completo
+  y arranca como siempre, sin opciones nuestras: uno antiguo podría no conocerla.
 
 **4. Conversaciones en paralelo.** Con Codex, «Conversación nueva» usa primero «New Codex Agent»
 (`chatgpt.newCodexPanel`), que abre un panel nuevo cada vez; `chatgpt.newChat`, que cambia la de su barra, va de
@@ -10289,13 +10292,32 @@ repuesto. Con Claude ya era así (`primaryEditor.open`, una pestaña nueva cada 
 dos y los dos puestos, «Conversación nueva» pregunta «¿Con quién?».
 
 **Pruebas.** Seis nuevas en `humo.js`, con «206:» en el nombre: con tus palabras en las cinco preguntas; Codex con su
-programa (pestaña, encargo tras `--`, carpeta, uno por encargo, el del ordenador y el portapapeles); dónde se busca su
-programa en seis sistemas; lo que dice la barra en los cinco sitios que mandan algo; la conversación nueva en
+programa (pestaña, `--no-daemon` en el de su extensión, encargo tras `--`, carpeta, uno por encargo, el del ordenador
+sin opciones y el portapapeles); dónde se busca su programa en seis sistemas, y con qué opciones arranca; lo que dice la barra en los cinco sitios que mandan algo; la conversación nueva en
 paralelo y con cuál; y los dos asistentes al montar. Una más en `mapeos-codex.js`: un encargo largo, por su fichero.
 Y una en el VS Code de verdad, con un Codex de mentira que apunta lo que recibe: la pestaña va en el editor, en la
 carpeta, y el encargo llega tal cual, con comillas, `&`, `$` y acentos. Se vio fallar dos veces a propósito: sin el
 `--` y con la pestaña abajo. Cambian las pruebas que contestaban el montaje con un guion, porque la primera pregunta
 es ahora con quién, y `ponerGit` arranca antes de la primera pregunta, no después.
 
-**Lo que no se ha probado:** un encargo de verdad en el Codex de Jose. Las pruebas comprueban con qué se abre la
-pestaña, no lo que hace Codex dentro; abrirlo en su cuenta es cosa suya.
+**Un encargo de verdad en el Codex de Jose** (25-11, con su sí). Codex 0.171.0-alpha.13.2, el de su extensión, en
+una terminal propia como la de la pestaña, con un encargo inofensivo en una carpeta de pruebas:
+
+1. **Como lo abría la barra** (`-- encargo`): la caja de Codex y, al momento, el error de arriba. La 0.65 se habría
+   caído con todo el que usa el programa de su extensión. Las pruebas no lo veían: miran con qué se abre la pestaña.
+2. **Con `--no-daemon`**: arranca, y antes de nada pide revisar los enganches de Jose («Hooks need review: 12 hooks
+   are new or changed»). No se contestó: elegir cambia su configuración.
+3. **Con `--no-daemon` y los enganches apagados solo en esa ejecución** (`--disable hooks`): el encargo entra solo,
+   Codex trabaja 7 segundos, crea `hola.txt` con «hola» y dice «Hecho.». El `config.toml` de Jose tiene la misma
+   fecha antes y después.
+
+Con eso se añadió `--no-daemon`, primero en las pruebas (fallaron) y luego en `arranqueDeCodex`.
+
+**La revisión de enganches sale en la pestaña.** En una carpeta con el arnés, la primera vez Codex pide confiar en sus
+enganches (decisión 178) ahí mismo, en inglés, antes del encargo. Si se sigue sin confiar, los enganches del arnés no
+corren en esa conversación. Queda para Jose si la barra lo avisa antes, o si «Dejarlo listo en Codex» pasa a abrir
+esa pestaña.
+
+**Lo que no se ha probado:** si el encargo sigue solo después de contestar a esa revisión (en el paso 2 se dejó sin
+contestar), y la barra abriendo la pestaña con el Codex de verdad dentro del editor: el paso 3 usa el mismo programa
+con las mismas opciones, pero fuera del editor.

@@ -20533,7 +20533,9 @@ exec git "$@"
     const [primera] = vscode.registrado.terminales;
     assert.ok(primera, 'no abre ninguna pestaña');
     assert.equal(primera.opciones.shellPath, programa, 'no es el Codex que trae su extensión');
-    assert.deepEqual(primera.opciones.shellArgs, ['--', texto], 'el encargo no le llega entero, o lo puede tomar por una opción');
+    // `--no-daemon`: el de su extensión viene suelto, sin el paquete que pide su
+    // servidor de fondo, y sin esa opción se cae al arrancar (medido el 25-11-2026).
+    assert.deepEqual(primera.opciones.shellArgs, ['--no-daemon', '--', texto], 'el encargo no le llega entero, o lo puede tomar por una opción, o se cae al arrancar');
     assert.equal(primera.opciones.cwd, cargar('proyecto').raiz(), 'no trabaja en la carpeta');
     assert.equal(primera.opciones.location, vscode.TerminalLocation.Editor, 'no va en una pestaña del editor');
     assert.equal(primera.opciones.name, 'Codex');
@@ -20544,13 +20546,15 @@ exec git "$@"
     // Otro encargo, otra pestaña: los dos trabajan a la vez.
     assert.equal(await puente.enviar('Y ahora, las facturas'), 'trabajando');
     assert.equal(vscode.registrado.terminales.length, 2, 'el segundo no va en su propia pestaña');
-    assert.deepEqual(vscode.registrado.terminales[1].opciones.shellArgs, ['--', 'Y ahora, las facturas']);
+    assert.deepEqual(vscode.registrado.terminales[1].opciones.shellArgs, ['--no-daemon', '--', 'Y ahora, las facturas']);
 
     // Sin el programa en su extensión, el Codex de este ordenador, si lo hay.
     fs.rmSync(programa);
     asistentesM.terminal.programaEnElPath = (nombre) => (nombre === 'codex' ? '/opt/codex/bin/codex' : null);
     assert.equal(await puente.enviar('Haz el resumen'), 'trabajando');
     assert.equal(vscode.registrado.terminales.at(-1).opciones.shellPath, '/opt/codex/bin/codex');
+    // Ese es un paquete completo: arranca como siempre, sin opciones nuestras.
+    assert.deepEqual(vscode.registrado.terminales.at(-1).opciones.shellArgs, ['--', 'Haz el resumen'], 'al del ordenador le pone opciones que no necesita');
     // Y sin ninguno, como antes: al portapapeles, avisando.
     asistentesM.terminal.programaEnElPath = () => null;
     assert.equal(await puente.enviar('Haz el resumen'), 'copiado');
@@ -20579,20 +20583,23 @@ exec git "$@"
       ];
       for (const [plataforma, arquitectura, donde] of CASOS) {
         const programa = path.join(suya, 'bin', ...donde);
-        assert.equal(asistentesM.programaDeCodex({ plataforma, arquitectura }), null, `${plataforma}-${arquitectura}: da uno que no está`);
+        assert.equal(asistentesM.arranqueDeCodex({ plataforma, arquitectura }), null, `${plataforma}-${arquitectura}: da uno que no está`);
         fs.mkdirSync(path.dirname(programa), { recursive: true });
         fs.writeFileSync(programa, '');
-        assert.equal(asistentesM.programaDeCodex({ plataforma, arquitectura }), programa, `${plataforma}-${arquitectura}: no lo encuentra`);
+        assert.deepEqual(asistentesM.arranqueDeCodex({ plataforma, arquitectura }), { programa, opciones: ['--no-daemon'] }, `${plataforma}-${arquitectura}: no lo encuentra, o no le dice que vaya sin su servidor`);
       }
       // Un procesador que su extensión no trae: no se inventa una carpeta.
-      assert.equal(asistentesM.programaDeCodex({ plataforma: 'linux', arquitectura: 'ia32' }), null);
+      assert.equal(asistentesM.arranqueDeCodex({ plataforma: 'linux', arquitectura: 'ia32' }), null);
       // Una carpeta con ese nombre no es el programa.
       fs.rmSync(path.join(suya, 'bin', 'linux-x86_64', 'codex'));
       fs.mkdirSync(path.join(suya, 'bin', 'linux-x86_64', 'codex'));
-      assert.equal(asistentesM.programaDeCodex({ plataforma: 'linux', arquitectura: 'x64' }), null, 'toma una carpeta por el programa');
+      assert.equal(asistentesM.arranqueDeCodex({ plataforma: 'linux', arquitectura: 'x64' }), null, 'toma una carpeta por el programa');
       // Sin su extensión, ni se mira dentro.
       vscode.guion.extensionesInstaladas = antes.instaladas;
-      assert.equal(asistentesM.programaDeCodex({ plataforma: 'darwin', arquitectura: 'arm64' }), null);
+      assert.equal(asistentesM.arranqueDeCodex({ plataforma: 'darwin', arquitectura: 'arm64' }), null);
+      // Sin su extensión, el del ordenador, tal cual.
+      asistentesM.terminal.programaEnElPath = (nombre) => (nombre === 'codex' ? '/opt/codex/bin/codex' : null);
+      assert.deepEqual(asistentesM.arranqueDeCodex({ plataforma: 'darwin', arquitectura: 'arm64' }), { programa: '/opt/codex/bin/codex', opciones: [] });
       return `${CASOS.length} sistemas, como los busca su extensión`;
     } finally {
       vscode.guion.extensionesInstaladas = antes.instaladas;

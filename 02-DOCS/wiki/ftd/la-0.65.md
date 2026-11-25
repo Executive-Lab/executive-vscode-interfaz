@@ -58,13 +58,14 @@ Y con la 0.65 en marcha, tres peticiones más de Jose (decisión 206):
 - Claude y Codex al montar: con uno puesto, con los dos y sin ninguno.
 - Con Codex, el encargo lo empieza su programa en una pestaña del editor, una por encargo; sin programa, el portapapeles.
 - «Conversación nueva»: «New Codex Agent» primero; con los dos, se elige con cuál.
+- Un encargo de verdad en el Codex de Jose, con su sí (25-11), y arreglar lo que salga.
 - Pruebas, decisiones 205 y 206, versión 0.65.0.
 
 **Fuera**
 
 - Las carpetas de trabajo viejas de la barra: Jose dijo que no se tocan.
 - Publicar la 0.65.0: con el sí de Jose.
-- Un encargo de verdad en el Codex de Jose: es su cuenta, y se pide antes.
+- Contestar la revisión de enganches que pide el Codex de Jose: es su configuración.
 - El historial de git: el nombre del cliente sigue en los commits viejos. Reescribirlo rompería todas las copias.
 
 ## Checklist
@@ -83,6 +84,7 @@ Y con la 0.65 en marcha, tres peticiones más de Jose (decisión 206):
 - [x] 12. Claude y Codex al montar, con uno, con los dos y sin ninguno.
 - [x] 13. Con Codex, el encargo lo empieza él en su pestaña; uno por encargo; sin programa, como antes.
 - [x] 14. «Conversación nueva» de Codex en un panel nuevo cada vez; con los dos, se elige.
+- [x] 15. Un encargo de verdad en el Codex de Jose; el programa de su extensión arranca con `--no-daemon`.
 
 ## Evidence
 
@@ -94,7 +96,10 @@ Y con la 0.65 en marcha, tres peticiones más de Jose (decisión 206):
 - **3.** «205: con un perfil técnico, el freno pregunta…», con el freno de verdad: tres preguntadas, dos en silencio. «Las
   reglas», el freno que se ofrece y el primer mensaje (`hayFreno` mira `armado`).
 - **4.** Decisión 204: «hecho, publicado en la 0.64.0». `la-0.64.md`: `done`, con la release del 25-11 a las 13:19 UTC.
-- **5.** `git grep -nia nexus`: nada (salida 1), y nada en los ficheros nuevos. En 15 ficheros, «Asesoría Norte».
+- **5.** `git grep -nia` con el nombre del cliente: nada (salida 1), y nada en los ficheros nuevos. En 15 ficheros,
+  «Asesoría Norte». Ojo: el commit `4015f53` lo nombraba aquí mismo, en esta prueba, y la «salida 1» era falsa en él;
+  se vio al releer y se quitó en el commit siguiente. Si la PR se fusiona en un solo commit, como las anteriores, no
+  llega a `main`.
 - **6.** `diff -r skills/executive-lab .claude/skills/executive-lab`: iguales.
 - **7.** Las tres, `shipped`, con su versión (0.27.0, 0.41.0 y 0.61.0, por `git tag --contains`).
 - **8.** `comprobar-diccionario.js`: 27 palabras, 94 ficheros, 806 rótulos, todo bien. Decisiones 205 y 206. 0.65.0 en
@@ -114,11 +119,24 @@ Y con la 0.65 en marcha, tres peticiones más de Jose (decisión 206):
 - **14.** «206: una conversación nueva de Codex va en su propia pestaña…», y `mapeos-codex.js` con el orden nuevo.
 - **Riesgo.** `rsc risk --base origin/main`: nivel 2, por los ficheros del arnés (`.claude/`), como la 0.63 y la 0.64.
   Revisión en línea, fichero por fichero, sin revisores en segundo plano. La PR la fusiona Jose.
-- **No se corrió aquí.** `windows.js`, el `.exe` y el `.dmg`: los corre GitHub en la PR. Un encargo de verdad en el
-  Codex de Jose: es su cuenta.
+- **15.** Con el sí de Jose, su Codex (0.171.0-alpha.13.2, el de su extensión) en una terminal propia como la de la
+  pestaña, con un encargo inofensivo en una carpeta de pruebas. Como lo abría la barra (`-- encargo`): la caja y, al
+  momento, «this CLI has no complete local package… rerun the same command with --no-daemon». Con `--no-daemon`:
+  arranca y pide revisar los enganches de Jose (no se contestó). Con `--no-daemon` y `--disable hooks`, solo en esa
+  ejecución: `hola.txt` con «hola» en 7 segundos, y «Hecho.». El `config.toml` de Jose, con la misma fecha antes y
+  después. Luego las pruebas: «206: con Codex…» y «206: el programa de Codex se busca…» en `humo.js` y la del encargo
+  largo en `mapeos-codex.js` piden `--no-daemon` en el de su extensión y nada en el del ordenador; se vieron fallar
+  («se cae al arrancar», «arranqueDeCodex is not a function», «expected: '--no-daemon'») y, con el código, en verde.
+  Las cifras del 9 son de una pasada entera después de este cambio, VS Code de verdad incluido.
+- **No se corrió aquí.** `windows.js`, el `.exe` y el `.dmg`: los corre GitHub en la PR. La pestaña con el Codex de
+  verdad dentro del editor, y si el encargo sigue solo después de contestar la revisión de enganches: lo verá Jose.
+- **10.** PR #116. Con `4015f53`, GitHub en verde: `windows`, `el-exe`, `el-dmg` y `vscode-de-verdad`. Con el arreglo
+  del 15, en marcha.
 - **Cómo se deshace.** `git revert` del commit de la fusión. Lo guardado de más (`conSusPalabras` en las respuestas)
   lo ignora una barra anterior.
 
 ## Next
 
 - Jose: fusionar la PR y publicar la 0.65.0.
+- Jose: decidir si la barra avisa antes de que, la primera vez, Codex pide en la pestaña (en inglés) confiar en los
+  enganches, o si «Dejarlo listo en Codex» (decisión 178) pasa a abrir esa pestaña.

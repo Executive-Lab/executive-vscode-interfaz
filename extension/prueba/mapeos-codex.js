@@ -266,7 +266,8 @@ test('con su programa, Codex trabaja el encargo en su pestaña, y uno largo le l
     assert.equal(await puente.enviar(texto, null, { plataforma: 'win32' }), 'trabajando');
     const [pestana] = vscode.registrado.terminales;
     assert.equal(pestana.opciones.shellPath, programa);
-    const [guiones, linea] = pestana.opciones.shellArgs;
+    const [sinServidor, guiones, linea] = pestana.opciones.shellArgs;
+    assert.equal(sinServidor, '--no-daemon', 'el de su extensión se cae sin esa opción');
     assert.equal(guiones, '--');
     const ruta = (linea.match(/02-DOCS\/raw\/pedidos\/\S+?\.md/) || [])[0];
     assert.ok(ruta, `no le da la línea del fichero: ${linea}`);
