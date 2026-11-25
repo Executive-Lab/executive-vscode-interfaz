@@ -64,9 +64,13 @@ Lo que se vio al mirarlo:
   primera pasada entera dio un fallo: «al montar, las copias solas se dicen…» pide que el aviso acabe en «Dale a
   enviar», y con la pregunta movida acababa en «Cuando quieras preparar la cuenta de GitHub…». Ahora lo que hay que
   hacer se dice lo último (`mandarElPrimero(…, { sinDecirlo: true })`), y la prueba pasa.
-- **2.** «207: una web que no se abre se dice…»: el aviso exacto y su botón.
+- **2.** «207: una web que no se abre se dice…»: el aviso exacto y su botón. Y al montar, en «al montar, las copias
+  solas se dicen…»: va en el aviso del final, con «Escribir la web otra vez» junto a «Quitar las copias solas», y lo
+  mismo «Ya lleva la cara de…». Se vio fallar antes del arreglo («el aviso del final tapa lo de la web»), y enseñó
+  que con web el aviso del final perdía también «Guardo una copia sola…».
 - **3 y 4.** «207: el nombre de la marca es la parte del título que dice el dominio…»: «Stratton Apps», no su lema; el
-  icono para móvil, sin placa.
+  icono para móvil, sin placa; `logo_es_icono: logo.png`, y otro logotipo puesto después lleva su placa (se vio
+  fallar con el «si» de antes: «no apunta qué fichero es el icono»).
 - **5.** Con el Codex de Jose (su sí del 25-11): `codex exec --json` da `thread.started` con el número, y su panel
   abre esa conversación con el texto del encargo («ahora ha funcionado el texto!»). En `humo.js`, «207: con Codex…»:
   la orden, la carpeta, un panel por encargo, sin terminal ni portapapeles.
@@ -75,6 +79,18 @@ Lo que se vio al mirarlo:
   se ve», 4 !== 3) y pasar después. En el VS Code de verdad (1.148.0, en el Mac), antes de ese último cambio: «todo
   bien», con la prueba de Codex en sus dos caminos.
 - **7.** `comprobar-diccionario.js`: 27 palabras, 94 ficheros, 806 rótulos, todo bien.
+- **8.** Sobre el código final, en una sola pasada después del último cambio (la de antes de la revisión ya no vale): `humo.js` 602 de 602, `contrato.js` 15
+  de 15, las tres empresas y la recién montada, `mapeos-codex.js` 31 de 31, `humo.js --con-arnes` 612 de 612 y, en un
+  VS Code de verdad (1.148.0, en el Mac), «todo bien», con la prueba de Codex en sus tres caminos (con número, sin
+  número, sin su panel).
+- **No se corrió aquí.** `windows.js`, el `.exe` y el `.dmg`: los corre GitHub en la PR. El panel de Codex con un
+  encargo lanzado por la barra: lo verá Jose.
+- **Revisión.** `rsc risk --base origin/main`: nivel 1, un revisor. Hecha en línea, fichero por fichero, sin
+  revisores en segundo plano. Dejó los dos arreglos de arriba (el icono atado a su fichero, y lo de la web en el aviso
+  del final del montaje). Sin arreglar, por menor: si dos partes del título contienen el dominio, gana la primera,
+  no la que coincide entera.
+- **Cómo se deshace.** `git revert` del commit de la fusión. Nada nuevo se guarda, salvo `logo_es_icono` en
+  `marca.md`, que una barra anterior ignora.
 
 ## Next
 
