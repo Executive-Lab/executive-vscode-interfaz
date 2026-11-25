@@ -5,10 +5,11 @@
 #   ./construir.sh 0.1.0
 #   ./construir.sh --sin-descargas  # no vuelve a bajar Node si ya está la carga
 #
-# Lo que sale: instalador/mac/Executive Lab <version>.dmg, SIN FIRMAR. Para
-# poder dárselo a alguien hay que pasarlo después por ./firmar.sh, porque un
-# .dmg sin firmar lo bloquea Gatekeeper y desde macOS 15 ya no vale el clic
-# derecho: hay que ir a Ajustes del sistema.
+# Lo que sale: instalador/mac/Executive Lab <version>.dmg, sin la firma de Apple
+# y con la firma provisional (ad hoc) de macOS. Se reparte así (Jose, 25-11-2026):
+# la primera vez el Mac pregunta y se abre con Ajustes del sistema › Privacidad y
+# seguridad › «Abrir igualmente». Con un certificado Developer ID, ./firmar.sh
+# lo firma y lo notariza, y ya no pregunta.
 #
 # Por qué una app y no un .pkg: instalador/mac/instalar.applescript lo explica.
 
@@ -188,6 +189,17 @@ PLIST="$APP/Contents/Info.plist"
 # Sin esto, el applet enseña en el Dock el nombre del script.
 /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string Executive Lab" "$PLIST" 2>/dev/null || true
 
+# La firma provisional, al final. osacompile firma el applet, y todo lo que se le
+# pone después (instalar.js, la carga, el icono, el Info.plist) la rompe. Rota, un
+# Mac que baja el .dmg de internet dice que la app «está dañada» y no deja abrirla
+# de ninguna manera; válida, sale el aviso de siempre y «Abrir igualmente» la abre.
+# Comprobado el 25-11-2026 con syspolicy_check sobre el .dmg de la 0.64.0: «Codesign
+# Error, Fatal» sin esto; «Adhoc Signed App, Warning» con esto. firmar.sh la
+# sustituye por la de Developer ID.
+codesign --force --deep --sign - "$APP"
+codesign --verify --deep --strict "$APP" \
+  || { echo "La firma provisional de la app no es válida: el Mac diría que está dañada." >&2; exit 1; }
+
 echo "  App: $(du -sh "$APP" | cut -f1)"
 
 # ─────────────────────────────────────────────────────────────── 3. el .dmg
@@ -200,5 +212,6 @@ hdiutil create -volname "Executive Lab" -srcfolder "$ESCENARIO" -ov -format UDZO
 echo
 echo "Hecho: $DMG  ($(du -sh "$DMG" | cut -f1))"
 echo
-echo "Sin firmar. Antes de dárselo a nadie:"
+echo "Sin la firma de Apple: la primera vez, «Abrir igualmente» en Privacidad y seguridad."
+echo "Con un certificado Developer ID, para que no pregunte:"
 echo "  ./firmar.sh \"$DMG\""
