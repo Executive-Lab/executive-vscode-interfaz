@@ -27,6 +27,11 @@
 const REPO = 'Executive-Lab/executive-vscode-interfaz';
 const SITIOS = ['minarkap/executive-lab-interfaz', 'Executive-Lab/executive-lab-interfaz', 'Executive-Lab/executive-vscode-interfaz'];
 const QUIEN_PUBLICA = 'minarkap';
+// Cómo se llama la barra (`publisher.name` de su `package.json`). Cada uno puede
+// hacerse la suya a partir de esta, y una copia con otro nombre no tiene que
+// preguntar aquí: pondría la nuestra al lado de la suya (decisión 204). Quien
+// haga la suya cambia esto, `REPO`, `SITIOS` y `QUIEN_PUBLICA`.
+const ID = 'executivelab.arnes-ui';
 
 // En GitHub, `Executive-Lab` y `executive-lab` son el mismo sitio.
 const mismoSitio = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
@@ -38,4 +43,11 @@ const esNuestro = (sitio) => SITIOS.some((s) => mismoSitio(s, sitio));
 const CUENTAS = [...new Set(SITIOS.map((s) => s.split('/')[0].toLowerCase()))];
 const enNuestrasCuentas = (sitio) => CUENTAS.includes(String(sitio || '').split('/')[0].toLowerCase());
 
-module.exports = { REPO, SITIOS, CUENTAS, QUIEN_PUBLICA, esNuestro, enNuestrasCuentas, mismoSitio };
+// ¿Es esta barra la que vive en `REPO`? Sin saber cómo se llama, se da por
+// buena: así ha sido siempre, y en las pruebas no se sabe.
+const esLaDeAqui = (contexto) => {
+  const id = contexto && contexto.extension && contexto.extension.id;
+  return !id || mismoSitio(id, ID);
+};
+
+module.exports = { REPO, SITIOS, CUENTAS, QUIEN_PUBLICA, ID, esLaDeAqui, esNuestro, enNuestrasCuentas, mismoSitio };

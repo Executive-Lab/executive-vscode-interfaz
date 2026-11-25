@@ -10042,7 +10042,7 @@ cosas a la vista pasa de cinco a seis (`TOPE`).
 
 ## 203. La 0.63: la barra pasa a la 4.1.9, y un repaso entero antes de enseñarla
 
-**Fecha:** 24 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+**Fecha:** 24 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.63.0 · FTD
 `02-DOCS/wiki/ftd/la-0.63.md`
 
 Jose, 24-11: *«adapta la barra a la última versión de RSC y audita, revisa, corrige, mejora y optimiza todo que la
@@ -10103,3 +10103,91 @@ Se lee bien, pero no es el color de la empresa. Va con el trabajo del kit de mar
 **Pruebas.** Cuatro nuevas en `humo.js`, con «203:» en el nombre: la seguridad deja pasar el estilo de la marca y
 solo ese; las tildes de los temas, en catorce casos; las migas con el rótulo, y el contraste de lo de encima, los
 campos y el código con tres marcas y el editor en oscuro. Cambian seis que esperaban «Facturacion» sin tilde.
+
+## 204. La 0.64: la marca de la empresa entera, y una barra de la que partir
+
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+`02-DOCS/wiki/ftd/la-0.64.md`
+
+Jose, 16-11: *«asegurar que lo del kit de marca funciona y funciona bien. Para que se ponga con el logo, y con los
+colores, y la tipografía, y la identidad de marca»*. Y el 25-11: *«en el caso de la comunidad voy a decir que se
+construyan ellos mismos sus propias extensiones y que pueden utilizar como base la mía. De GitHub. Pero sí, hazlo de
+marca, revisa que está todo bien y que funciona bien»*. El kit de arnés (empaquetar un arnés en un instalador propio)
+se queda fuera: cada uno parte de la barra en GitHub. Carril FTD.
+
+El repaso se hizo con seis marcas de prueba (amarilla, azul, verde, naranja, oscura con cian y lavanda pálida), en
+claro y en oscuro, pintadas en Chromium con la seguridad de la página puesta.
+
+**1. El botón principal lleva el color de la empresa tal cual.** Llevaba el tono 40 de su paleta (el 80 en oscuro),
+con la saturación recortada: con un amarillo (#ffd400) salía mostaza, y con un cian (#22d3ee), azul pastel. Ahora
+lleva el suyo, exacto, si se cumplen dos cosas. Que se distinga de la página y de las tarjetas, por luz (contraste de
+1,5 o más con las dos) o por color (croma OKLab de 0,1 o más). Y que encima se lea una letra a 4,5 o más: blanca, o
+muy oscura de su mismo matiz. Si no se cumplen, el tono de antes. Con el amarillo, el botón es amarillo con la letra
+casi negra; con el cian, cian.
+
+Lo que va escrito con el acento (los enlaces, una fila al pasar por encima) no puede ir en ese color: un enlace
+amarillo sobre blanco no se lee. Va en su propia ficha, `--acento-texto`, que baja por la escala de su paleta hasta
+que se lee en la página y en las tarjetas, igual que el texto. Sin marca, `--acento-texto` es el relleno de siempre,
+y nuestra barra no cambia.
+
+**2. La tipografía de la empresa, en los títulos.** Con la marca de una empresa, los títulos y su nombre salían en DM
+Serif y el texto en Lato: las de Executive Lab. El código lo decía a propósito («una tipografía ajena, no»). Ahora:
+
+- **Su tipografía va en los títulos y en su nombre**, no en el texto. Una letra de rótulo puede ser preciosa en un
+  título e ilegible en un párrafo, y el público de esto no puede permitirse una barra que no se lee.
+- **Llega en un fichero de su carpeta** (`fuente:` en el récord: `.woff2`, `.woff`, `.ttf` u `.otf`), con el mismo
+  cuidado que el logotipo: dentro de la carpeta, y que exista. La página no pide nada a la red, así que no se trae
+  de ningún sitio: el fichero se declara como `'Marca EL'` y la seguridad de la página lo deja cargar desde ahí.
+- **O por su nombre** (`tipografia:`), si la tiene puesta en el ordenador. El nombre solo admite letras, números,
+  espacios y guiones: uno con comillas o llaves rompería la hoja de estilo.
+- **El texto, en la del sistema.** Y sin tipografía suya, también la del sistema: con su marca, nunca la nuestra.
+- **Los títulos, a su grosor.** Con su fichero, a 400, que es el único grosor que trae: pedirle otro lo engorda a la
+  fuerza. Con la del sistema o solo con el nombre, en seminegrita (600): a 400 se confundían con el texto. Es la
+  ficha `--peso-titulo`, que en nuestra barra sigue siendo 400.
+- `sistema`, `clasica` y `grande` siguen igual, para todo.
+
+**3. El primer intento desde la web apunta la tipografía.** Además de los colores y el logotipo, `web.js` busca la
+tipografía de la web: en un enlace a Google Fonts, en un `@import` de sus hojas de estilo, o en lo que declaran sus
+títulos y su texto, sin contar las del sistema. Si es de Google Fonts, que son libres, se baja su fichero de
+`fonts.gstatic.com` (2 MB como mucho) a la carpeta de la marca. Comprobado con Google de verdad: a la barra le da un
+`.ttf`. Sin red, se queda el nombre.
+
+**4. Las reglas del asistente decían lo contrario.** Las tres copias del `SKILL.md` de Executive Lab decían «No
+toques la tipografía ni los tamaños», pedían un campo que la barra no lee (`superficie`) y no citaban uno que sí
+(`logo_lleva_el_nombre`). Ahora piden los ocho campos que la barra lee, explican los tres colores, el logotipo y la
+tipografía, y le dicen que baje el fichero si la letra es libre y que no lo haga si es de pago. Lo mismo en
+`queLePedimos`, lo que se le pide desde la barra.
+
+**5. «Contárselo con mis palabras» le da el encargo entero.** Le pedía al asistente que preguntara, sin decirle dónde
+dejarlo ni con qué campos: lo que hiciera podía no llegar a la barra. Ahora le pide lo mismo que desde la web, pero
+sacado de lo que cuente la persona: que pregunte una cosa cada vez (el nombre, los colores, el tipo de letra, el aire
+que tiene) y que lo deje montado en el récord.
+
+**6. Una barra hecha a partir de esta no pone la nuestra.** La barra busca sus versiones en nuestro sitio y las pone
+sola. Una copia con otro nombre habría instalado la nuestra al lado de la suya. Ahora `sitio.js` sabe cómo se llama
+la barra (`ID`, el `publisher.name` de su `package.json`), y si la que corre se llama de otra forma, no pregunta.
+Una prueba vigila que `ID` sea el del `package.json`. El README tiene una parte nueva, «Hazte tu propia barra», con
+las cuatro cosas que hay que cambiar: el nombre, dónde busca sus versiones, su cara por defecto y cómo se publica.
+
+**7. El README, al día.** La captura de la marca enseña la nuestra, una empresa clara con su naranja tal cual y su
+tipografía en el título, y una oscura con su cian. El clon va por `https`, que funciona sin llaves. Las pruebas son
+unas 600, no 80.
+
+**8. El encargo, corto otra vez.** Con la tipografía, lo que se le pide al asistente pasó de unos 1.400 caracteres
+a más de 2.000 dentro del enlace con el que se le pasa, y dejó de caber (decisión 129: en Windows, a partir de
+2.000 se corta). Desde la 166, lo que no cabe se deja en un fichero y se le manda una línea que lo nombra; en
+Windows, si eso no se puede, va al portapapeles. Funcionaba, pero peor que antes. Lo vio GitHub en Windows, no el
+Mac: una prueba de la 166 esperaba «Dale a enviar» y recibía solo «Guardado 1.». Ahora el encargo dice lo mismo en
+menos palabras: entre 1.308 y 1.439 caracteres en los cuatro casos, con el logotipo y un manual al lado. Una prueba
+nueva lo vigila.
+
+**9. Cierre de la 203:** publicada en la 0.63.0, y su documento FTD, hecho.
+
+**Queda:** con el amarillo, el ✨ del botón casi no se ve. El borde de la tarjeta y los enlaces van en el tono que se
+lee, no en el amarillo: es a propósito.
+
+**Pruebas.** Siete nuevas en `humo.js`, con «204:» en el nombre: el color del botón con seis marcas; la tipografía
+(fichero, nombre, de la lista, grosor, ficheros malos y nombres raros); la dirección del fichero y la seguridad de la
+página; los campos que se le piden al asistente y las tres copias de sus reglas; que ese encargo cabe en el enlace;
+la tipografía desde la web, con Google Fonts de mentira, y la barra con otro nombre. Cambian dos: la de la lista de tipografías ya no admite la
+nuestra en `--sans`, y la de los colores de la marca no cuenta `--peso-titulo` como color.

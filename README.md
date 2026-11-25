@@ -34,7 +34,7 @@ investigarla, y debajo de cada campo, de dónde se saca esa clave en concreto:
 ![La pantalla de una conexión, con su guía](docs/conexion.png)
 
 Y cuando la persona dice cuál es la web de su empresa, el panel deja de llevar nuestra marca y lleva
-la suya — mismos botones, sus colores, su logotipo, clara u oscura:
+la suya — mismos botones, con sus colores, su logotipo y su tipografía, clara u oscura:
 
 ![El mismo panel con la marca de Executive Lab, con la de una empresa clara y con la de una oscura](docs/marca.png)
 
@@ -326,7 +326,7 @@ Todas las decisiones, con lo que se descartó y por qué, están en
 ## Trabajar en esto
 
 ```bash
-git clone git@github.com:Executive-Lab/executive-vscode-interfaz.git
+git clone https://github.com/Executive-Lab/executive-vscode-interfaz.git
 cd executive-vscode-interfaz
 
 # El arnés que viaja dentro de la extensión NO está versionado. Antes de empaquetar:
@@ -336,7 +336,7 @@ npm install --prefix extension/media/harness @ericrisco/rsc@4.1.9
 ### Probarlo
 
 ```bash
-cd extension && npm run probar          # 80 comprobaciones, con un vscode y un navegador de mentira
+cd extension && npm run probar          # unas 600 comprobaciones, con un vscode y un navegador de mentira
 node extension/prueba/humo.js --con-arnes   # + monta un arnés de verdad (tarda minutos)
 node docs/comprobar-diccionario.js      # ningún texto de pantalla usa palabra prohibida
 node herramientas/revisar-powershell.js # los .ps1, antes de llevarlos a Windows
@@ -369,6 +369,30 @@ antes que la prueba del wizard estaba rota (auditoría, F26).
 
 Para los instaladores de escritorio hay que montar antes la carpeta `carga/` con los binarios de
 terceros, que no se versionan. Está explicado en [instalador/README.md](instalador/README.md).
+
+### Hazte tu propia barra
+
+Puedes partir de esta para hacer la tuya: la licencia es MIT. Haz un *fork* en GitHub, clónalo, y antes
+de repartirla cambia cuatro cosas.
+
+1. **Su nombre**, en `extension/package.json`: `name`, `publisher` y `displayName`. El editor reconoce
+   una extensión por `publisher.name`: si dejas el nuestro, la tuya y la nuestra son la misma para él, y
+   una pisa a la otra.
+2. **Dónde busca sus versiones**, en `extension/src/sitio.js`: `ID` (tu `publisher.name`), `REPO` y
+   `SITIOS` (tu repositorio) y `QUIEN_PUBLICA` (la cuenta de GitHub que publica tus versiones). La barra
+   pone sola la última versión que encuentra ahí. Mientras `ID` no sea el de tu `package.json`, no busca
+   nada: así nunca te instala la nuestra.
+3. **Su cara por defecto**, la que lleva antes de que cada persona ponga la de su empresa: la paleta y
+   las tipografías del principio de `extension/media/panel.css`, el logotipo (`extension/media/logo.svg`),
+   las fuentes (`extension/media/fuentes/`) y el icono (`extension/media/icono-marketplace.png`). Los
+   textos que nombran a Executive Lab salen con `grep -rn "Executive Lab" extension/src extension/media`.
+4. **Cómo publicas**: `./publicar.sh` deja el `.vsix` en `publicacion/`. Súbelo a una release de tu
+   repositorio con la cuenta de `QUIEN_PUBLICA`, sin cambiarle el nombre (`executive-lab-<versión>.vsix`,
+   o cambia `nombreDelPaquete` en `version.js`).
+
+Antes de repartirla, `npm run probar` en `extension/` tiene que seguir en verde: las pruebas vigilan que
+la versión diga lo mismo en todas partes, que `ID` sea el de tu `package.json` y que ningún texto use
+las palabras que una persona no técnica no entiende (`docs/diccionario.md`).
 
 ---
 

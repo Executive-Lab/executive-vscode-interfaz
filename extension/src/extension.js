@@ -324,7 +324,7 @@ class Panel {
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <link rel="stylesheet" href="${uri('panel.css')}">
-${marca.estilo(suya, nonce)}
+${marca.estilo(suya, nonce, suya && suya.fuente ? String(webview.asWebviewUri(vscode.Uri.file(suya.fuente))) : null)}
 </head>
 <body${enGrande ? ' class="en-grande"' : ''}>
 ${cabecera}
@@ -1695,6 +1695,7 @@ ${cabecera}
       verProyecto: () => this.verProyecto(mensaje.fichero),
       materialDeMarca: () => this.materialDeMarca(),
       quitarLaCara: () => this.quitarLaCara(),
+      contarLaCara: () => this.contarLaCara(),
       fijar: () => this.cambiarFijada(fijadas.fijar, mensaje.cual),
       soltar: () => this.cambiarFijada(fijadas.soltar, mensaje.cual),
       ponerPermiso: () => this.cambiarAjuste(ajustes.ponerPermiso, mensaje.cual),
@@ -3464,6 +3465,13 @@ ${cabecera}
     return this.verLaCara({ texto: mensaje, malo: !ok });
   }
 
+  // «Contárselo con mis palabras» (decisión 204): el encargo entero, con dónde
+  // dejarlo y con qué campos. Antes le pedía «déjalo montado» y nada más, y lo
+  // que hiciera el asistente podía no llegar nunca a la barra.
+  async contarLaCara() {
+    await this.pedir(marca.queLePedimos(null, false, { sinMaterial: true }));
+  }
+
   // Elegir qué va arriba del todo. Lo que use de verdad esa persona no lo
   // sabemos nosotros, así que lo elige ella.
   async verFijadas(avisoLocal = null) {
@@ -4487,7 +4495,7 @@ ${cabecera}
   async ponerLaCara() {
     const escrito = await vscode.window.showInputBox({
       title: 'Ponerle la cara de tu empresa',
-      prompt: '¿Cuál es la web de tu empresa? De ahí saco los colores y el logotipo.',
+      prompt: '¿Cuál es la web de tu empresa? De ahí saco los colores, el logotipo y la letra.',
       placeHolder: 'nexusconsulting.com',
       ignoreFocusOut: true,
     });

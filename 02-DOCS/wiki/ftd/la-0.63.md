@@ -4,7 +4,7 @@ title: La 0.63
 date: 2026-11-24
 author: Jose Sanchis
 branch: la-0.63
-status: in-progress
+status: done
 ---
 
 # La 0.63
@@ -93,6 +93,10 @@ Dos cosas:
 - **Cómo se deshace.** `git revert` del commit de la fusión. No hay datos que migrar: una carpeta que la 0.63 puso en
   la 4.1.9 va por delante de una barra 0.62, y esa barra trabaja ahí con la 4.1.9 sin bajarla (constitución, P7).
 
+- **Publicada.** Jose: *«dale, si»*, y la PR #114 se fusionó (d93e568). Salió la release `v0.63.0` el 24-11-2026,
+  con el `.vsix`, desde la cuenta que publica. Se cerraron #113 y la PR #108. Jose: *«Si»*, y la 0.63.0 quedó
+  instalada en su VS Code.
+
 ## Next
 
-- Jose: fusionar y publicar la 0.63.0. Con ella, cerrar #113 y la PR #108, que la 0.62 ya dejó atrás.
+- Nada. Lo siguiente va en la 0.64 (`la-0.64.md`).

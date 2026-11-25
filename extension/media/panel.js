@@ -1028,7 +1028,8 @@ function pantallaLaCara({
     ${boton({
       etiqueta: 'Contárselo con mis palabras',
       icono: '💬',
-      accion: { tipo: 'pedir', prompt: 'Quiero ponerle a esto la cara de mi empresa y no tengo web ni logotipo a mano. Pregúntame cómo es: los colores, el nombre, el aire que tiene, y déjalo montado.' },
+      // Pasa por la barra, que le añade dónde dejarlo y con qué campos (decisión 204).
+      accion: { tipo: 'contarLaCara' },
     })}
 
     ${material.length ? `

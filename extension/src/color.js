@@ -147,6 +147,13 @@ const CROMA_NEUTRO_VARIANTE = 0.035;
 // El tono de un color en la escala 0-100, que es lo que Material llama "tone".
 const tonoDe = (hex) => Math.round(comoLoVeLaVista(hex));
 
+// Lo lejos que está un color del gris, en OKLab: 0 es un gris; un amarillo
+// vivo pasa de 0,15.
+function cromaDe(hex) {
+  const { a, b } = aOklab(hex);
+  return Math.hypot(a, b);
+}
+
 // El esquema, con los papeles y las distancias de Material 3.
 //
 // Una desviación, y conviene saber cuál: Material fija el fondo en el tono 98
@@ -155,8 +162,10 @@ const tonoDe = (hex) => Math.round(comoLoVeLaVista(hex));
 // Material contando desde él. Si no, un azul marino acaba en negro y un crema
 // en blanco: cumpliría contraste y no sería la marca de nadie.
 //
-// Lo que sí se respeta tal cual son los tonos del texto y del acento, que son
-// los que garantizan que se lea sin ir comprobando color por color.
+// Lo que sí se respeta tal cual son los tonos del texto y del acento con el que
+// se escribe, que son los que garantizan que se lea sin ir comprobando color por
+// color. El relleno del botón principal es aparte: lleva el color de la empresa
+// tal cual siempre que su letra se lea encima (decisión 204).
 function esquemaMaterial({ acento, fondo, oscura }) {
   const P = paletaTonal(acento, 0.16);
   const N = paletaTonal(fondo, CROMA_NEUTRO);
@@ -187,6 +196,26 @@ function esquemaMaterial({ acento, fondo, oscura }) {
     return escala(tonos[tonos.length - 1]);
   };
 
+  // El botón principal, con el color de la empresa tal cual (decisión 204).
+  // Llevaba el tono 40 de su paleta (el 80 en oscuro), con la saturación
+  // recortada: un amarillo salía mostaza, y un cian, azul pastel. Se queda el
+  // suyo si se distingue de la página, por luz o por color, y si encima se lee
+  // una letra: blanca, o muy oscura de su mismo matiz. Si no, el tono de antes.
+  const tarjeta = oscura ? N(apartado(7)) : N(apartado(-4));
+  const elSuyo = (() => {
+    const suyoExacto = aHex(aRgb(acento));
+    const seVe = [fondo, tarjeta].every((f) => contraste(suyoExacto, f) >= 1.5) || cromaDe(suyoExacto) >= 0.1;
+    if (!seVe) return null;
+    const letra = [P(10), '#ffffff'].reduce((a, b) => (contraste(b, suyoExacto) > contraste(a, suyoExacto) ? b : a));
+    return contraste(letra, suyoExacto) >= 4.5 ? { relleno: suyoExacto, sobre: letra } : null;
+  })();
+  // Lo que va escrito con el acento —un enlace, una fila al pasar por encima—
+  // tiene que leerse en la página y en las tarjetas: se baja por la escala hasta
+  // que se lee, como el texto.
+  const acentoDeLetra = oscura
+    ? queSeLea(P, [80, 85, 90, 95, 100], [fondo, tarjeta])
+    : queSeLea(P, [40, 35, 30, 25, 20, 0], [fondo, tarjeta]);
+
   return oscura
     ? {
       superficie: fondo,
@@ -196,9 +225,9 @@ function esquemaMaterial({ acento, fondo, oscura }) {
       texto: queSeLea(N, [90, 94, 97, 100], [fondo, N(apartado(7))]),
       apagado: queSeLea(NV, [78, 84, 90, 95, 100], [fondo, N(apartado(7))]),
       borde: NV(apartado(20)),
-      acento: P(80),
-      acentoRelleno: P(80),
-      sobreAcento: P(20),
+      acento: acentoDeLetra,
+      acentoRelleno: elSuyo ? elSuyo.relleno : P(80),
+      sobreAcento: elSuyo ? elSuyo.sobre : P(20),
     }
     : {
       superficie: fondo,
@@ -206,9 +235,9 @@ function esquemaMaterial({ acento, fondo, oscura }) {
       texto: queSeLea(N, [10, 6, 3, 0], [fondo, N(apartado(-4))]),
       apagado: queSeLea(NV, [32, 26, 20, 12, 0], [fondo, N(apartado(-4))]),
       borde: NV(apartado(-16)),
-      acento: P(40),
-      acentoRelleno: P(40),
-      sobreAcento: P(100),
+      acento: acentoDeLetra,
+      acentoRelleno: elSuyo ? elSuyo.relleno : P(40),
+      sobreAcento: elSuyo ? elSuyo.sobre : P(100),
     };
 }
 

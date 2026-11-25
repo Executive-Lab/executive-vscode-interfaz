@@ -205,9 +205,9 @@ programa que no está, la barra lo dice en vez de lanzarlo, y te lo pide a ti.
 
 Hay tres puertas a esto y todas acaban aquí: el **wizard** se la pregunta al montar la carpeta, el
 alumno puede pulsar **Poner el tema de mi empresa** en la barra, o simplemente lo cuenta en la
-conversación. En cuanto sepas la web, **míralas y escribe el récord de marca**. Desde ese momento el panel deja
-de llevar los colores de Executive Lab y lleva los suyos, y eso hace más por que se sienta en su casa
-que cualquier cosa que le digas.
+conversación. En cuanto sepas la web, **mírala y escribe el récord de marca**. Desde ese momento el panel deja
+de llevar la cara de Executive Lab y lleva la suya: sus colores, su logotipo y su tipografía. Eso hace más
+por que se sienta en su casa que cualquier cosa que le digas.
 
 Va en `02-DOCS/wiki/brand/marca.md`, que es donde RSC guarda la identidad visual de un proyecto (la
 misma carpeta que leen `design`, `design-dna` y `brand-voice`):
@@ -216,37 +216,45 @@ misma carpeta que leen `design`, `design-dna` y `brand-voice`):
 ---
 type: concept
 title: Marca de Ferretería Soler
-description: Los colores y el logotipo de la empresa, tomados de su web.
+description: Los colores, el logotipo y la tipografía de la empresa, tomados de su web.
 resource: https://ferreteriasoler.es
 tags: [brand, marca]
+empresa: Ferretería Soler
 fondo: "#f7f5f2"
-superficie: "#ffffff"
 texto: "#1a1a1a"
 acento: "#0057b8"
 logo: logo.svg
+logo_lleva_el_nombre: si
+tipografia: Montserrat
+fuente: montserrat.woff2
 ---
 
 # Marca de Ferretería Soler
 
-De dónde sale cada color y qué se ha dejado fuera.
+De dónde sale cada cosa y qué se ha dejado fuera.
 ```
 
-Cuatro colores, y solo cuatro: **fondo** (el de la página), **superficie** (tarjetas; si no lo pones,
-se calcula), **texto** y **acento** (el color de sus botones y enlaces). En `#rrggbb`, siempre. **El logotipo, solo si se lee sobre el fondo que has elegido.** Descárgalo a esa misma carpeta como
+**Tres colores**, en `#rrggbb`: **fondo** (el de su página), **texto** (solo dice si la marca es clara u
+oscura) y **acento** (el de sus botones). Con ellos el panel construye la paleta entera, y el botón
+principal lleva el acento tal cual si encima se lee una letra. Del contraste no te preocupes: el panel
+hace las cuentas. Si con ese fondo no se lee nada, descarta la marca entera y se queda con la nuestra,
+así que coge los colores *reales* de la web, no los que te parezcan bonitos.
+
+**El logotipo, solo si se lee sobre el fondo que has elegido.** Descárgalo a esa misma carpeta como
 `logo.svg` o `logo.png` y míralo: si es blanco sobre transparente —el caso más común— sobre un fondo
 claro desaparece. Si es SVG, recolorea el blanco al color de texto y listo. Si es un PNG blanco y no
 puedes recolorearlo, **deja fuera la línea `logo:`**: el panel escribirá el nombre de la empresa con
 su tipografía y sus colores, que se lee siempre. Un rótulo escrito es mejor que medio logotipo
-invisible.
+invisible. Con `logo_lleva_el_nombre:` dile si el nombre va escrito dentro (`si`) o si es solo el
+símbolo (`no`): en ese caso el panel lo escribe al lado.
 
-Y pon `empresa: Ferretería Soler` si el nombre para el rótulo no es el del título del artículo.
+Y pon `empresa:` si el nombre para el rótulo no es el del título del artículo.
 
-**No toques la tipografía ni los tamaños.** Los colores de una web se pueden adoptar sin romper nada;
-una tipografía ajena, no, y esta gente no puede permitirse una interfaz que de pronto no se lee.
-
-Del contraste no te preocupes: el panel comprueba las cuentas y oscurece el acento solo si hace falta.
-Si el texto no se lee sobre el fondo, descarta la marca entera y se queda con la nuestra — así que
-coge los colores *reales* de la web, no los que te parezcan bonitos.
+**La tipografía va en los títulos y en el nombre**; el texto se queda en la del sistema, que siempre se
+lee. En `tipografia:` pon el nombre de la de sus títulos, tal cual la usa su web. Si es libre (todas las
+de Google Fonts lo son), baja su fichero `.woff2` o `.ttf` a esa misma carpeta y ponlo en `fuente:`. Si
+es de pago, no la bajes: con el nombre basta, y si la tiene en su ordenador, saldrá. Para una barra
+más fácil de leer, `tipografia: grande` lo pone todo en Verdana, una letra ancha y muy clara.
 
 ### 4. Si hay documentos esperando, léelos
 
