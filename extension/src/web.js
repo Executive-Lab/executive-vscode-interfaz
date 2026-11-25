@@ -26,6 +26,8 @@
 //   texto    `--foreground` / `--text`, o el `color` del `body`; si no, según el fondo.
 //   logo     `apple-touch-icon` (el grande) y, si no, `icon` en svg o png.
 //            Un `.ico` no sirve: la barra no lo pinta.
+//   letra    una hoja de Google Fonts (y se baja su fichero) o el `font-family`
+//            de sus títulos o de su `body`, sin las del sistema (decisión 204).
 //
 // Todo con regex sobre el HTML, sin analizador: se buscan cuatro etiquetas
 // concretas, y un analizador entero para eso sería más superficie que
@@ -43,6 +45,7 @@ const frontmatter = require('./frontmatter');
 
 const LIMITE_HTML = 1_000_000;
 const LIMITE_LOGO = 2_000_000;
+const LIMITE_FUENTE = 2_000_000;
 const TIEMPO = 8000;
 const SALTOS = 3;
 
@@ -230,6 +233,64 @@ function logoDe(html, base) {
   return candidatos[0] ? { url: candidatos[0].direccion, ext: candidatos[0].ext.replace('jpeg', 'jpg') } : null;
 }
 
+// ── La tipografía ────────────────────────────────────────────────────────
+//
+// La de sus títulos (decisión 204). Primero una hoja de Google Fonts, que además
+// es libre y se puede bajar; si no, el `font-family` de sus títulos (`h1`, `h2`)
+// o del `body`, saltándose las del sistema, que no son de nadie.
+const DEL_SISTEMA = /^(-apple-system|system-ui|ui-sans-serif|ui-serif|ui-monospace|blinkmacsystemfont|segoe ui|roboto|helvetica|helvetica neue|arial|sans-serif|serif|monospace|cursive|fantasy|emoji|math|georgia|times|times new roman|verdana|tahoma|inherit|initial|unset|revert)$/i;
+// Va escrito tal cual en la cabecera del récord y en la hoja de estilo.
+const NOMBRE_DE_TIPOGRAFIA = /^[\p{L}\p{N}][\p{L}\p{N} -]{0,47}$/u;
+
+function deGoogle(href) {
+  const m = String(href || '').replace(/&amp;/g, '&').match(/^https?:\/\/fonts\.googleapis\.com\/css2?\?(.+)$/i);
+  if (!m) return null;
+  const familia = new URLSearchParams(m[1]).get('family');
+  const nombre = familia ? familia.split(':')[0].trim() : '';
+  return NOMBRE_DE_TIPOGRAFIA.test(nombre) ? nombre : null;
+}
+
+function primeraFamilia(lista) {
+  for (const trozo of String(lista || '').split(',')) {
+    const nombre = trozo.trim().replace(/^['"]|['"]$/g, '').trim();
+    if (nombre && !/^var\(/i.test(nombre) && !DEL_SISTEMA.test(nombre) && NOMBRE_DE_TIPOGRAFIA.test(nombre)) return nombre;
+  }
+  return null;
+}
+
+function tipografiaDeCss(css) {
+  const importada = deGoogle((String(css).match(/@import\s+(?:url\(\s*)?['"]?(https?:\/\/fonts\.googleapis\.com\/[^'")\s]+)/i) || [])[1]);
+  if (importada) return { nombre: importada, google: true };
+  for (const selector of ['h1', 'h2', 'body']) {
+    for (const [, cuerpo] of String(css).matchAll(new RegExp(`(?:^|[}\\s,>])${selector}\\b[^{}]*\\{([^}]*)\\}`, 'gi'))) {
+      const nombre = primeraFamilia((cuerpo.match(/font-family\s*:\s*([^;}]+)/i) || [])[1]);
+      if (nombre) return { nombre, google: false };
+    }
+  }
+  return null;
+}
+
+function tipografiaDe(html, css) {
+  for (const et of etiquetas(html, 'link')) {
+    const nombre = deGoogle(atributo(et, 'href'));
+    if (nombre) return { nombre, google: true };
+  }
+  return tipografiaDeCss(css);
+}
+
+// Su fichero, solo de Google Fonts: ahí todas son libres, y se sabe de dónde
+// viene. Con varias, la del alfabeto latino, que Google marca con un comentario.
+async function bajarDeGoogle(nombre, bajar) {
+  const hoja = (await bajar(`https://fonts.googleapis.com/css2?family=${encodeURIComponent(nombre).replace(/%20/g, '+')}`, { limite: 200_000 })).cuerpo.toString('utf8');
+  const bloques = hoja.split('@font-face');
+  const latino = bloques.findIndex((b, i) => i > 0 && /\/\*\s*latin\s*\*\/\s*$/.test(bloques[i - 1]));
+  const elegido = latino > 0 ? bloques[latino] : (bloques[1] || '');
+  const m = elegido.match(/url\((https:\/\/fonts\.gstatic\.com\/[^)\s'"]+\.(woff2|woff|ttf|otf))\)/i);
+  if (!m) return null;
+  const fichero = await bajar(m[1], { limite: LIMITE_FUENTE });
+  return fichero && fichero.cuerpo.length ? { cuerpo: fichero.cuerpo, ext: m[2].toLowerCase() } : null;
+}
+
 // Lo que se puede saber de una web leyendo solo su portada. Puro: sin red.
 function extraer(html, base) {
   const css = cssEnLinea(html);
@@ -242,6 +303,7 @@ function extraer(html, base) {
     fondo: primeraVariable(css, VARIABLES_DE_FONDO) || delBody(css, 'background'),
     texto: primeraVariable(css, VARIABLES_DE_TEXTO) || delBody(css, 'color'),
     logo: logoDe(html, base),
+    tipografia: tipografiaDe(html, css),
     hojas: hojasDeEstilo(html, base),
   };
 }
@@ -252,6 +314,7 @@ function extraerDeCss(css) {
     acento: primeraVariable(css, VARIABLES_DE_MARCA) || elMasRepetido(css),
     fondo: primeraVariable(css, VARIABLES_DE_FONDO) || delBody(css, 'background'),
     texto: primeraVariable(css, VARIABLES_DE_TEXTO) || delBody(css, 'color'),
+    tipografia: tipografiaDeCss(css),
   };
 }
 
@@ -287,13 +350,14 @@ async function sacarLaCara(web, { bajar = descargar } = {}) {
   // La portada no siempre lleva el CSS dentro: se mira la primera hoja (dos
   // como mucho), que es donde una web con marca declara sus colores.
   for (const hoja of leido.hojas.slice(0, 2)) {
-    if (leido.acento && leido.fondo) break;
+    if (leido.acento && leido.fondo && leido.tipografia) break;
     try {
       const css = (await bajar(hoja, { limite: 400_000 })).cuerpo.toString('utf8');
       const deLaHoja = extraerDeCss(css);
       leido.acento = leido.acento || deLaHoja.acento;
       leido.fondo = leido.fondo || deLaHoja.fondo;
       leido.texto = leido.texto || deLaHoja.texto;
+      leido.tipografia = leido.tipografia || deLaHoja.tipografia;
     } catch { /* una hoja que no baja no tumba lo demás */ }
   }
 
@@ -329,6 +393,19 @@ async function sacarLaCara(web, { bajar = descargar } = {}) {
     }
   }
 
+  // Su tipografía (decisión 204): el nombre siempre; el fichero, si es de
+  // Google Fonts. Si no baja, la cara se pone igual, con el nombre.
+  let fuente = null;
+  if (leido.tipografia && leido.tipografia.google) {
+    try {
+      const bajada = await bajarDeGoogle(leido.tipografia.nombre, bajar);
+      if (bajada) {
+        fs.writeFileSync(path.join(carpeta, `fuente.${bajada.ext}`), bajada.cuerpo);
+        fuente = `fuente.${bajada.ext}`;
+      }
+    } catch { /* sin su fichero, por su nombre */ }
+  }
+
   // Un cinturón más, porque este nombre sale de una web ajena y acaba en una
   // cabecera donde cada línea es un campo: lo que llegue con un salto dentro
   // se queda en una línea o no entra. Lo de arriba ya lo aplasta; esto lo
@@ -342,6 +419,8 @@ async function sacarLaCara(web, { bajar = descargar } = {}) {
     `texto: ${texto}`,
     `acento: ${leido.acento}`,
     ...(logo ? [`logo: ${logo}`] : []),
+    ...(leido.tipografia ? [`tipografia: ${leido.tipografia.nombre}`] : []),
+    ...(fuente ? [`fuente: ${fuente}`] : []),
     `resource: ${web}`,
     'provisional: si',
     '---',
@@ -358,7 +437,7 @@ async function sacarLaCara(web, { bajar = descargar } = {}) {
     return { ok: false, motivo: `no he podido escribir ${marca.FICHERO}: ${error.message}`, escritura: `No he podido guardar los colores de tu web (${marca.FICHERO}): ${porQueNoSePudo(error)}.` };
   }
 
-  return { ok: true, nombre, acento: leido.acento, fondo, logo: Boolean(logo), logoSinGuardar };
+  return { ok: true, nombre, acento: leido.acento, fondo, logo: Boolean(logo), tipografia: leido.tipografia ? leido.tipografia.nombre : null, fuente: Boolean(fuente), logoSinGuardar };
 }
 
 module.exports = { sacarLaCara, extraer, extraerDeCss, descargar, normalizar, esGris, nombreDelTitulo, logoDe };

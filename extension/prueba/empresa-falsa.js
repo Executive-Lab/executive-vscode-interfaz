@@ -392,6 +392,9 @@ function montarMarca(raiz, {
   // letras, que sí lo lleva.
   simbolo = false,
   tipografia = null,
+  // El fichero de su tipografía (decisión 204), en la carpeta de la marca. Uno
+  // que intenta salirse de ella se escribe en el récord, pero no en el disco.
+  fuente = null,
   // Lo que diga el récord, cuando lo diga: 'si', 'no', o nada.
   dice = null,
 } = {}) {
@@ -412,12 +415,17 @@ acento: "${acento}"
 ${logo ? 'logo: logo.svg' : ''}
 ${dice ? `logo_lleva_el_nombre: ${dice}` : ''}
 ${tipografia ? `tipografia: ${tipografia}` : ''}
+${fuente ? `fuente: ${fuente}` : ''}
 ---
 
 # Marca de Ferretería Soler
 
 Tomada de su web el ${HOY}.
 `);
+  if (fuente && !fuente.includes('..')) {
+    // Basta con que exista: la barra no la abre, solo le da la dirección a la página.
+    fs.writeFileSync(path.join(raiz, '02-DOCS/wiki/brand', fuente), Buffer.from('wOF2-de-mentira'));
+  }
   if (logo && simbolo) {
     escribir(raiz, '02-DOCS/wiki/brand/logo.svg',
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">\n  <circle cx="24" cy="24" r="20" fill="${acento}"/>\n</svg>\n`);

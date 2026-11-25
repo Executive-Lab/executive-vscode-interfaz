@@ -9,9 +9,10 @@
 // Mientras no exista ese fichero, la marca es la de Executive Lab. Es el
 // default correcto: durante el curso, hasta que cuente de qué va su empresa.
 //
-// Aquí no se cambia la tipografía ni los tamaños. Los colores de una web se
-// pueden adoptar sin romper nada; una tipografía ajena, no — y el público de
-// esto no puede permitirse una interfaz que de pronto no se lee.
+// La tipografía de la empresa va en los títulos y en su nombre, no en el texto
+// (decisión 204): el texto va en la del sistema, que siempre se lee, porque una
+// tipografía ajena puede ser preciosa en un rótulo e ilegible en un párrafo. Y
+// con su marca, nunca la nuestra. Los tamaños no se tocan.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -24,6 +25,8 @@ const medidas = require('./medidas');
 const CARPETA = ['02-DOCS', 'wiki', 'brand'];
 const FICHERO = 'marca.md';
 const LOGOS = /\.(svg|png|jpe?g|webp)$/i;
+// El fichero de su tipografía, y cómo se le dice a la página qué es.
+const FUENTES = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
 
 function carpeta() {
   return proyecto.ruta(...CARPETA);
@@ -42,6 +45,25 @@ function logoDe(campos, donde) {
   const completa = path.resolve(donde, campos.logo);
   if (!rutas.estaDentro(donde, completa) || !fs.existsSync(completa)) return null;
   return completa;
+}
+
+// Su tipografía, en un fichero de esa misma carpeta (decisión 204). Lo deja el
+// asistente, o la barra al sacar la cara de la web si es de Google Fonts. Con
+// el mismo cuidado que el logotipo: dentro de la carpeta, y que exista.
+function fuenteDe(campos, donde) {
+  if (typeof campos.fuente !== 'string') return null;
+  const tipo = (campos.fuente.trim().match(/\.([a-z0-9]+)$/i) || [])[1];
+  if (!tipo || !FUENTES[tipo.toLowerCase()]) return null;
+  const completa = path.resolve(donde, campos.fuente.trim());
+  if (!rutas.estaDentro(donde, completa) || !fs.existsSync(completa)) return null;
+  return completa;
+}
+
+// El nombre de una tipografía va escrito tal cual en la hoja de estilo: solo
+// letras, números, espacios y guiones. Uno con comillas o llaves la rompería.
+function nombreDeTipografia(valor) {
+  const nombre = typeof valor === 'string' ? valor.trim() : '';
+  return /^[\p{L}\p{N}][\p{L}\p{N} -]{0,47}$/u.test(nombre) ? nombre : null;
 }
 
 // ¿El logotipo lleva el nombre de la empresa dentro, o es solo el símbolo?
@@ -182,7 +204,9 @@ function leer() {
     placa: Boolean(logo && placaPara(logo, esquema.superficie)),
     carpeta: donde,
     oscura: esOscura,
-    tipografia: typeof campos.tipografia === 'string' ? campos.tipografia.trim() : null,
+    // Una de la lista (`sistema`, `clasica`, `grande`) o el nombre de la suya.
+    tipografia: nombreDeTipografia(campos.tipografia),
+    fuente: fuenteDe(campos, donde),
     tokens: {
       // Los de significado, que son los que pintan. Los crudos de `panel.css`
       // se quedan sin tocar a propósito: son la paleta de Executive Lab.
@@ -199,7 +223,11 @@ function leer() {
       '--apagado': esquema.apagado,
       '--borde': esquema.borde,
       '--acento': esquema.acento,
+      // El color de la empresa tal cual, si su letra se lee (decisión 204). Por
+      // eso lo que va escrito con el acento usa su propia ficha: un enlace
+      // amarillo sobre blanco no se lee.
       '--acento-relleno': esquema.acentoRelleno,
+      '--acento-texto': esquema.acento,
       '--sobre-acento': esquema.sobreAcento,
       // La sombra del botón principal llevaba el rojo de Executive Lab escrito
       // a fuego, así que un botón cian salía con un halo rojo debajo.
@@ -251,7 +279,9 @@ const GRUPOS_EN_OSCURO = { '--grupo-1': '#ec4429', '--grupo-2': '#3987e5', '--gr
 // `nonce`: la contraseña de un solo uso de la página. Su seguridad solo deja
 // pasar los estilos que la llevan; sin ella, este bloque no se aplicaba nunca en
 // un VS Code de verdad (decisión 203).
-function estilo(marca, nonce = null) {
+// `fuente`: la dirección del fichero de su tipografía, ya preparada para la
+// página (`asWebviewUri`); sin ella no se declara ninguna.
+function estilo(marca, nonce = null, fuente = null) {
   if (!marca || !marca.tokens) return '';
   const lineas = Object.entries(marca.tokens).map(([k, v]) => `  ${k}: ${v};`).join('\n');
 
@@ -265,10 +295,10 @@ function estilo(marca, nonce = null) {
   //
   // El alto contraste se queda fuera a propósito: quien lo usa lo necesita, y
   // ninguna marca vale eso.
-  const tipo = tipografiaDe(marca);
+  const { cara, fichas: tipo } = tipografiaDe(marca, fuente);
 
   const contrasena = nonce ? ` nonce="${String(nonce).replace(/[^A-Za-z0-9+/=]/g, '')}"` : '';
-  return `<style${contrasena}>
+  return `<style${contrasena}>${cara}
 :root {
 ${lineas}${tipo}
 }
@@ -278,21 +308,39 @@ ${lineas}
 </style>`;
 }
 
-// La tipografía, de una lista corta. Nada de traerse una fuente de la red: el
-// panel no pide nada fuera a propósito, y una que no carga deja la barra en lo
-// que decida el sistema.
+// La tipografía. Nada de traerse una fuente de la red: el panel no pide nada
+// fuera a propósito. La suya llega en un fichero de su carpeta, o por su nombre
+// si la tiene puesta en el ordenador; y si no carga, la del sistema.
+const SISTEMA = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 const TIPOGRAFIAS = {
-  sistema: {
-    sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    serif: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
+  sistema: { sans: SISTEMA, serif: SISTEMA },
   clasica: { sans: "Georgia, 'Times New Roman', serif", serif: "Georgia, 'Times New Roman', serif" },
   grande: { sans: "Verdana, Tahoma, -apple-system, sans-serif", serif: "Verdana, Tahoma, Georgia, serif" },
 };
 
-function tipografiaDe(marca) {
-  const cual = TIPOGRAFIAS[marca.tipografia];
-  return cual ? `\n  --sans: ${cual.sans};\n  --serif: ${cual.serif};` : '';
+// Con la marca de una empresa, siempre se declaran las dos: sin la suya, la del
+// sistema, porque las de `panel.css` (Lato y DM Serif) son las de Executive Lab.
+//   · Una de la lista: para todo, como siempre.
+//   · El nombre de la suya: en los títulos y en su nombre; el texto, del sistema.
+//   · Su fichero: se declara como 'Marca EL', y va delante en los títulos.
+function tipografiaDe(marca, fuente) {
+  const deLaLista = TIPOGRAFIAS[marca.tipografia];
+  const sans = deLaLista ? deLaLista.sans : SISTEMA;
+  const porNombre = !deLaLista && marca.tipografia ? `'${marca.tipografia}', ` : '';
+  const formato = marca.fuente ? FUENTES[(marca.fuente.match(/\.([a-z0-9]+)$/i) || [])[1].toLowerCase()] : null;
+  const conFichero = Boolean(fuente && formato);
+  const serif = `${conFichero ? "'Marca EL', " : ''}${porNombre}${deLaLista ? deLaLista.serif : SISTEMA}`;
+  // La dirección va entre comillas simples: se le quita lo que podría cerrarlas.
+  const direccion = conFichero ? String(fuente).replace(/['"\\()\s]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`) : '';
+  const cara = conFichero
+    ? `\n@font-face {\n  font-family: 'Marca EL';\n  src: url('${direccion}') format('${formato}');\n  font-display: swap;\n}`
+    : '';
+  // Su fichero trae un solo grosor, y va a ese: pedirle otro lo engorda a la
+  // fuerza. Lo demás, en seminegrita, o los títulos se confunden con el texto:
+  // la del sistema, una de la lista, o la suya por su nombre, que si no está en
+  // el ordenador acaba en la del sistema (y si está, trae su seminegrita).
+  const peso = conFichero ? 400 : 600;
+  return { cara, fichas: `\n  --sans: ${sans};\n  --serif: ${serif};\n  --peso-titulo: ${peso};` };
 }
 
 // Lo que se le pide al asistente cuando el alumno da su web.
@@ -306,13 +354,17 @@ function tipografiaDe(marca) {
 // Executive Lab. Nadie se enteraba de que había pasado algo.
 // `yaHayPrimerIntento`: la barra ya sacó una cara provisional de la web
 // (`web.js`), así que no se le pide hacerla desde cero sino revisarla.
-function queLePedimos(web, yaHayPrimerIntento = false) {
+// `sinMaterial`: lo va a contar con sus palabras (decisión 204). Antes ese
+// botón le pedía «déjalo montado» sin decirle ni dónde ni con qué campos.
+function queLePedimos(web, yaHayPrimerIntento = false, { sinMaterial = false } = {}) {
   return [
-    yaHayPrimerIntento && web
-      ? `Ya he sacado un primer intento de la cara de mi empresa desde ${web} y lo he dejado en \`${CARPETA.join('/')}/${FICHERO}\` marcado como provisional. Mira la web con calma y corrige lo que no sea de verdad —colores, logotipo, nombre—; al reescribirlo, quita la línea \`provisional\`.`
-      : web
-        ? `Mira ${web} y ponle a esto la cara de mi empresa.`
-        : 'Ponle a esto la cara de mi empresa, con el material que te he dejado.',
+    sinMaterial
+      ? 'Quiero ponerle a esto la cara de mi empresa y no tengo web ni logotipo a mano. Pregúntame cómo es, de una cosa en una: el nombre, los colores, el tipo de letra y el aire que tiene. Después déjalo montado.'
+      : yaHayPrimerIntento && web
+        ? `Ya he sacado un primer intento de la cara de mi empresa desde ${web} y lo he dejado en \`${CARPETA.join('/')}/${FICHERO}\` marcado como provisional. Mira la web con calma y corrige lo que no sea de verdad —colores, logotipo, nombre, tipografía—; al reescribirlo, quita la línea \`provisional\`.`
+        : web
+          ? `Mira ${web} y ponle a esto la cara de mi empresa.`
+          : 'Ponle a esto la cara de mi empresa, con el material que te he dejado.',
     '',
     `Déjalo en \`${CARPETA.join('/')}/${FICHERO}\`, con estos campos en la cabecera y escritos así:`,
     '',
@@ -320,14 +372,16 @@ function queLePedimos(web, yaHayPrimerIntento = false) {
     '- `fondo:`, `texto:` y `acento:` en formato `#rrggbb`.',
     web
       ? '  El `fondo` y el `acento` son los de su web de verdad: si la web es oscura, el fondo va oscuro.'
-      : '  Sácalos del material. Si su marca es oscura, el fondo va oscuro: esto se pinta igual de bien de las dos maneras.',
+      : `  Sácalos ${sinMaterial ? 'de lo que te cuente' : 'del material'}. Si su marca es oscura, el fondo va oscuro: esto se pinta igual de bien de las dos maneras.`,
     '  El `texto` solo se usa para saber si la marca es clara u oscura; las letras las calculo yo.',
     '  Evita un fondo a media luz (un gris medio): encima de eso no se lee nada y tendría que descartarlo.',
     '- `logo:` el nombre del fichero del logotipo, guardado en esa misma carpeta.',
     '- `logo_lleva_el_nombre:` `si` si el logotipo trae dentro el nombre escrito, `no` si es solo el símbolo.',
+    '- `tipografia:` el nombre de la tipografía de sus títulos, tal cual (por ejemplo, `Montserrat`). Si no la sabes, no lo pongas.',
+    '- `fuente:` si esa tipografía es libre (las de Google Fonts lo son), baja su fichero `.woff2` o `.ttf` a esa misma carpeta y pon aquí su nombre. Si es de pago, no la bajes: con el nombre basta.',
     web ? '- `resource:` la web.' : null,
     '',
-    'Con esos tres colores construyo la paleta entera siguiendo Material Design, así que no hace falta que me des más.',
+    'Con esos tres colores construyo la paleta entera siguiendo Material Design, así que no hace falta que me des más. El botón principal lleva su acento tal cual, si se lee; y su tipografía va en los títulos y en el nombre.',
   ].filter((l) => l !== null).join('\n');
 }
 

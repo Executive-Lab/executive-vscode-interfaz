@@ -2137,8 +2137,10 @@ contraseña de entrar: es una llave aparte que se puede anular sin tocar la cuen
     montarMarca(empresa, { tipografia: 'grande' });
     assert.match(marca.estilo(marca.leer()), /--sans: Verdana/);
 
+    // Una que no está en la lista es el nombre de la suya (decisión 204): va a
+    // los títulos, y el texto se queda en la del sistema.
     montarMarca(empresa, { tipografia: 'la-de-mi-primo' });
-    assert.ok(!/--sans:/.test(marca.estilo(marca.leer())), 'una que no está en la lista no se pone');
+    assert.ok(!/--sans:[^;]*la-de-mi-primo/.test(marca.estilo(marca.leer())), 'una que no está en la lista no va al texto');
 
     montarMarca(empresa);
     return Object.keys(marca.TIPOGRAFIAS).join(' · ');
@@ -3798,6 +3800,226 @@ exec git "$@"
     }
     montarMarca(empresa);
     return `tres marcas, contraste mínimo ${Math.min(...medidas).toFixed(1)}`;
+  });
+
+  await comprobar('204: el botón principal lleva el color de la empresa tal cual, si su letra se lee encima', () => {
+    // El botón llevaba un tono calculado de su paleta, con la saturación
+    // recortada: un amarillo #ffd400 salía marrón mostaza, y un cian #22d3ee,
+    // azul pastel. Ninguna barra llevaba el color exacto de su empresa. Ahora
+    // lo lleva tal cual, con la letra (blanca u oscura) que se lea encima; y si
+    // no se distingue de la página, el tono de siempre.
+    const color = cargar('color');
+    const casos = [
+      ['amarilla', { acento: '#ffd400' }, '#ffd400'],
+      ['azul', { acento: '#0057b8' }, '#0057b8'],
+      ['verde sobre blanco', { acento: '#2e7d32', fondo: '#ffffff', texto: '#222222' }, '#2e7d32'],
+      ['naranja', { acento: '#ff6b00' }, '#ff6b00'],
+      ['oscura con cian', { fondo: '#0d1117', texto: '#e6edf3', acento: '#22d3ee', logo: false }, '#22d3ee'],
+      ['lavanda pálida sobre blanco', { acento: '#eeeaff', fondo: '#ffffff', texto: '#222222' }, null],
+    ];
+    const vistos = [];
+    for (const [que, opciones, esperado] of casos) {
+      montarMarca(empresa, opciones);
+      const t = marca.leer().tokens;
+      if (esperado) assert.equal(t['--acento-relleno'], esperado, `"${que}": el botón no lleva su color`);
+      else assert.notEqual(t['--acento-relleno'], opciones.acento, `"${que}": un botón que no se distingue de la página`);
+      const letra = color.contraste(t['--sobre-acento'], t['--acento-relleno']);
+      assert.ok(letra >= 4.5, `"${que}": la letra del botón no se lee (${letra.toFixed(2)})`);
+      // Lo que va escrito con el acento —los enlaces, una fila al pasar por
+      // encima— no usa el relleno: un enlace amarillo sobre blanco no se lee.
+      for (const debajo of ['--fondo', '--superficie']) {
+        const enlace = color.contraste(t['--acento-texto'], t[debajo]);
+        assert.ok(enlace >= 4.5, `"${que}": un enlace sobre ${debajo} no se lee (${enlace.toFixed(2)})`);
+      }
+      vistos.push(`${que} ${t['--acento-relleno']}`);
+    }
+    const css = fs.readFileSync(path.join(RAIZ, 'media', 'panel.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    assert.ok(!/(^|[;{\s])color:\s*var\(--acento-relleno\)/m.test(css), 'una letra pintada con el relleno del botón');
+    assert.match(css, /\.articulo a \{[^}]*color: var\(--acento-texto\)/, 'los enlaces de un artículo no usan el color de texto');
+    montarMarca(empresa);
+    return vistos.join(' · ');
+  });
+
+  await comprobar('204: con la marca de una empresa, su tipografía va en los títulos, y la nuestra no se queda', () => {
+    // Con la marca de una empresa, los títulos y su nombre salían en DM Serif y
+    // el texto en Lato: las de Executive Lab. Ahora su tipografía va en los
+    // títulos y en su nombre, desde el fichero que deja en su carpeta (nada de
+    // la red: la página no pide nada fuera). El texto, en la del sistema, que
+    // siempre se lee. Y sin tipografía suya, la del sistema: nunca la nuestra.
+    const nuestras = /Lato EL|DM Serif EL/;
+    const declarada = (css, ficha) => ((css.match(new RegExp(`${ficha}:\\s*([^;]+);`)) || [])[1] || '');
+
+    montarMarca(empresa);
+    const sinLaSuya = marca.estilo(marca.leer());
+    assert.ok(declarada(sinLaSuya, '--sans') && declarada(sinLaSuya, '--serif'), 'sin tipografía suya, se queda la nuestra');
+    assert.ok(!nuestras.test(sinLaSuya), 'con su marca, la tipografía sigue siendo la de Executive Lab');
+    // Y en la del sistema, los títulos en seminegrita: a 400 se confundían con el texto.
+    assert.equal(declarada(sinLaSuya, '--peso-titulo'), '600', 'los títulos en la del sistema se confunden con el texto');
+
+    montarMarca(empresa, { tipografia: 'Montserrat', fuente: 'montserrat.woff2' });
+    const suya = marca.leer();
+    assert.ok(suya.fuente && suya.fuente.endsWith('montserrat.woff2'), 'no encuentra el fichero de su tipografía');
+    const con = marca.estilo(suya, null, 'vscode-resource:/brand/montserrat.woff2');
+    assert.match(con, /@font-face\s*\{[^}]*font-family: 'Marca EL';[^}]*src: url\('vscode-resource:\/brand\/montserrat\.woff2'\) format\('woff2'\)/, 'su fichero no se declara');
+    assert.match(declarada(con, '--serif'), /^'Marca EL', 'Montserrat', /, 'los títulos no llevan la suya');
+    assert.ok(!/Marca EL|Montserrat/.test(declarada(con, '--sans')), 'el texto tiene que ir en la del sistema, que siempre se lee');
+    assert.equal(declarada(con, '--peso-titulo'), '400', 'su letra de rótulo, a su grosor');
+    const hoja = fs.readFileSync(path.join(RAIZ, 'media', 'panel.css'), 'utf8');
+    for (const sel of ['.titulo', '.marca--nombre', '.brujula .donde', '.articulo h3, .articulo h4, .articulo h5, .articulo h6']) {
+      const regla = (hoja.match(new RegExp(`\\n${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`)) || [])[1] || '';
+      assert.match(regla, /font-weight: var\(--peso-titulo\)/, `«${sel}» no usa el grosor de los títulos`);
+    }
+
+    // Solo el nombre, sin fichero: si la tiene puesta en el ordenador, sale.
+    montarMarca(empresa, { tipografia: 'Montserrat' });
+    const soloNombre = marca.estilo(marca.leer());
+    assert.ok(!/@font-face/.test(soloNombre), 'sin fichero no hay nada que declarar');
+    assert.match(declarada(soloNombre, '--serif'), /^'Montserrat', /);
+    // Y si no la tiene, sale la del sistema: en seminegrita, como sin la suya.
+    // Una familia puesta en el ordenador sí trae su seminegrita.
+    assert.equal(declarada(soloNombre, '--peso-titulo'), '600', 'sin su fichero, los títulos pueden salir en la del sistema a 400');
+
+    // Las de la lista siguen igual, para todo.
+    montarMarca(empresa, { tipografia: 'grande' });
+    assert.match(declarada(marca.estilo(marca.leer()), '--sans'), /^Verdana/);
+
+    // Lo que no es un fichero de tipografía, se sale de su carpeta o no está, no entra.
+    for (const mala of ['../fuera.woff2', 'fuente.exe']) {
+      montarMarca(empresa, { fuente: mala });
+      assert.equal(marca.leer().fuente, null, `«${mala}» se acepta como tipografía`);
+    }
+    montarMarca(empresa, { fuente: 'borrada.woff2' });
+    fs.unlinkSync(path.join(empresa, '02-DOCS', 'wiki', 'brand', 'borrada.woff2'));
+    assert.equal(marca.leer().fuente, null, 'un fichero que no está se acepta como tipografía');
+    // Y un nombre raro no puede romper la hoja de estilo.
+    montarMarca(empresa, { tipografia: "Mont'serrat; } body { display: none" });
+    const rara = marca.estilo(marca.leer());
+    assert.ok(!/display: none/.test(rara) && !/Mont'/.test(rara), `un nombre que rompe el estilo: ${declarada(rara, '--serif')}`);
+    montarMarca(empresa);
+    return "títulos en la suya; el texto, en la del sistema";
+  });
+
+  await comprobar('204: la página le da a su tipografía la dirección de su carpeta, y la seguridad la deja cargar', () => {
+    const proveedor = vscode.registrado.proveedor;
+    const medios = vscode.Uri.joinPath(contexto.extensionUri, 'media');
+    const webview = { cspSource: 'vscode-resource:', asWebviewUri: (u) => ({ toString: () => `vscode-resource:${u.fsPath || u.path}` }) };
+    montarMarca(empresa, { tipografia: 'Montserrat', fuente: 'montserrat.woff2' });
+    const pagina = proveedor.html(webview, medios, marca.leer());
+    const fichero = path.join(empresa, '02-DOCS', 'wiki', 'brand', 'montserrat.woff2');
+    assert.ok(pagina.includes(`url('vscode-resource:${fichero}')`), 'la página no apunta al fichero de su tipografía');
+    const csp = (pagina.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1] || '';
+    assert.match(csp, /font-src vscode-resource:/, 'la seguridad no deja cargar la tipografía');
+    montarMarca(empresa);
+    return 'su fichero, servido como su logotipo';
+  });
+
+  await comprobar('204: al asistente se le piden los campos que la barra lee, con la tipografía, y nada se la prohíbe', async () => {
+    // Las reglas del asistente decían «No toques la tipografía», pedían un
+    // campo que la barra no lee (`superficie`) y no citaban uno que sí
+    // (`logo_lleva_el_nombre`). Y «Contárselo con mis palabras» no le decía ni
+    // dónde dejarlo ni con qué campos: lo que hiciera podía no llegar nunca.
+    const pedido = marca.queLePedimos('https://ferreteriasoler.es');
+    for (const campo of ['empresa:', 'fondo:', 'texto:', 'acento:', 'logo:', 'logo_lleva_el_nombre:', 'tipografia:', 'fuente:']) {
+      assert.ok(pedido.includes(`\`${campo}\``), `no se le pide ${campo}`);
+    }
+    assert.match(pedido, /libre/, 'tiene que decirle que solo baje una tipografía libre');
+    for (const copia of ['media/railes/executive-lab/SKILL.md', '../skills/executive-lab/SKILL.md', '../.claude/skills/executive-lab/SKILL.md']) {
+      const reglas = fs.readFileSync(path.join(RAIZ, copia), 'utf8');
+      const seccion = reglas.slice(reglas.indexOf('quédate con su marca'), reglas.indexOf('### 4.'));
+      assert.ok(seccion.length > 200, `${copia}: no encuentro la parte de la marca`);
+      assert.ok(!/No toques la tipografía/.test(seccion), `${copia}: le prohíbe la tipografía`);
+      assert.ok(!/^superficie:/m.test(seccion), `${copia}: pide «superficie», que la barra no lee`);
+      for (const campo of ['logo_lleva_el_nombre', 'tipografia', 'fuente']) assert.ok(seccion.includes(campo), `${copia}: no cita «${campo}»`);
+    }
+
+    const proveedor = vscode.registrado.proveedor;
+    const antes = proveedor.pedir;
+    const pedidos = [];
+    proveedor.pedir = async (p) => { pedidos.push(p); };
+    try { await proveedor.contarLaCara(); } finally { proveedor.pedir = antes; }
+    assert.equal(pedidos.length, 1, 'contarlo no le pide nada al asistente');
+    assert.match(pedidos[0], /Pregúntame cómo es/);
+    assert.ok(pedidos[0].includes('02-DOCS/wiki/brand/marca.md') && pedidos[0].includes('`acento:`'), 'no le dice dónde ni cómo dejarlo');
+    assert.ok(!/material que te he dejado/.test(pedidos[0]), 'habla de un material que no le ha dado');
+    const panel = fs.readFileSync(path.join(RAIZ, 'media', 'panel.js'), 'utf8');
+    const laCara = panel.slice(panel.indexOf('function pantallaLaCara'), panel.indexOf('function pantallaComoTrabaja'));
+    assert.match(laCara, /tipo: 'contarLaCara'/, 'el botón de contarlo no pasa por la barra');
+    return 'ocho campos, en las tres copias de las reglas y en los tres botones';
+  });
+
+  await comprobar('204: el primer intento desde la web apunta su tipografía, y si es de Google Fonts, se baja', async () => {
+    const web = cargar('web');
+    const conGoogle = `<html><head><title>Ferretería Soler</title><meta name="theme-color" content="#d84315">
+      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans&display=swap" rel="stylesheet">
+      </head><body></body></html>`;
+    assert.deepEqual(web.extraer(conGoogle, 'https://ferreteriasoler.es/').tipografia, { nombre: 'Montserrat', google: true });
+    const conCss = '<html><head><style>h1{font-family:"Playfair Display",Georgia,serif} body{font-family:-apple-system,Arial,sans-serif}</style></head></html>';
+    assert.deepEqual(web.extraer(conCss, 'https://x.es/').tipografia, { nombre: 'Playfair Display', google: false });
+    const sinNada = '<html><head><style>body{font-family:-apple-system,Helvetica,Arial,sans-serif}</style></head></html>';
+    assert.equal(web.extraer(sinNada, 'https://x.es/').tipografia, null, 'las del sistema no son su tipografía');
+
+    const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'cara-fuente-'));
+    fs.mkdirSync(path.join(carpeta, '02-DOCS', 'wiki'), { recursive: true });
+    const pedidas = [];
+    const conRed = (fuenteBaja) => async (url) => {
+      pedidas.push(url);
+      if (url.startsWith('https://fonts.googleapis.com/')) return { cuerpo: Buffer.from("@font-face { font-family: 'Montserrat'; src: url(https://fonts.gstatic.com/s/montserrat/v26/abc.ttf) format('truetype'); }"), tipo: 'text/css', url };
+      if (url.startsWith('https://fonts.gstatic.com/')) {
+        if (!fuenteBaja) throw new Error('sin red');
+        return { cuerpo: Buffer.from('ttf-de-mentira'), tipo: 'font/ttf', url };
+      }
+      return { cuerpo: Buffer.from(conGoogle), tipo: 'text/html', url };
+    };
+    const antes = vscode.guion.raiz;
+    vscode.guion.raiz = carpeta;
+    try {
+      const cara = await web.sacarLaCara('https://ferreteriasoler.es', { bajar: conRed(true) });
+      assert.ok(cara.ok, cara.motivo);
+      assert.ok(pedidas.includes('https://fonts.googleapis.com/css2?family=Montserrat'), `no pide su hoja a Google: ${pedidas.join(', ')}`);
+      const suya = cargar('marca').leer();
+      assert.equal(suya.tipografia, 'Montserrat');
+      assert.ok(suya.fuente && suya.fuente.endsWith('.ttf') && fs.existsSync(suya.fuente), 'el fichero de su tipografía no se guarda');
+
+      // Sin red para la tipografía, la cara se pone igual, con su nombre y sin fichero.
+      fs.rmSync(path.join(carpeta, '02-DOCS', 'wiki', 'brand'), { recursive: true });
+      const sinFuente = await web.sacarLaCara('https://ferreteriasoler.es', { bajar: conRed(false) });
+      assert.ok(sinFuente.ok, sinFuente.motivo);
+      assert.equal(cargar('marca').leer().fuente, null);
+      assert.equal(cargar('marca').leer().tipografia, 'Montserrat');
+    } finally {
+      vscode.guion.raiz = antes;
+      fs.rmSync(carpeta, { recursive: true, force: true });
+    }
+    return 'Montserrat, con su fichero; sin red, con su nombre';
+  });
+
+  await comprobar('204: una barra con otro nombre no busca versiones en nuestro sitio', async () => {
+    // Cada uno puede hacerse su barra a partir de esta (licencia MIT). Pero la
+    // barra pregunta a nuestro sitio y pone sola lo que encuentra: una copia con
+    // otro nombre habría instalado la nuestra al lado de la suya.
+    const sitio = cargar('sitio');
+    const paquete = JSON.parse(fs.readFileSync(path.join(RAIZ, 'package.json'), 'utf8'));
+    assert.equal(sitio.ID, `${paquete.publisher}.${paquete.name}`, 'el nombre de la barra en sitio.js no es el del paquete');
+    const version = cargar('version');
+    let preguntas = 0;
+    const fetchAntes = global.fetch;
+    global.fetch = async () => { preguntas += 1; return { ok: false }; };
+    const almacen = new Map();
+    const contextoDe = (id) => ({ extension: { id }, globalState: { get: (k) => almacen.get(k), update: async (k, v) => { almacen.set(k, v); } } });
+    try {
+      assert.equal(await version.laUltima(contextoDe('alguien.su-barra'), { fresca: true }), null);
+      const puesta = await version.ponerLaNueva(contextoDe('alguien.su-barra'), '0.1.0');
+      assert.equal(puesta.ok, false);
+      assert.equal(preguntas, 0, 'una barra con otro nombre pregunta a nuestro sitio');
+      await version.laUltima(contextoDe(sitio.ID.toUpperCase()), { fresca: true });
+      assert.equal(preguntas, 1, 'la nuestra tiene que seguir preguntando');
+    } finally { global.fetch = fetchAntes; }
+    const leeme = fs.readFileSync(path.join(RAIZ, '..', 'README.md'), 'utf8');
+    const inicio = leeme.indexOf('### Hazte tu propia barra');
+    assert.ok(inicio > 0, 'el README no dice cómo hacerse su propia barra');
+    const seccion = leeme.slice(inicio, leeme.indexOf('\n## ', inicio));
+    for (const cosa of ['sitio.js', 'package.json', 'publisher', 'panel.css']) assert.ok(seccion.includes(cosa), `el README no dice qué cambiar en ${cosa}`);
+    return `${sitio.ID}: solo ella pregunta a ${sitio.REPO}`;
   });
 
   await comprobar('el panel se ajusta al arnés conforme se monta', async () => {
@@ -5580,7 +5802,7 @@ exec git "$@"
     const css = fs.readFileSync(path.join(RAIZ, 'media', 'panel.css'), 'utf8');
     const cuerpo = css.slice(css.indexOf('* { box-sizing'));
     const usados = [...new Set([...cuerpo.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]))]
-      .filter((v) => !v.startsWith('--vscode') && !['--sans', '--serif', '--radio', '--radio-lg', '--hueco', '--sombra', '--alto-boton'].includes(v));
+      .filter((v) => !v.startsWith('--vscode') && !['--sans', '--serif', '--peso-titulo', '--radio', '--radio-lg', '--hueco', '--sombra', '--alto-boton'].includes(v));
 
     montarMarca(empresa, { fondo: '#0d1117', texto: '#e6edf3', acento: '#22d3ee' });
     const tokens = marca.leer().tokens;

@@ -27,7 +27,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const github = require('./github');
 
-const { REPO, QUIEN_PUBLICA, esNuestro, enNuestrasCuentas, mismoSitio } = require('./sitio');
+const { REPO, QUIEN_PUBLICA, esLaDeAqui, esNuestro, enNuestrasCuentas, mismoSitio } = require('./sitio');
 const ULTIMA = `https://api.github.com/repos/${REPO}/releases/latest`;
 // Las de prueba no salen en `latest`: para quien se ofrece a probarlas, se mira
 // la lista entera, y de ahí la más nueva, sea o no de prueba (decisión 134).
@@ -160,6 +160,9 @@ function paqueteDeFiar(paquete, version) {
 // versiones nuevas antes», también las de prueba; lo recordado de un canal no
 // vale para el otro.
 async function laUltima(contexto, { fresca = false, deprueba = probarAntes() } = {}) {
+  // Una barra hecha a partir de esta, con otro nombre, no pregunta aquí: lo que
+  // encontrara sería la nuestra, y la pondría sola al lado de la suya (decisión 204).
+  if (!esLaDeAqui(contexto)) return null;
   try {
     const almacen = contexto.globalState;
     const canal = deprueba ? 'pruebas' : 'estable';
