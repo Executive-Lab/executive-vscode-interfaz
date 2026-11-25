@@ -60,7 +60,7 @@ Lo que se vio al revisarla, con cinco marcas de prueba en claro y en oscuro:
 - [x] 4. Las reglas del asistente y lo que se le pide, con los campos que la barra lee de verdad.
 - [x] 5. «Contárselo con mis palabras» le dice dónde y cómo dejarlo.
 - [x] 6. Una barra con otro nombre no busca versiones en nuestro sitio; el README dice qué cambiar.
-- [x] 7. Las cinco marcas, fotografiadas antes y después.
+- [x] 7. Las marcas de prueba (cinco, y una sexta con su tipografía), fotografiadas antes y después.
 - [x] 8. Diccionario, decisión 204, versión 0.64.0, cierre de la 203.
 - [x] 9. Batería entera, contrato, empresas, `--con-arnes`, mapeos, PowerShell y VS Code de verdad.
 - [ ] 10. PR abierta, con GitHub en verde.
