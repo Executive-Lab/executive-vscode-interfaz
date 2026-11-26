@@ -326,9 +326,10 @@ async function run() {
     const leer = (fichero) => fs.readFileSync(fichero, 'utf8').split('\n--\n').filter(Boolean);
     const laCarpeta = fs.realpathSync(vscode.workspace.workspaceFolders[0].uri.fsPath);
     try {
-      // Con número: su programa por detrás, y ninguna terminal.
+      // Con número: su programa por detrás, y ninguna terminal, ni al acabar
+      // (su panel se abre entonces; aquí no está, y no pasa nada).
       fs.writeFileSync(conNumero, '');
-      assert.equal(await conReloj(puente.enviar(encargo), 'mandarle el encargo a Codex'), 'trabajando');
+      assert.equal(await conReloj(puente.enviar(encargo), 'mandarle el encargo a Codex'), 'porDetras');
       assert.ok(fs.existsSync(`${apunte}.exec`), 'su programa no ha arrancado por detrás');
       assert.deepEqual(leer(`${apunte}.exec`), ['exec', '--json', '-s', 'workspace-write', '--', encargo], 'el encargo no le llega tal cual');
       assert.equal(fs.realpathSync(fs.readFileSync(`${apunte}.exec.donde`, 'utf8').trim()), laCarpeta, 'no trabaja en la carpeta');

@@ -10371,7 +10371,20 @@ su número. Las dos partes comparten las conversaciones (`~/.codex`). Probado en
 conversación sale en su panel con el texto del encargo («ahora ha funcionado el texto!»).
 
 - **Cómo va.** La barra arranca su programa por detrás, en la carpeta: `exec --json -s workspace-write -- <encargo>`.
-  En cuanto dice el número, abre esa conversación en un panel de Codex. Un encargo, un panel: varios a la vez.
+  Con el número, dice «Codex ya está con ello. Cuando acabe, te abro su conversación en una pestaña nueva, y ahí puedes
+  seguir hablándole.», y abajo, en la barra de estado, «Codex está con ello». Cuando su programa acaba, bien o mal,
+  abre esa conversación en un panel de Codex, entera. Un encargo, un panel: varios a la vez.
+- **Al acabar, y no al empezar.** Al principio se abría en cuanto llegaba el número. Jose pidió que se probara de
+  verdad («hazme la prueba tú», 26-11), y se hizo lo mismo que su panel, que abre una conversación con `thread/resume`
+  en su `app-server`, mientras su programa hacía un encargo de unos 30 segundos (`uno.txt`, esperar 8, `dos.txt`,
+  esperar 8, `tres.txt`) en una carpeta de pruebas, con su Codex:
+  - al dar el número (0,8 s): «no rollout found», aún no está en el disco, así que el panel habría salido vacío;
+  - mientras trabaja: ni un aviso de lo que hace; no se ve en vivo;
+  - a otro panel, mientras el primero la tenía abierta: «already has an active writer»; una conversación la lleva
+    uno solo a la vez, y mientras trabaja la lleva su programa;
+  - al acabar (29,5 s): llega entera, con el encargo, los tres ficheros y «Hecho.».
+
+  Su `config.toml`, con la misma fecha y tamaño antes y después, y ningún programa de la prueba se quedó en marcha.
 - **`workspace-write`.** Sin pantalla no hay a quién preguntarle, así que puede tocar lo de la carpeta y nada fuera.
   Lo que se le diga después, en su panel, va con lo que tenga puesto esa persona.
 - **Vuelve a la pestaña de la 206** si su programa no da el número en 30 segundos (sin cuenta, sin red, uno que no
@@ -10383,11 +10396,17 @@ conversación sale en su panel con el texto del encargo («ahora ha funcionado e
 
 **Pruebas.** En `humo.js`, con «207:» en el nombre: el nombre por el dominio y el icono sin placa; la web que no se
 abre, con su aviso y su botón; Codex por detrás (orden, carpeta, panel por encargo, sin terminal ni portapapeles; sin
-número, la pestaña; sin Codex en el editor, la pestaña y nada por detrás); y, en la de terminar de preparar, el orden
-marca → primer mensaje → GitHub. En `mapeos-codex.js`, el encargo largo por su fichero, en el panel y en la pestaña.
+número, la pestaña; sin Codex en el editor, la pestaña y nada por detrás; el panel al acabar y no antes, también si
+acaba mal; «Codex está con ello» abajo mientras trabaja); lo que dice la barra por detrás, en los cuatro sitios que
+mandan algo; y, en la de terminar de preparar, el orden marca → primer mensaje → GitHub. Las del panel al acabar y la
+frase por detrás se vieron fallar antes del cambio («no dice que trabaja por detrás», «por detrás, un botón no lo
+dice»). En `mapeos-codex.js`, el encargo largo por su fichero, en el panel y en la pestaña.
 En el VS Code de verdad, con un Codex de mentira: por detrás con número y sin terminal; sin número o sin su panel, la
 pestaña en el editor; en la carpeta, y el encargo intacto. La de «sin su panel» se vio fallar antes del cambio.
 
-**Lo que no se ha probado:** si su panel va enseñando lo que hace Codex mientras trabaja por detrás, o solo lo que
-había al abrirlo. Si no se actualiza, «Ahí ves lo que hace» no sería verdad, y lo que se le diga en el panel podría
-no llevar lo último. Lo verá Jose. Y la sesión de GitHub que el editor no ve.
+**Lo que se pierde frente a la pestaña:** mientras trabaja no se ve qué hace ni se le puede contestar; sin pantalla
+tampoco pregunta, y no sale de la carpeta. Al acabar, en su panel, se le sigue hablando como siempre.
+
+**Lo que no se ha probado:** el panel de verdad abriéndose desde la barra, con su extensión: esta máquina no deja
+hacer capturas de la pantalla, y la prueba de arriba habla con el mismo servidor que el panel, no con el panel. Y la
+sesión de GitHub que el editor no ve.

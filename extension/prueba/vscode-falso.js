@@ -21,6 +21,8 @@ const registrado = {
   pestanas: [],
   // Las pestañas con un programa dentro: Codex trabajando en un encargo (decisión 206).
   terminales: [],
+  // Lo que se enseña mientras algo trabaja: Codex por detrás (decisión 207).
+  progresos: [],
 };
 
 // Lo que las pruebas pueden cambiar antes de llamar.
@@ -59,7 +61,7 @@ module.exports = {
   ConfigurationTarget: { Global: 1, Workspace: 2, WorkspaceFolder: 3 },
   ExtensionMode: { Production: 1, Development: 2, Test: 3 },
   StatusBarAlignment: { Left: 1, Right: 2 },
-  ProgressLocation: { Notification: 15 },
+  ProgressLocation: { Window: 10, Notification: 15 },
   ThemeColor: class { constructor(id) { this.id = id; } },
   ViewColumn: { Active: -1, Beside: -2, One: 1, Two: 2 },
   TerminalLocation: { Panel: 1, Editor: 2 },
@@ -131,7 +133,7 @@ module.exports = {
       return guion.respuestas.shift();
     },
     showOpenDialog: async () => (guion.ficheros.length ? guion.ficheros.map(uri) : undefined),
-    withProgress: async (_opciones, tarea) => tarea({ report() {} }),
+    withProgress: async (opciones, tarea) => { registrado.progresos.push(opciones); return tarea({ report() {} }); },
   },
 
   // El proveedor de sesiones del editor. `silent` mira sin molestar y

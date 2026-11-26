@@ -139,7 +139,10 @@ const DALE_A_ENVIAR = 'Te lo he dejado escrito en la conversación. Dale a envia
 // Y cuando Codex ya está trabajando en su pestaña (decisión 206): no hay nada que
 // enviar ni que pegar. Copiado, lo dice el aviso del portapapeles.
 const YA_ESTA_CON_ELLO = 'Codex ya está con ello, en una pestaña nueva. Ahí ves lo que hace, y le contestas si te pregunta algo.';
-const comoLlego = (como) => ({ directo: DALE_A_ENVIAR, trabajando: YA_ESTA_CON_ELLO })[como] || null;
+// Y cuando lo hace su programa por detrás (decisión 207): su panel no puede
+// enseñarlo mientras trabaja, así que se abre al acabar, entero.
+const YA_ESTA_POR_DETRAS = 'Codex ya está con ello. Cuando acabe, te abro su conversación en una pestaña nueva, y ahí puedes seguir hablándole.';
+const comoLlego = (como) => ({ directo: DALE_A_ENVIAR, trabajando: YA_ESTA_CON_ELLO, porDetras: YA_ESTA_POR_DETRAS })[como] || null;
 
 // Lo que se dice al dejar la cuenta de GitHub para más tarde, al montar: dónde
 // queda, con su botón (decisión 164).
@@ -1921,7 +1924,7 @@ ${cabecera}
     const como = await puente.enviar(PEDIR_AYUDA_EN_EL_FORO, this.salida);
     const donde = 'Cuando te conteste, copia el mensaje y pégalo en «Resolver dudas», en Circle.';
     if (como === 'directo') return this.enviar({ tipo: 'aviso', texto: `Te lo he dejado escrito en la conversación: dale a enviar. ${donde}` });
-    if (como === 'trabajando') return this.enviar({ tipo: 'aviso', texto: `${YA_ESTA_CON_ELLO} ${donde}` });
+    if (como === 'trabajando' || como === 'porDetras') return this.enviar({ tipo: 'aviso', texto: `${comoLlego(como)} ${donde}` });
     if (como === 'copiado') return this.enviar({ tipo: 'aviso', texto: donde });
     return this.enviar({ tipo: 'aviso', texto: 'No he podido hablar con el asistente. Pulsa «Algo va mal» y pásale el código a tu tutor.', malo: true });
   }

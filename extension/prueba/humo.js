@@ -20668,49 +20668,71 @@ exec git "$@"
     hijo.stdout = new PassThrough();
     hijo.stderr = new PassThrough();
     hijo.kill = () => { hijo.matado = true; };
+    // Con número, sigue trabajando hasta que la prueba diga que acaba.
+    hijo.acabar = (codigo = 0) => { hijo.stdout.end(); hijo.emit('close', codigo, null); };
     lanzados.push({ programa, args, opciones, hijo });
     setImmediate(() => {
       if (numero) hijo.stdout.write(`${JSON.stringify({ type: 'thread.started', thread_id: `conversacion-${lanzados.length}` })}\n`);
-      else { hijo.stdout.end(); hijo.emit('close', 1, null); }
+      else hijo.acabar(1);
     });
     return hijo;
   };
+  const unRato = () => new Promise((r) => setTimeout(r, 20));
 
-  await comprobar('207: con Codex, el encargo lo empieza su programa por detrás y la conversación se abre en su panel, una por encargo', () => conCodexEnSuExtension(async (programa) => {
+  await comprobar('207: con Codex, el encargo lo empieza su programa por detrás y, al acabar, la conversación se abre en su panel, una por encargo', () => conCodexEnSuExtension(async (programa) => {
     // Jose, 25-11-2026: «no me refiero a que despliegues terminal, sino esto de
     // codex new agent que permite dos ventanas en vscode». Su panel no deja que
     // nadie le escriba, pero abre una conversación por su número; y su programa,
-    // sin pantalla, empieza una y da su número lo primero.
+    // sin pantalla, empieza una y da su número lo primero. El panel no la puede
+    // abrir mientras su programa trabaja (probado el 26-11 con el Codex de Jose:
+    // «no rollout found» al empezar, «already has an active writer» a medias, y
+    // nada en vivo): se abre al acabar, entera.
     const puente = cargar('puente');
     const lanzados = [];
     const antes = puente.codexPorDetras.lanzar;
     puente.codexPorDetras.lanzar = codexFingido(lanzados);
     vscode.registrado.portapapeles = '';
     vscode.registrado.ejecutados.length = 0;
+    vscode.registrado.progresos.length = 0;
     const paneles = () => vscode.registrado.ejecutados.filter((e) => e.id === 'vscode.openWith');
     try {
       const texto = '--sin-preguntar Haz el resumen de la semana';
-      assert.equal(await puente.enviar(texto), 'trabajando');
+      assert.equal(await puente.enviar(texto), 'porDetras', 'no dice que trabaja por detrás');
       const [primero] = lanzados;
       assert.ok(primero, 'no arranca su programa');
       assert.equal(primero.programa, programa, 'no es el Codex que trae su extensión');
       assert.deepEqual(primero.args, ['exec', '--json', '-s', 'workspace-write', '--', texto], 'el encargo no le llega entero, o lo puede tomar por una opción');
       assert.equal(primero.opciones.cwd, cargar('proyecto').raiz(), 'no trabaja en la carpeta');
-      assert.equal(paneles().length, 1, 'no abre la conversación en su panel');
-      assert.equal(String(paneles()[0].args[0]), 'openai-codex://route/local/conversacion-1', 'no abre esa conversación');
+      // Mientras trabaja: nada de panel, y en la barra de abajo se ve que está con ello.
+      await unRato();
+      assert.equal(paneles().length, 0, 'abre el panel mientras trabaja, y aún no se puede');
+      assert.deepEqual(vscode.registrado.progresos.map((p) => [p.location, p.title]), [[vscode.ProgressLocation.Window, 'Codex está con ello']], 'no se ve que está trabajando');
+      // Otro encargo a la vez, otro programa.
+      assert.equal(await puente.enviar('Y ahora, las facturas'), 'porDetras');
+      // Al acabar cada uno, su conversación en su panel, entera.
+      lanzados[1].hijo.acabar(0);
+      await unRato();
+      assert.equal(paneles().length, 1, 'al acabar, no abre la conversación en su panel');
+      assert.equal(String(paneles()[0].args[0]), 'openai-codex://route/local/conversacion-2', 'no abre la del que ha acabado');
       assert.equal(paneles()[0].args[1], 'chatgpt.conversationEditor', 'no la abre con el panel de Codex');
+      primero.hijo.acabar(0);
+      await unRato();
+      assert.equal(paneles().length, 2, 'el primero no va en su propio panel');
+      assert.equal(String(paneles()[1].args[0]), 'openai-codex://route/local/conversacion-1');
       assert.equal(vscode.registrado.terminales.length, 0, 'abre además una terminal');
       assert.equal(vscode.registrado.portapapeles, '', 'lo copia igual');
-      // Otro encargo, otro panel: los dos trabajan a la vez.
-      assert.equal(await puente.enviar('Y ahora, las facturas'), 'trabajando');
-      assert.equal(paneles().length, 2, 'el segundo no va en su propio panel');
-      assert.equal(String(paneles()[1].args[0]), 'openai-codex://route/local/conversacion-2');
+      // Uno que acaba mal también se abre: lo que haya pasado está en su conversación.
+      assert.equal(await puente.enviar('Uno que falla'), 'porDetras');
+      lanzados[2].hijo.acabar(1);
+      await unRato();
+      assert.equal(paneles().length, 3, 'uno que acaba mal no se abre');
 
       // Si su programa no da el número (sin cuenta, sin red), la pestaña de la
       // 206, que enseña lo que pasa y deja contestarle.
       puente.codexPorDetras.lanzar = codexFingido(lanzados, { numero: false });
       assert.equal(await puente.enviar('Haz el resumen'), 'trabajando');
-      assert.equal(paneles().length, 2, 'abre un panel sin conversación');
+      await unRato();
+      assert.equal(paneles().length, 3, 'abre un panel sin conversación');
       assert.equal(vscode.registrado.terminales.length, 1, 'sin número, no va a su pestaña');
       assert.deepEqual(vscode.registrado.terminales[0].opciones.shellArgs, ['--no-daemon', '--', 'Haz el resumen']);
 
@@ -20723,11 +20745,11 @@ exec git "$@"
       cargar('asistentes').terminal.programaEnElPath = (nombre) => (nombre === 'codex' ? '/opt/codex/bin/codex' : null);
       assert.equal(await puente.enviar('Haz el resumen sin panel'), 'trabajando');
       assert.equal(lanzados.length, yaLanzados, 'sin su panel, lo arranca por detrás y no se ve');
-      assert.equal(paneles().length, 2, 'abre un panel que no está');
+      assert.equal(paneles().length, 3, 'abre un panel que no está');
       assert.equal(vscode.registrado.terminales.length, 2, 'sin su panel, no va a su pestaña');
       assert.equal(vscode.registrado.terminales[1].opciones.shellPath, '/opt/codex/bin/codex');
       assert.deepEqual(vscode.registrado.terminales[1].opciones.shellArgs, ['--', 'Haz el resumen sin panel']);
-      return 'su programa por detrás, y cada conversación en su panel; sin número o sin su panel, la pestaña';
+      return 'su programa por detrás; al acabar, cada conversación en su panel; sin número o sin su panel, la pestaña';
     } finally {
       puente.codexPorDetras.lanzar = antes;
     }
@@ -20782,6 +20804,8 @@ exec git "$@"
     const enviados = [];
     const antes = { enviar: proveedor.enviar, puente: puenteM.enviar, elDeAhora: asistentesM.elDeAhora, instaladas: vscode.guion.extensionesInstaladas, donde: proveedor.donde, pendiente: proveedor.avisoPendiente };
     const CON_ELLO = 'Codex ya está con ello, en una pestaña nueva. Ahí ves lo que hace, y le contestas si te pregunta algo.';
+    // Por detrás (decisión 207): su panel se abre al acabar, y eso es lo que se dice.
+    const POR_DETRAS = 'Codex ya está con ello. Cuando acabe, te abro su conversación en una pestaña nueva, y ahí puedes seguir hablándole.';
     proveedor.enviar = (m) => enviados.push(m);
     puenteM.enviar = async () => 'trabajando';
     vscode.guion.extensionesInstaladas = [...antes.instaladas, 'openai.chatgpt'];
@@ -20797,8 +20821,18 @@ exec git "$@"
       proveedor.avisoPendiente = null;
       assert.equal(await proveedor.mandarElPrimero('Hola'), 'trabajando');
       assert.equal(proveedor.avisoPendiente && proveedor.avisoPendiente.texto, CON_ELLO, 'el primer mensaje del montaje no lo dice');
+      // Lo mismo, con Codex por detrás.
+      puenteM.enviar = async () => 'porDetras';
+      await proveedor.manejar({ tipo: 'pedir', prompt: 'Haz el resumen de la semana.' });
+      assert.equal(ultimoAviso().texto, POR_DETRAS, 'por detrás, un botón no lo dice');
+      assert.deepEqual(await proveedor.pasarleYDecir('Documento añadido.', 'Léelo.'), { texto: `Documento añadido. ${POR_DETRAS}`, malo: false }, 'por detrás, darle documentos no lo dice');
+      await proveedor.manejar({ tipo: 'pedirAyudaEnElForo' });
+      assert.equal(ultimoAviso().texto, `${POR_DETRAS} Cuando te conteste, copia el mensaje y pégalo en «Resolver dudas», en Circle.`, 'por detrás, el foro no lo dice');
+      proveedor.avisoPendiente = null;
+      assert.equal(await proveedor.mandarElPrimero('Hola'), 'porDetras');
+      assert.equal(proveedor.avisoPendiente && proveedor.avisoPendiente.texto, POR_DETRAS, 'por detrás, el primer mensaje del montaje no lo dice');
       for (const m of enviados.filter((e) => e.tipo === 'aviso')) assert.ok(!/Dale a enviar|pégalo con/i.test(m.texto.replace('pégalo en «Resolver dudas»', '')), `dice que lo mande o lo pegue: ${m.texto}`);
-      return 'un botón, los documentos, el foro y el primer mensaje';
+      return 'un botón, los documentos, el foro y el primer mensaje, en su pestaña y por detrás';
     } finally {
       proveedor.enviar = antes.enviar;
       puenteM.enviar = antes.puente;

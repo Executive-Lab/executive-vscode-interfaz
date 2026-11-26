@@ -278,8 +278,8 @@ test('con su programa, Codex trabaja el encargo, y uno largo le llega por su fic
     vscode.registrado.terminales.length = 0;
     vscode.registrado.portapapeles = '';
     const texto = 'Prepara el informe con sus tildes.\n'.repeat(300);
-    // En su panel: el programa por detrás recibe la línea que nombra el fichero.
-    assert.equal(await puente.enviar(texto, null, { plataforma: 'win32' }), 'trabajando');
+    // Por detrás, y su panel al acabar: el programa recibe la línea que nombra el fichero.
+    assert.equal(await puente.enviar(texto, null, { plataforma: 'win32' }), 'porDetras');
     assert.equal(lanzados.length, 1);
     assert.equal(lanzados[0].programa, programa);
     const porDetras = lanzados[0].args.at(-1);
