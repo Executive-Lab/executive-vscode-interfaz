@@ -51,12 +51,15 @@ Lo que se vio al mirarlo:
 - [x] 2. Una web que no se abre se dice, con «Escribir la web otra vez».
 - [x] 3. El nombre de la marca es la parte del título que dice el dominio.
 - [x] 4. El icono para móvil va sin placa.
-- [x] 5. Con Codex en el editor, el encargo empieza por detrás y su conversación se abre en su panel, una por encargo.
+- [x] 5. Con Codex en el editor, el encargo empieza por detrás y, al acabar, su conversación se abre en su panel, una
+  por encargo.
 - [x] 6. Sin número, o sin Codex en el editor, la pestaña de la 206.
 - [x] 7. Diccionario y decisión 207.
-- [x] 8. Batería entera, `--con-arnes`, mapeos y VS Code de verdad, sobre el código final.
-- [ ] 9. Jose lo prueba en la ventana de prueba: la marca, y si el panel de Codex va enseñando lo que hace.
-- [x] 10. PR abierta, con GitHub en verde.
+- [ ] 8. Batería entera, `--con-arnes`, mapeos y VS Code de verdad, sobre el código final.
+- [x] 9. ¿El panel de Codex va enseñando lo que hace mientras trabaja por detrás? Probado con su Codex: no. Por eso se
+  abre al acabar.
+- [ ] 10. PR abierta, con GitHub en verde.
+- [ ] 11. Jose ve, en la ventana de prueba, la marca y el panel de Codex abriéndose al acabar.
 
 ## Evidence
 
@@ -73,7 +76,15 @@ Lo que se vio al mirarlo:
   fallar con el «si» de antes: «no apunta qué fichero es el icono»).
 - **5.** Con el Codex de Jose (su sí del 25-11): `codex exec --json` da `thread.started` con el número, y su panel
   abre esa conversación con el texto del encargo («ahora ha funcionado el texto!»). En `humo.js`, «207: con Codex…»:
-  la orden, la carpeta, un panel por encargo, sin terminal ni portapapeles.
+  la orden, la carpeta, el panel al acabar y no antes (también si acaba mal), uno por encargo, «Codex está con ello»
+  abajo mientras trabaja, sin terminal ni portapapeles. Se vio fallar antes del cambio («no dice que trabaja por
+  detrás», «por detrás, un botón no lo dice»).
+- **9.** Jose: «hazme la prueba tú» (26-11). Sin poder capturar la pantalla, se hizo lo mismo que su panel
+  (`thread/resume` en un `app-server` propio) mientras su programa hacía un encargo de unos 30 s en una carpeta de
+  pruebas (guion y registro en el scratchpad: `guiones/panel-en-vivo.js`, `panel-en-vivo.jsonl`). Al dar el número,
+  «no rollout found»; mientras trabaja, ningún aviso de lo que hace; un segundo, «already has an active writer»; al
+  acabar, la conversación entera (encargo, `uno.txt`, dos esperas, `dos.txt`, `tres.txt`, «Hecho.»). Su
+  `config.toml`, igual antes y después; ningún programa de la prueba en marcha al terminar.
 - **6.** En la misma prueba: sin número, la pestaña con `--no-daemon`; sin Codex en el editor, la pestaña con el del
   ordenador y nada por detrás. Esta última se vio fallar antes del cambio («sin su panel, lo arranca por detrás y no
   se ve», 4 !== 3) y pasar después. En el VS Code de verdad (1.148.0, en el Mac), antes de ese último cambio: «todo
@@ -85,7 +96,8 @@ Lo que se vio al mirarlo:
   de 31, `humo.js --con-arnes` 612 de 612, el diccionario y `revisar-powershell.js` (5 ficheros, sin pegas) y, en un
   VS Code de verdad (1.148.0, en el Mac), «todo bien», con la prueba de Codex en sus tres caminos (con número, sin
   número, sin su panel). Es la batería de `02-DOCS/wiki/sdd/config.yaml` entera, más la manual.
-- **No se corrió aquí.** El panel de Codex con un encargo lanzado por la barra: lo verá Jose.
+- **No se corrió aquí.** El panel de verdad abriéndose desde la barra, con la extensión de Codex: esta máquina no
+  deja capturar la pantalla. Lo verá Jose (11).
 - **10.** PR #118. GitHub en verde con `5cde287`: `windows` (7 min 22 s), `el-exe`, `el-dmg` y `vscode-de-verdad`
   (ejecución 45675074156).
 - **Revisión.** `rsc risk --base origin/main`: nivel 1, un revisor. Hecha en línea, fichero por fichero, sin
@@ -101,6 +113,5 @@ Lo que se vio al mirarlo:
 
 ## Next
 
-- Jose: probarlo en la ventana de prueba, mirar «Guardar una copia fuera» y decir si el panel de Codex se movía.
-- Si el panel no se mueve mientras trabaja, abrirlo al acabar, no al empezar.
-- PR, y con el sí de Jose, fusionar y publicar la 0.65.0.
+- Jose: probarlo en la ventana de prueba (11) y mirar «Guardar una copia fuera».
+- Con el sí de Jose, fusionar la PR #118 y publicar la 0.65.0.
