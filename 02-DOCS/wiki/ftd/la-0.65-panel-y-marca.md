@@ -58,7 +58,7 @@ Lo que se vio al mirarlo:
 - [x] 8. Batería entera, `--con-arnes`, mapeos y VS Code de verdad, sobre el código final.
 - [x] 9. ¿El panel de Codex va enseñando lo que hace mientras trabaja por detrás? Probado con su Codex: no. Por eso se
   abre al acabar.
-- [ ] 10. PR abierta, con GitHub en verde.
+- [x] 10. PR abierta, con GitHub en verde.
 - [ ] 11. Jose ve, en la ventana de prueba, la marca y el panel de Codex abriéndose al acabar.
 
 ## Evidence
@@ -97,8 +97,8 @@ Lo que se vio al mirarlo:
   número, sin su panel). Es la batería de `02-DOCS/wiki/sdd/config.yaml` entera, más la manual.
 - **No se corrió aquí.** El panel de verdad abriéndose desde la barra, con la extensión de Codex: esta máquina no
   deja capturar la pantalla. Lo verá Jose (11).
-- **10.** PR #118. GitHub en verde con `5cde287`: `windows` (7 min 22 s), `el-exe`, `el-dmg` y `vscode-de-verdad`
-  (ejecución 45675074156).
+- **10.** PR #118. GitHub en verde con `5cde287` (ejecución 45675074156) y otra vez con `84b7548`, el del panel al
+  acabar: `windows` (5 min 22 s), `el-exe`, `el-dmg` y `vscode-de-verdad` (ejecución 45863735805).
 - **Revisión.** `rsc risk --base origin/main`: nivel 1, un revisor. Hecha en línea, fichero por fichero, sin
   revisores en segundo plano. Dejó los dos arreglos de arriba (el icono atado a su fichero, y lo de la web en el aviso
   del final del montaje). Sin arreglar, por menor: si dos partes del título contienen el dominio, gana la primera,
