@@ -38,7 +38,7 @@ a mano el 25-11.
 - [x] 1. `a-la-release.sh`, con ensayo.
 - [x] 2. El trabajo `a-la-release` en `windows.yml`, solo al publicar una release.
 - [x] 3. Notas y aviso de `publicar.sh`; `README.md` e `instalador/README.md`.
-- [ ] 4. GitHub en verde en la rama, con el trabajo nuevo saltado porque no es una release.
+- [x] 4. GitHub en verde en la rama, con el trabajo nuevo saltado porque no es una release.
 - [ ] 5. La primera release de verdad (0.65.0) sale con los dos instaladores.
 
 ## Evidence
@@ -56,6 +56,8 @@ a mano el 25-11.
   `el-exe`, y es el único con permiso de escritura.
 - `docs/comprobar-diccionario.js`: en verde. La prueba de `humo.js` que lee `README.md` y `publicar.sh`
   (números de otro día), a mano: nada.
+- 26-11-2026 · GitHub en la rama (run 45857003400, `0805ab4`): `windows`, `vscode-de-verdad`, `el-dmg`
+  y `el-exe` en verde; `a-la-release`, saltado. El flujo se acepta con el disparador nuevo.
 - **Sin probar:** la subida de verdad. Solo se prueba publicando una release; la primera será la 0.65.0.
 
 ## Next
