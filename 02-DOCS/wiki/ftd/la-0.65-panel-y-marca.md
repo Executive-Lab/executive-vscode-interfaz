@@ -55,7 +55,7 @@ Lo que se vio al mirarlo:
   por encargo.
 - [x] 6. Sin número, o sin Codex en el editor, la pestaña de la 206.
 - [x] 7. Diccionario y decisión 207.
-- [ ] 8. Batería entera, `--con-arnes`, mapeos y VS Code de verdad, sobre el código final.
+- [x] 8. Batería entera, `--con-arnes`, mapeos y VS Code de verdad, sobre el código final.
 - [x] 9. ¿El panel de Codex va enseñando lo que hace mientras trabaja por detrás? Probado con su Codex: no. Por eso se
   abre al acabar.
 - [ ] 10. PR abierta, con GitHub en verde.
@@ -91,8 +91,7 @@ Lo que se vio al mirarlo:
   bien», con la prueba de Codex en sus dos caminos.
 - **7.** `comprobar-diccionario.js`: 27 palabras, 94 ficheros, 806 rótulos, todo bien (también después de la última
   edición del diccionario).
-- **8.** Sobre el código final, en una sola pasada después del último cambio de código (la de antes de la revisión ya
-  no vale): `humo.js` 602 de 602, `contrato.js` 15 de 15, las tres empresas y la recién montada, `mapeos-codex.js` 31
+- **8.** Sobre el código final (el panel al acabar, 26-11), en una sola pasada después del último cambio de código: `humo.js` 602 de 602, `contrato.js` 15 de 15, las tres empresas y la recién montada, `mapeos-codex.js` 31
   de 31, `humo.js --con-arnes` 612 de 612, el diccionario y `revisar-powershell.js` (5 ficheros, sin pegas) y, en un
   VS Code de verdad (1.148.0, en el Mac), «todo bien», con la prueba de Codex en sus tres caminos (con número, sin
   número, sin su panel). Es la batería de `02-DOCS/wiki/sdd/config.yaml` entera, más la manual.
