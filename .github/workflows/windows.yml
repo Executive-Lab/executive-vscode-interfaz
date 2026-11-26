@@ -17,7 +17,12 @@ on:
       - 'instalador/windows/**'
       - 'instalador/mac/**'
       - '.github/workflows/windows.yml'
+      - 'instalador/a-la-release.sh'
   workflow_dispatch:
+  # Al publicar una release se construyen y se prueban los dos instaladores, como en cada
+  # cambio, y si pasan se suben a ella (trabajo `a-la-release`, al final).
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -249,3 +254,30 @@ jobs:
           path: instalador/windows/Output/ExecutiveLab-Setup.exe
           retention-days: 14
           if-no-files-found: error
+
+  # Al publicar una release, el .dmg y el .exe que acaban de pasar sus pruebas se suben a ella,
+  # con la versión en el nombre, y se comprueba que han llegado enteros. Antes se subían a mano y
+  # las releases salían sin ellos. Si esto falla, la release se queda sin instaladores hasta
+  # relanzarlo (Actions › esta ejecución › Re-run failed jobs).
+  a-la-release:
+    if: github.event_name == 'release'
+    needs: [el-dmg, el-exe]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: el-dmg
+          path: instaladores
+      - uses: actions/download-artifact@v4
+        with:
+          name: el-exe
+          path: instaladores
+      - name: Subirlos a la release y comprobarlos
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ETIQUETA: ${{ github.event.release.tag_name }}
+        run: bash instalador/a-la-release.sh "$ETIQUETA" instaladores

@@ -8,8 +8,10 @@
 #   executive-lab-<version>.vsix   la extensión, 6 MB — el camino principal
 #   NOTAS.md                        lo que va en la release de GitHub
 #
-# El instalador de escritorio (instalador/windows/Output) no se toca: es el
-# camino secundario, para quien llega sin VS Code ni asistente.
+# Los instaladores de escritorio (.dmg y .exe), para quien llega sin VS Code ni
+# asistente, no salen de aquí: el .exe solo se compila en Windows. Al publicar la
+# release, GitHub los construye, los prueba y los sube a ella solo (windows.yml,
+# trabajo `a-la-release`). Las notas ya traen su apartado.
 
 set -euo pipefail
 R="$(cd "$(dirname "$0")" && pwd)"
@@ -85,6 +87,18 @@ Descarga \`executive-lab-$VERSION.vsix\` y arrástralo a VS Code. O:
 code --install-extension executive-lab-$VERSION.vsix
 \`\`\`
 
+## O con el instalador, sin tocar VS Code
+
+Para quien llega sin nada: pone VS Code, git, Claude Code o Codex y la barra, con los ajustes puestos. Pregunta una sola cosa, con qué asistente vas a trabajar, y deja un acceso directo que abre el editor con la barra.
+
+- **Mac:** \`ExecutiveLab-$VERSION.dmg\`. Ábrelo y haz doble clic en «Instalar Executive Lab».
+- **Windows:** \`ExecutiveLab-Setup-$VERSION.exe\`.
+
+Van **sin firmar**, así que la primera vez el ordenador pregunta:
+
+- **Mac:** cierra el aviso y ve a Ajustes del sistema › Privacidad y seguridad › **Abrir igualmente**.
+- **Windows:** en «Windows protegió tu PC», **Más información** › **Ejecutar de todas formas**.
+
 ## Hace falta
 
 - VS Code 1.98 o más nuevo, y Claude Code o Codex con cuenta de pago.
@@ -106,7 +120,9 @@ if [ "$COMPLETO" = "1" ]; then
   echo "Comprobado entero, incluido el wizard con un arnés de verdad."
   echo
   echo "Qué hacer con esto:"
-  echo "  1. Subirlo como release en GitHub, con NOTAS.md de descripción."
+  echo "  1. Subirlo como release en GitHub, etiqueta v$VERSION, con NOTAS.md de descripción."
+  echo "     Al publicarla, GitHub construye el .dmg y el .exe, los prueba y los añade a la"
+  echo "     release en unos 5 minutos. Míralo en Actions › Windows › a-la-release."
   echo "  2. Para el Marketplace: npx @vscode/vsce publish  (hace falta cuenta de editor)."
   echo "  3. Para Open VSX:      npx ovsx publish executive-lab-$VERSION.vsix -p <token>"
 else
