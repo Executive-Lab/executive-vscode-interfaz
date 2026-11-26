@@ -97,6 +97,12 @@ iscc windows\ExecutiveLab.iss
 `.exe` del 17-09 llevaba dentro la extensión 0.1.0 y un `preparar.js` tres horas más viejo que el
 repositorio. El de macOS nunca tuvo ese problema porque lo monta `construir.sh`.
 
+**Para una release no hace falta construirlos a mano.** Al publicarla, el flujo `windows.yml` de
+GitHub construye los dos, los instala en una máquina limpia y, si pasan, los sube a ella con
+`a-la-release.sh`: `ExecutiveLab-<versión>.dmg` y `ExecutiveLab-Setup-<versión>.exe`, con la etiqueta
+«sin firmar». Antes se subían a mano y las releases salían sin ellos (hasta la 0.64.0). Para ver qué
+subiría sin subir nada: `instalador/a-la-release.sh v<versión> <carpeta> --ensayo`.
+
 ## Lo que todavía no está probado
 
 **El `.exe` está compilado pero nunca se ha ejecutado en un Windows limpio.** `preparar.js` sí se

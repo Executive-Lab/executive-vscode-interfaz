@@ -100,6 +100,10 @@ panel cuando esa persona elige carpeta, igual que por el camino de la extensión
   Inno Setup (ver [instalador/README.md](instalador/README.md)).
 - **macOS:** `Executive Lab <version>.dmg`, **6,8 MB**. Node y el editor se descargan al instalar.
 
+Los dos se suben solos a cada release, como `ExecutiveLab-<versión>.dmg` y
+`ExecutiveLab-Setup-<versión>.exe`: al publicarla, GitHub los construye, los instala en una máquina
+limpia y, si pasan, los añade a ella (`windows.yml`, trabajo `a-la-release`).
+
 ⚠️ **Se reparten sin firmar** (Jose, 25-11-2026: firmarlos no compensa). La primera vez el ordenador
 pregunta, y se le dice a quien lo instala cómo seguir:
 
@@ -377,6 +381,11 @@ cd extension && npm run empaquetar   # valida el manifiesto y genera el .vsix
 comprobaciones **con un arnés de verdad**, que tarda minutos: es lo que habría pillado tres semanas
 antes que la prueba del wizard estaba rota (auditoría, F26).
 
+Los instaladores no salen de `publicar.sh`, porque el `.exe` solo se compila en Windows. Al publicar la
+release, `windows.yml` los construye, los prueba y los sube a ella con `instalador/a-la-release.sh`, que
+comprueba que la etiqueta es la versión del código y que lo subido llega entero. Si ese trabajo falla,
+la release se queda sin instaladores hasta relanzarlo en Actions.
+
 Para los instaladores de escritorio hay que montar antes la carpeta `carga/` con los binarios de
 terceros, que no se versionan. Está explicado en [instalador/README.md](instalador/README.md).
 
@@ -398,7 +407,7 @@ de repartirla cambia cuatro cosas.
    textos que nombran a Executive Lab salen con `grep -rn "Executive Lab" extension/src extension/media`.
 4. **Cómo publicas**: `./publicar.sh` deja el `.vsix` en `publicacion/`. Súbelo a una release de tu
    repositorio con la cuenta de `QUIEN_PUBLICA`, sin cambiarle el nombre (`executive-lab-<versión>.vsix`,
-   o cambia `nombreDelPaquete` en `version.js`).
+   o cambia `nombreDelPaquete` en `version.js`). Al publicarla, `windows.yml` le añade los instaladores.
 
 Antes de repartirla, `npm run probar` en `extension/` tiene que seguir en verde: las pruebas vigilan que
 la versión diga lo mismo en todas partes, que `ID` sea el de tu `package.json` y que ningún texto use
