@@ -109,8 +109,12 @@ Lo que se vio al mirarlo:
   cambio, `humo.js` 602 de 602 y el diccionario, bien.
 - **Cómo se deshace.** `git revert` del commit de la fusión. Nada nuevo se guarda, salvo `logo_es_icono` en
   `marca.md`, que una barra anterior ignora.
+- **Publicada.** 27-11-2026, con el sí de Jose («fusiona en autopilo, te lo apruebo»): release `v0.65.0` desde
+  `0a3634b`, la última. Antes, `publicar.sh` entero: `humo.js --con-arnes` 612 de 612, `contrato.js` 15 de 15, las tres
+  empresas y la recién montada, el diccionario y PowerShell. El `.vsix` lo sube `minarkap` (`sha256:1d273b67…`), y
+  GitHub añade solo el `.dmg` y el `.exe` (ejecución 45985256459, `a-la-release` en verde).
+  Sale sin el 11: Jose aún no lo ha visto en la ventana de prueba.
 
 ## Next
 
 - Jose: probarlo en la ventana de prueba (11) y mirar «Guardar una copia fuera».
-- Con el sí de Jose, fusionar la PR #118 y publicar la 0.65.0.
