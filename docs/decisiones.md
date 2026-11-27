@@ -10324,7 +10324,7 @@ con las mismas opciones, pero fuera del editor.
 
 ## 207. La marca que se pone, GitHub que no corta, y Codex en su panel
 
-**Fecha:** 25 de noviembre de 2026 · **Estado:** en marcha, rama `la-0.65-panel-y-marca` · FTD
+**Fecha:** 25 de noviembre de 2026 · **Estado:** fusionada (PR #118, 27-11), sin publicar · FTD
 `02-DOCS/wiki/ftd/la-0.65-panel-y-marca.md`
 
 Jose, 25-11, probando la 0.65 sin publicar en una ventana de prueba:
@@ -10407,6 +10407,18 @@ pestaña en el editor; en la carpeta, y el encargo intacto. La de «sin su panel
 **Lo que se pierde frente a la pestaña:** mientras trabaja no se ve qué hace ni se le puede contestar; sin pantalla
 tampoco pregunta, y no sale de la carpeta. Al acabar, en su panel, se le sigue hablando como siempre.
 
-**Lo que no se ha probado:** el panel de verdad abriéndose desde la barra, con su extensión: esta máquina no deja
-hacer capturas de la pantalla, y la prueba de arriba habla con el mismo servidor que el panel, no con el panel. Y la
+**Probado con su extensión (27-11).** Jose: «tienes que hacer tu la prueba». En un VS Code de verdad (1.148.0, en el
+Mac), con la extensión de Codex de Jose (26.1120.50957) y su cuenta, sobre una carpeta de pruebas vacía con git, la
+barra manda un encargo de unos 20 s (dos ficheros y una espera). A los 3 s devuelve «por detrás»; a los 21 s Codex
+acaba; a los 22 s se abre la pestaña de su panel, activa, con esa conversación, y no antes. Los dos ficheros están. En
+el registro de su extensión, el panel carga la conversación: `maybe_resume_success`, un turno, acabado, en 2,3 s. Su
+`config.toml`, igual antes y después; ningún programa de la prueba en marcha al terminar.
+
+**Lo que se vio de paso.** Fueron tres pasadas. En la primera, la ventana se cerró 15 s después de abrirse el panel,
+con la carga empezada (`maybe_resume_started`). En la segunda, con el ordenador cargado y sin tarjeta gráfica, la
+pantalla del panel no arrancó en los 30 s que se da la propia extensión (`renderer_ready_timeout`): la pestaña se
+abrió con la conversación correcta, pero sin pintar. La tercera, con tarjeta gráfica, es la de arriba. Eso es del
+panel de Codex, no de la barra.
+
+**Lo que no se ha probado:** qué ve Jose cuando la pantalla del panel no arranca a tiempo, y cómo se recupera. Y la
 sesión de GitHub que el editor no ve.
