@@ -10321,3 +10321,92 @@ esa pestaña.
 **Lo que no se ha probado:** si el encargo sigue solo después de contestar a esa revisión (en el paso 2 se dejó sin
 contestar), y la barra abriendo la pestaña con el Codex de verdad dentro del editor: el paso 3 usa el mismo programa
 con las mismas opciones, pero fuera del editor.
+
+## 207. La marca que se pone, GitHub que no corta, y Codex en su panel
+
+**Fecha:** 25 de noviembre de 2026 · **Estado:** en marcha, rama `la-0.65-panel-y-marca` · FTD
+`02-DOCS/wiki/ftd/la-0.65-panel-y-marca.md`
+
+Jose, 25-11, probando la 0.65 sin publicar en una ventana de prueba:
+
+- *«Creo que lo de la marca no se aplica. Digo que es [la empresa] y [su web, con una letra de menos] y no se pone.»*
+- *«Tengo ya el github conectado y aun así me dice esto»* (el aviso «Te queda una cosa: una cuenta de GitHub…»).
+- *«Ahora sí ha salido pero feo. Lo de codex nueva ventana no me refiero a que despliegues terminal, sino esto de codex
+  new agent que permite dos ventanas en vscode.»*
+
+**1. La pregunta de GitHub ya no corta el montaje.** Salía antes de poner la marca y el primer mensaje, y el
+montaje esperaba la respuesta. Con el aviso sin contestar, la barra no se ponía la cara ni el asistente recibía nada.
+Ahora sale al final, justo antes de la principal. Lo que cambia lo que lee el asistente (permisos, consejos) sigue
+yendo antes del primer mensaje. En el aviso de la barra, lo que hay que hacer ahora («Dale a enviar», «Codex ya está
+con ello…», entrar primero en la cuenta) sigue siendo lo último, detrás de «Cuando quieras preparar la cuenta de
+GitHub…», que es para más tarde: lo pedía ya una prueba de antes, y se vio fallar al mover la pregunta. Por qué el editor dice que no hay sesión de GitHub cuando Jose la tiene: sin saber
+todavía (dos sospechas, otra sesión con otros permisos o el proveedor que tarda más de 4 segundos). No se toca
+`github.js` hasta verlo.
+
+**2. Una web que no se abre se dice.** `taleresbonet.com` (con una l de menos) no se abre. La barra no podía leerla y no decía
+nada: ni nombre, ni logo, ni colores, y ningún aviso. Ahora: «No he podido abrir taleresbonet.com: o no está bien
+escrita, o ahora no hay conexión.», con el botón «Escribir la web otra vez». Al montar, que es donde se escribe la
+web, va dentro del aviso del final, con su botón junto a los demás. La barra enseña un aviso cada vez, y el del final
+lo tapaba. Lo mismo pasaba con «Ya lleva la cara de…». Peor aún: al mirar la web se repintaba la principal, y eso
+soltaba antes de tiempo lo que el montaje guardaba para el final; con web, el aviso del final se quedaba sin
+«Guardo una copia sola…». Visto al revisar el cambio, con su prueba fallando antes del arreglo.
+
+**3. El nombre de la marca es la parte del título que dice el dominio.** En «Talleres Bonet | Reparación de maquinaria
+industrial en toda Cataluña» se tomaba la parte más larga: el lema. Ahora gana la parte que coincide con el dominio
+(`talleresbonet.com` → «Talleres Bonet»), sin tildes, mayúsculas ni espacios al comparar. Sin ninguna, la más larga,
+como antes.
+
+**4. El icono para móvil va sin placa.** Cuando la web no tiene logo, se usa su icono para móvil
+(`apple-touch-icon`), que ya trae su fondo. Encima de la placa blanca quedaba un cuadrado dentro de otro. Ahora
+`marca.md` apunta qué fichero es (`logo_es_icono: logo.png`), y la placa no se pone mientras `logo:` sea ese mismo.
+Con un «sí» a secas, un logotipo que pusiera después el asistente heredaría lo del icono y podría quedarse sin la
+placa que necesita.
+
+**5. Con Codex, el encargo va a su panel de conversación.** La 206 lo abría en una pestaña de terminal. Jose quiere
+los paneles de «New Codex Agent», que permiten varias conversaciones a la vez. Leída su extensión (openai.chatgpt
+26.1120.50957): ese panel no deja que nadie le escriba. Pero abre una conversación ya empezada por su número
+(`openai-codex://route/local/<número>`, con su editor `chatgpt.conversationEditor`), que es lo que hace su lista de
+conversaciones. Y su programa, sin pantalla (`codex exec --json`), empieza una con el encargo y lo primero que dice es
+su número. Las dos partes comparten las conversaciones (`~/.codex`). Probado en el Codex de Jose el 25-11: la
+conversación sale en su panel con el texto del encargo («ahora ha funcionado el texto!»).
+
+- **Cómo va.** La barra arranca su programa por detrás, en la carpeta: `exec --json -s workspace-write -- <encargo>`.
+  Con el número, dice «Codex ya está con ello. Cuando acabe, te abro su conversación en una pestaña nueva, y ahí puedes
+  seguir hablándole.», y abajo, en la barra de estado, «Codex está con ello». Cuando su programa acaba, bien o mal,
+  abre esa conversación en un panel de Codex, entera. Un encargo, un panel: varios a la vez.
+- **Al acabar, y no al empezar.** Al principio se abría en cuanto llegaba el número. Jose pidió que se probara de
+  verdad («hazme la prueba tú», 26-11), y se hizo lo mismo que su panel, que abre una conversación con `thread/resume`
+  en su `app-server`, mientras su programa hacía un encargo de unos 30 segundos (`uno.txt`, esperar 8, `dos.txt`,
+  esperar 8, `tres.txt`) en una carpeta de pruebas, con su Codex:
+  - al dar el número (0,8 s): «no rollout found», aún no está en el disco, así que el panel habría salido vacío;
+  - mientras trabaja: ni un aviso de lo que hace; no se ve en vivo;
+  - a otro panel, mientras el primero la tenía abierta: «already has an active writer»; una conversación la lleva
+    uno solo a la vez, y mientras trabaja la lleva su programa;
+  - al acabar (29,5 s): llega entera, con el encargo, los tres ficheros y «Hecho.».
+
+  Su `config.toml`, con la misma fecha y tamaño antes y después, y ningún programa de la prueba se quedó en marcha.
+- **`workspace-write`.** Sin pantalla no hay a quién preguntarle, así que puede tocar lo de la carpeta y nada fuera.
+  Lo que se le diga después, en su panel, va con lo que tenga puesto esa persona.
+- **Vuelve a la pestaña de la 206** si su programa no da el número en 30 segundos (sin cuenta, sin red, uno que no
+  conoce `exec`), y si Codex está en el ordenador pero no en el editor: no habría panel donde verlo, y por detrás
+  trabajaría sin que nadie lo viera.
+- **Si el panel no se abre** con el encargo ya en marcha, no se abre además la pestaña: lo haría dos veces. Queda en
+  su lista de conversaciones.
+- **La espera es `close`, no `exit`.** Uno que dice el número y acaba en seguida podía acabar antes de leerse.
+
+**Pruebas.** En `humo.js`, con «207:» en el nombre: el nombre por el dominio y el icono sin placa; la web que no se
+abre, con su aviso y su botón; Codex por detrás (orden, carpeta, panel por encargo, sin terminal ni portapapeles; sin
+número, la pestaña; sin Codex en el editor, la pestaña y nada por detrás; el panel al acabar y no antes, también si
+acaba mal; «Codex está con ello» abajo mientras trabaja); lo que dice la barra por detrás, en los cuatro sitios que
+mandan algo; y, en la de terminar de preparar, el orden marca → primer mensaje → GitHub. Las del panel al acabar y la
+frase por detrás se vieron fallar antes del cambio («no dice que trabaja por detrás», «por detrás, un botón no lo
+dice»). En `mapeos-codex.js`, el encargo largo por su fichero, en el panel y en la pestaña.
+En el VS Code de verdad, con un Codex de mentira: por detrás con número y sin terminal; sin número o sin su panel, la
+pestaña en el editor; en la carpeta, y el encargo intacto. La de «sin su panel» se vio fallar antes del cambio.
+
+**Lo que se pierde frente a la pestaña:** mientras trabaja no se ve qué hace ni se le puede contestar; sin pantalla
+tampoco pregunta, y no sale de la carpeta. Al acabar, en su panel, se le sigue hablando como siempre.
+
+**Lo que no se ha probado:** el panel de verdad abriéndose desde la barra, con su extensión: esta máquina no deja
+hacer capturas de la pantalla, y la prueba de arriba habla con el mismo servidor que el panel, no con el panel. Y la
+sesión de GitHub que el editor no ve.

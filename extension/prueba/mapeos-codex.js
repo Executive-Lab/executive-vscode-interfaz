@@ -244,11 +244,26 @@ test('los raíles no escriben a través de un override enlazado', { skip: proces
   } finally { fs.rmSync(fuera, { recursive: true, force: true }); }
 });
 
-// Decisión 206: con su programa, Codex se pone a trabajar con el encargo, en su
-// pestaña. Uno que no cabe va a un fichero, como siempre, y se le da la línea que lo
-// nombra: nada al portapapeles.
-test('con su programa, Codex trabaja el encargo en su pestaña, y uno largo le llega por su fichero', async () => {
+// Decisión 206: con su programa, Codex se pone a trabajar con el encargo. Desde la
+// 207, por detrás y en su panel; sin número, en su pestaña. Uno que no cabe va a un
+// fichero, como siempre, y se le da la línea que lo nombra: nada al portapapeles.
+test('con su programa, Codex trabaja el encargo, y uno largo le llega por su fichero, en su panel y en su pestaña', async () => {
   const puente = cargar('puente');
+  const lanzados = [];
+  const antesLanzar = puente.codexPorDetras.lanzar;
+  let conNumero = true;
+  puente.codexPorDetras.lanzar = (programa, args) => {
+    const { PassThrough } = require('node:stream');
+    const hijo = new (require('node:events'))();
+    hijo.stdout = new PassThrough();
+    hijo.kill = () => {};
+    lanzados.push({ programa, args });
+    setImmediate(() => {
+      if (conNumero) hijo.stdout.write('{"type":"thread.started","thread_id":"larga"}\n');
+      else { hijo.stdout.end(); hijo.emit('close', 1); }
+    });
+    return hijo;
+  };
   const pedidos = cargar('pedidos');
   const suya = fs.mkdtempSync(path.join(os.tmpdir(), 'extension-de-codex-'));
   const sistema = { darwin: 'macos', win32: 'windows', linux: 'linux' }[process.platform];
@@ -263,6 +278,16 @@ test('con su programa, Codex trabaja el encargo en su pestaña, y uno largo le l
     vscode.registrado.terminales.length = 0;
     vscode.registrado.portapapeles = '';
     const texto = 'Prepara el informe con sus tildes.\n'.repeat(300);
+    // Por detrás, y su panel al acabar: el programa recibe la línea que nombra el fichero.
+    assert.equal(await puente.enviar(texto, null, { plataforma: 'win32' }), 'porDetras');
+    assert.equal(lanzados.length, 1);
+    assert.equal(lanzados[0].programa, programa);
+    const porDetras = lanzados[0].args.at(-1);
+    assert.match(porDetras, /02-DOCS\/raw\/pedidos\/\S+?\.md/, `no le da la línea del fichero: ${porDetras}`);
+    assert.deepEqual(lanzados[0].args.slice(0, -1), ['exec', '--json', '-s', 'workspace-write', '--']);
+    assert.equal(vscode.registrado.terminales.length, 0, 'con número, abre además una terminal');
+    // Sin número, en su pestaña.
+    conNumero = false;
     assert.equal(await puente.enviar(texto, null, { plataforma: 'win32' }), 'trabajando');
     const [pestana] = vscode.registrado.terminales;
     assert.equal(pestana.opciones.shellPath, programa);
@@ -275,6 +300,7 @@ test('con su programa, Codex trabaja el encargo en su pestaña, y uno largo le l
     assert.equal(fs.readFileSync(path.join(raiz, ...ruta.split('/')), 'utf8'), `${texto.trim()}\n`, 'el fichero no lleva el encargo');
     assert.equal(vscode.registrado.portapapeles, '', 'lo copia igual');
   } finally {
+    puente.codexPorDetras.lanzar = antesLanzar;
     vscode.guion.rutasDeExtensiones = {};
     fs.rmSync(suya, { recursive: true, force: true });
   }

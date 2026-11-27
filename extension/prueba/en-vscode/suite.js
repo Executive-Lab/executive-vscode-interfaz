@@ -287,13 +287,16 @@ async function run() {
     return `instalada: ${puestas[0]}`;
   });
 
-  // Con Codex, el encargo lo empieza su programa en una pestaña (decisión 206). Lo
-  // que solo se sabe con un editor de verdad: que la pestaña va en el editor, no
-  // abajo, y que el programa recibe el encargo tal cual, sin que nadie lo
-  // reinterprete. Con un Codex de mentira que apunta lo que le llega. En Windows
-  // no: sin un `.exe` propio, el de mentira pasaría por `cmd.exe`, que es
-  // justo lo que la barra evita.
-  await comprobar('con Codex, el encargo abre su programa en una pestaña del editor, y le llega tal cual', async () => {
+  // Con Codex, el encargo lo empieza su programa por detrás y la conversación se
+  // abre en su panel (decisión 207); si no da el número, en una pestaña del editor
+  // (decisión 206). Lo que solo se sabe con un editor de verdad: que el programa
+  // recibe el encargo tal cual, sin que nadie lo reinterprete, en la carpeta; que
+  // con el número no se abre además una terminal; y que la pestaña de repuesto va
+  // en el editor, no abajo. Con un Codex de mentira que apunta lo que le llega.
+  // Su panel no se mira: aquí no está la extensión de Codex. En Windows no: sin un
+  // `.exe` propio, el de mentira pasaría por `cmd.exe`, que es justo lo que la
+  // barra evita.
+  await comprobar('con Codex, el encargo arranca su programa por detrás y le llega tal cual; sin número o sin su panel, su pestaña va en el editor', async () => {
     if (process.platform === 'win32') return 'en Windows no se mira: haría falta un .exe de mentira';
     const fs = require('node:fs');
     const os = require('node:os');
@@ -302,29 +305,64 @@ async function run() {
     const puente = elQueCargo(raiz, 'puente.js');
     const carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-de-mentira-'));
     const apunte = path.join(carpeta, 'lo-que-le-llega');
+    const conNumero = path.join(carpeta, 'da-el-numero');
     const programa = path.join(carpeta, 'codex');
-    fs.writeFileSync(programa, `#!/bin/sh\npwd > "${apunte}.donde"\nfor a in "$@"; do printf '%s\\n--\\n' "$a"; done > "${apunte}.tmp"\nmv "${apunte}.tmp" "${apunte}"\n`, { mode: 0o755 });
-    const antes = { elDeAhora: asistentes.elDeAhora, delPath: asistentes.terminal.programaEnElPath };
+    fs.writeFileSync(programa, [
+      '#!/bin/sh',
+      'if [ "$1" = exec ]; then que=exec; else que=pestana; fi',
+      `pwd > "${apunte}.$que.donde"`,
+      `for a in "$@"; do printf '%s\\n--\\n' "$a"; done > "${apunte}.$que.tmp"`,
+      `mv "${apunte}.$que.tmp" "${apunte}.$que"`,
+      `if [ "$que" = exec ] && [ -f "${conNumero}" ]; then echo '{"type":"thread.started","thread_id":"de-mentira"}'; fi`,
+      '',
+    ].join('\n'), { mode: 0o755 });
+    const antes = { elDeAhora: asistentes.elDeAhora, delPath: asistentes.terminal.programaEnElPath, instalado: asistentes.estaInstalado };
     asistentes.elDeAhora = () => asistentes.porId('codex');
+    // Aquí Codex no está en el editor: se finge que sí, para que vaya a su panel.
+    asistentes.estaInstalado = (a) => a.id === 'codex' || antes.instalado(a);
     asistentes.terminal.programaEnElPath = (nombre) => (nombre === 'codex' ? programa : null);
     const habia = vscode.window.terminals.length;
     const encargo = '--sin-preguntar Haz el resumen de «Ferretería» y "Soler" & $HOME; `ls`';
+    const leer = (fichero) => fs.readFileSync(fichero, 'utf8').split('\n--\n').filter(Boolean);
+    const laCarpeta = fs.realpathSync(vscode.workspace.workspaceFolders[0].uri.fsPath);
     try {
-      assert.equal(await conReloj(puente.enviar(encargo), 'mandarle el encargo a Codex'), 'trabajando');
-      for (let i = 0; i < 50 && !fs.existsSync(apunte); i += 1) await esperar(100);
-      assert.ok(fs.existsSync(apunte), 'el programa no ha arrancado');
-      const llegado = fs.readFileSync(apunte, 'utf8').split('\n--\n').filter(Boolean);
-      assert.deepEqual(llegado, ['--', encargo], 'el encargo no le llega tal cual');
-      const donde = fs.readFileSync(`${apunte}.donde`, 'utf8').trim();
-      assert.equal(fs.realpathSync(donde), fs.realpathSync(vscode.workspace.workspaceFolders[0].uri.fsPath), 'no trabaja en la carpeta');
+      // Con número: su programa por detrás, y ninguna terminal, ni al acabar
+      // (su panel se abre entonces; aquí no está, y no pasa nada).
+      fs.writeFileSync(conNumero, '');
+      assert.equal(await conReloj(puente.enviar(encargo), 'mandarle el encargo a Codex'), 'porDetras');
+      assert.ok(fs.existsSync(`${apunte}.exec`), 'su programa no ha arrancado por detrás');
+      assert.deepEqual(leer(`${apunte}.exec`), ['exec', '--json', '-s', 'workspace-write', '--', encargo], 'el encargo no le llega tal cual');
+      assert.equal(fs.realpathSync(fs.readFileSync(`${apunte}.exec.donde`, 'utf8').trim()), laCarpeta, 'no trabaja en la carpeta');
+      await esperar(500);
+      assert.ok(!vscode.window.terminals.slice(habia).some((t) => t.name === 'Codex'), 'con el número, abre además una terminal');
+
+      // Sin número: la pestaña, en el editor.
+      fs.rmSync(conNumero);
+      assert.equal(await conReloj(puente.enviar(encargo), 'mandarle el encargo a Codex sin número'), 'trabajando');
+      for (let i = 0; i < 50 && !fs.existsSync(`${apunte}.pestana`); i += 1) await esperar(100);
+      assert.ok(fs.existsSync(`${apunte}.pestana`), 'sin número, su pestaña no arranca');
+      assert.deepEqual(leer(`${apunte}.pestana`), ['--', encargo], 'en la pestaña, el encargo no le llega tal cual');
+      assert.equal(fs.realpathSync(fs.readFileSync(`${apunte}.pestana.donde`, 'utf8').trim()), laCarpeta, 'la pestaña no trabaja en la carpeta');
       const suya = vscode.window.terminals.slice(habia).find((t) => t.name === 'Codex');
       assert.ok(suya, 'no hay ninguna pestaña que se llame Codex');
       const enElEditor = vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.input instanceof vscode.TabInputTerminal);
       assert.ok(enElEditor, 'la pestaña no va en el editor');
-      return 'en el editor, en la carpeta, y el encargo intacto';
+
+      // Sin Codex en el editor no hay panel: con número y todo, su pestaña, y
+      // nada por detrás.
+      asistentes.estaInstalado = antes.instalado;
+      fs.writeFileSync(conNumero, '');
+      fs.rmSync(`${apunte}.exec`);
+      fs.rmSync(`${apunte}.pestana`);
+      assert.equal(await conReloj(puente.enviar(encargo), 'mandarle el encargo a Codex sin su panel'), 'trabajando');
+      for (let i = 0; i < 50 && !fs.existsSync(`${apunte}.pestana`); i += 1) await esperar(100);
+      assert.ok(fs.existsSync(`${apunte}.pestana`), 'sin su panel, su pestaña no arranca');
+      assert.ok(!fs.existsSync(`${apunte}.exec`), 'sin su panel, arranca por detrás y no se ve');
+      return 'por detrás y sin terminal con número; sin él o sin su panel, en el editor; en la carpeta, y el encargo intacto';
     } finally {
       asistentes.elDeAhora = antes.elDeAhora;
       asistentes.terminal.programaEnElPath = antes.delPath;
+      asistentes.estaInstalado = antes.instalado;
       for (const t of vscode.window.terminals.slice(habia)) t.dispose();
       fs.rmSync(carpeta, { recursive: true, force: true });
     }
