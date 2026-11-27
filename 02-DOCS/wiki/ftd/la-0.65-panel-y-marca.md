@@ -59,7 +59,10 @@ Lo que se vio al mirarlo:
 - [x] 9. ¿El panel de Codex va enseñando lo que hace mientras trabaja por detrás? Probado con su Codex: no. Por eso se
   abre al acabar.
 - [x] 10. PR abierta, con GitHub en verde.
-- [ ] 11. Jose ve, en la ventana de prueba, la marca y el panel de Codex abriéndose al acabar.
+- [x] 11. El panel de Codex se abre al acabar, con la conversación cargada, en un VS Code de verdad con la extensión de
+  Codex de Jose. Lo prueba Claude, como pidió Jose.
+- [ ] 12. La marca puesta al montar, vista en una ventana con el código de `main` (la ventana de prueba de Jose tenía
+  el de antes).
 
 ## Evidence
 
@@ -95,10 +98,17 @@ Lo que se vio al mirarlo:
   de 31, `humo.js --con-arnes` 612 de 612, el diccionario y `revisar-powershell.js` (5 ficheros, sin pegas) y, en un
   VS Code de verdad (1.148.0, en el Mac), «todo bien», con la prueba de Codex en sus tres caminos (con número, sin
   número, sin su panel). Es la batería de `02-DOCS/wiki/sdd/config.yaml` entera, más la manual.
-- **No se corrió aquí.** El panel de verdad abriéndose desde la barra, con la extensión de Codex: esta máquina no
-  deja capturar la pantalla. Lo verá Jose (11).
+- **11.** Jose: «tienes que hacer tu la prueba» (26-11). Un VS Code de verdad (1.148.0, en el Mac) con la extensión
+  de Codex de Jose (26.1120.50957) y su cuenta, sobre una carpeta de pruebas vacía con git (guion en el scratchpad:
+  `guiones/con-codex-de-verdad/`). La barra devuelve «por detrás» a los 3 s; Codex acaba a los 21 s; a los 22 s, la
+  pestaña de su panel, activa, con esa conversación, y no antes; los dos ficheros, hechos. En el registro de su
+  extensión: `maybe_resume_success`, un turno, acabado, en 2,3 s. `config.toml`, igual antes y después; nada de la
+  prueba en marcha al acabar. De tres pasadas: en la primera, la ventana se cerró con la carga empezada; en la
+  segunda, con el ordenador cargado y sin tarjeta gráfica, la pantalla del panel no arrancó en los 30 s que se da
+  (`renderer_ready_timeout`); la tercera es la de arriba. Lo de la segunda es del panel de Codex, no de la barra.
 - **10.** PR #118. GitHub en verde con `5cde287` (ejecución 45675074156) y otra vez con `84b7548`, el del panel al
-  acabar: `windows` (5 min 22 s), `el-exe`, `el-dmg` y `vscode-de-verdad` (ejecución 45863735805).
+  acabar: `windows` (5 min 22 s), `el-exe`, `el-dmg` y `vscode-de-verdad` (ejecución 45863735805). Jose la fusionó
+  el 27-11 (`0a3634b`), y GitHub, en verde sobre `main`.
 - **Revisión.** `rsc risk --base origin/main`: nivel 1, un revisor. Hecha en línea, fichero por fichero, sin
   revisores en segundo plano. Dejó los dos arreglos de arriba (el icono atado a su fichero, y lo de la web en el aviso
   del final del montaje). Sin arreglar, por menor: si dos partes del título contienen el dominio, gana la primera,
@@ -112,5 +122,6 @@ Lo que se vio al mirarlo:
 
 ## Next
 
-- Jose: probarlo en la ventana de prueba (11) y mirar «Guardar una copia fuera».
-- Con el sí de Jose, fusionar la PR #118 y publicar la 0.65.0.
+- La marca al montar, en una ventana con el código de `main` (12).
+- Jose: mirar «Guardar una copia fuera» (GitHub).
+- Con el sí de Jose, publicar la 0.65.0.
