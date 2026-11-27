@@ -4,7 +4,7 @@ title: La 0.65, RSC 4.2.0, el freno que se dice como es, y Codex que trabaja él
 date: 2026-11-25
 author: Jose Sanchis
 branch: la-0.65
-status: in-progress
+status: done
 ---
 
 # La 0.65, RSC 4.2.0, el freno que se dice como es, y Codex que trabaja él
@@ -134,9 +134,12 @@ Y con la 0.65 en marcha, tres peticiones más de Jose (decisión 206):
   `el-exe`, `el-dmg` y `vscode-de-verdad` (ejecución 45645985394).
 - **Cómo se deshace.** `git revert` del commit de la fusión. Lo guardado de más (`conSusPalabras` en las respuestas)
   lo ignora una barra anterior.
+- **Publicada.** 27-11-2026, con el sí de Jose («fusiona en autopilo, te lo apruebo»): release `v0.65.0` desde
+  `0a3634b`, la última. Antes, `publicar.sh` entero: `humo.js --con-arnes` 612 de 612, `contrato.js` 15 de 15, las tres
+  empresas y la recién montada, el diccionario y PowerShell. El `.vsix` lo sube `minarkap` (`sha256:1d273b67…`), y
+  GitHub añade solo el `.dmg` y el `.exe` (ejecución 45985256459, `a-la-release` en verde).
 
 ## Next
 
-- Jose: fusionar la PR y publicar la 0.65.0.
 - Jose: decidir si la barra avisa antes de que, la primera vez, Codex pide en la pestaña (en inglés) confiar en los
   enganches, o si «Dejarlo listo en Codex» (decisión 178) pasa a abrir esa pestaña.

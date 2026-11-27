@@ -10194,7 +10194,7 @@ nuestra en `--sans`, y la de los colores de la marca no cuenta `--peso-titulo` c
 
 ## 205. La 0.65: la barra pasa a RSC 4.2.0, y el freno se dice como es
 
-**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, pendiente de PR · FTD
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.65.0 · FTD
 `02-DOCS/wiki/ftd/la-0.65.md`
 
 Jose, 25-11, tras publicar la 0.64.0: *«sigue dándole a la barra. Qué queda pendiente? está actualizada a la ultima
@@ -10241,7 +10241,7 @@ verdad. Cambian tres: «Las reglas» con un técnico, el freno que se ofrece, y 
 
 ## 206. Con tus palabras, los dos asistentes, y Codex que trabaja él
 
-**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, en la PR #116 · FTD `02-DOCS/wiki/ftd/la-0.65.md`
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.65.0 · FTD `02-DOCS/wiki/ftd/la-0.65.md`
 
 Jose, 25-11, con la 0.65 en marcha, tres peticiones seguidas:
 
@@ -10324,7 +10324,7 @@ con las mismas opciones, pero fuera del editor.
 
 ## 207. La marca que se pone, GitHub que no corta, y Codex en su panel
 
-**Fecha:** 25 de noviembre de 2026 · **Estado:** en marcha, rama `la-0.65-panel-y-marca` · FTD
+**Fecha:** 25 de noviembre de 2026 · **Estado:** hecho, publicado en la 0.65.0, sin que Jose lo haya visto aún en una ventana de prueba · FTD
 `02-DOCS/wiki/ftd/la-0.65-panel-y-marca.md`
 
 Jose, 25-11, probando la 0.65 sin publicar en una ventana de prueba:

@@ -2,7 +2,7 @@
 type: ftd
 title: Los instaladores, en cada release
 date: 2026-11-26
-status: en curso
+status: done
 ---
 
 # Los instaladores, en cada release
@@ -39,7 +39,7 @@ a mano el 25-11.
 - [x] 2. El trabajo `a-la-release` en `windows.yml`, solo al publicar una release.
 - [x] 3. Notas y aviso de `publicar.sh`; `README.md` e `instalador/README.md`.
 - [x] 4. GitHub en verde en la rama, con el trabajo nuevo saltado porque no es una release.
-- [ ] 5. La primera release de verdad (0.65.0) sale con los dos instaladores.
+- [x] 5. La primera release de verdad (0.65.0) sale con los dos instaladores.
 
 ## Evidence
 
@@ -59,9 +59,12 @@ a mano el 25-11.
 - 26-11-2026 · GitHub en la rama (run 45857003400, `0805ab4`): `windows`, `vscode-de-verdad`, `el-dmg`
   y `el-exe` en verde; `a-la-release`, saltado. El flujo se acepta con el disparador nuevo.
 - **Sin probar:** la subida de verdad. Solo se prueba publicando una release; la primera será la 0.65.0.
+- 27-11-2026 · **La subida de verdad, con la 0.65.0.** Al publicar `v0.65.0` (10:48:53 UTC), el evento `release`
+  arrancó `windows.yml` (ejecución 45985256459). `a-la-release`, en verde a las 10:52:32: «Subidos y comprobados». En
+  la release: `ExecutiveLab-0.65.0.dmg` («Instalador para Mac (sin firmar)», `sha256:9405ccbd…`) y
+  `ExecutiveLab-Setup-0.65.0.exe` («Instalador para Windows (sin firmar)», `sha256:5bb706cd…`), subidos por
+  `github-actions[bot]`. El `.vsix`, de `minarkap`, sin tocar, y `releases/latest` es la 0.65.0.
 
 ## Next
 
-- Jose fusiona. Después, publicar la 0.65.0 desde `main`, ya con esto dentro, y mirar en Actions que
-  `a-la-release` sale en verde y que la release trae los dos.
-- Si falla, relanzar el trabajo en Actions, o subirlos a mano como en la 0.64.0.
+- Nada. Si una release sale sin instaladores, relanzar `a-la-release` en Actions, o subirlos a mano como en la 0.64.0.
